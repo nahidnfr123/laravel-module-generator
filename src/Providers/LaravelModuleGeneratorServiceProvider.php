@@ -5,6 +5,7 @@ namespace NahidFerdous\LaravelModuleGenerator\Providers;
 use Illuminate\Support\ServiceProvider;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateModuleFromYaml;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\GeneratePostmanCollection;
+use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateDbDiagram;
 
 class LaravelModuleGeneratorServiceProvider extends ServiceProvider
 {
@@ -19,6 +20,7 @@ class LaravelModuleGeneratorServiceProvider extends ServiceProvider
             $this->commands([
                 GenerateModuleFromYaml::class,
                 GeneratePostmanCollection::class,
+                GenerateDbDiagram::class,
             ]);
 
             // Publish stubs and config
