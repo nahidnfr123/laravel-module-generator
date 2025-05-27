@@ -225,6 +225,7 @@ class GenerateModuleFromYaml extends Command
         $relationshipMethods = '';
         if ($relations && count($relations)) {
             foreach ($relations as $relationName => $meta) {
+                $relationName = Str::camel($relationName);
                 $type = $meta['type'];
                 $relatedModel = $meta['model'];
 
