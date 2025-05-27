@@ -105,7 +105,7 @@ class GeneratePostmanCollection extends Command
     {
         return [
             'info' => [
-                'name' => 'Laravel API Collection',
+                'name' => env('APP_NAME', 'Laravel') . ' API Collection',
                 'description' => 'Auto-generated from YAML schema',
                 'schema' => 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
                 '_postman_id' => Str::uuid()->toString(),
