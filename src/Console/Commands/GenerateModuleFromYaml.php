@@ -15,6 +15,7 @@ class GenerateModuleFromYaml extends Command
                            {--force : Overwrite existing files} 
                            {--file= : Path to a YAML file}
                            {--skip-postman : Skip Postman collection generation}
+                           {--skip-dbdiagram : Skip DB diagram generation}
                            {--postman-base-url={{base-url}} : Base URL for Postman collection}
                            {--postman-prefix=api/v1 : API prefix for Postman collection}';
 
@@ -26,6 +27,7 @@ class GenerateModuleFromYaml extends Command
         $path = $this->option('file') ?? $defaultPath;
         $force = $this->option('force');
         $skipPostman = $this->option('skip-postman');
+        $dbDiagram = $this->option('skip-dbdiagram');
 
         if (!file_exists($path)) {
             $this->error("YAML file not found at: $path");
@@ -93,28 +95,28 @@ class GenerateModuleFromYaml extends Command
             }
 
             // 2: Request
-             if ($generate['request']) {
-                 $requestPath = app_path("Http/Requests/{$requestClass}.php");
-                 if (File::exists($requestPath) && !$force) {
-                     $this->warn("⚠️ Request already exists: {$requestClass}");
-                 } else {
-                     File::delete($requestPath);
-                     $this->warn("⚠️ Deleted existing request: {$requestClass}");
-                     $this->generateRequest($modelName, $fields);
-                 }
-             }
+            if ($generate['request']) {
+                $requestPath = app_path("Http/Requests/{$requestClass}.php");
+                if (File::exists($requestPath) && !$force) {
+                    $this->warn("⚠️ Request already exists: {$requestClass}");
+                } else {
+                    File::delete($requestPath);
+                    $this->warn("⚠️ Deleted existing request: {$requestClass}");
+                    $this->generateRequest($modelName, $fields);
+                }
+            }
 
             // 3: Collection
-             if ($generate['collection']) {
-                 $collectionPath = app_path("Http/Resources/{$modelName}/{$collectionClass}.php");
-                 if (File::exists($collectionPath) && !$force) {
-                     $this->warn("⚠️ Collection already exists: {$collectionClass}");
-                 } else {
-                     File::delete($collectionPath);
-                     $this->warn("⚠️ Deleted existing collection: {$collectionClass}");
-                     $this->generateCollection($modelName, $collectionClass, $modelVar);
-                 }
-             }
+            if ($generate['collection']) {
+                $collectionPath = app_path("Http/Resources/{$modelName}/{$collectionClass}.php");
+                if (File::exists($collectionPath) && !$force) {
+                    $this->warn("⚠️ Collection already exists: {$collectionClass}");
+                } else {
+                    File::delete($collectionPath);
+                    $this->warn("⚠️ Deleted existing collection: {$collectionClass}");
+                    $this->generateCollection($modelName, $collectionClass, $modelVar);
+                }
+            }
 
             // 4: Resource
             if ($generate['resource']) {
@@ -178,6 +180,24 @@ class GenerateModuleFromYaml extends Command
                 $this->info("🥵 Postman collection generated successfully!");
             } else {
                 $this->warn("⚠️ Failed to generate Postman collection");
+            }
+        }
+
+        // Generate DB diagram if not skipped
+        if (!$dbDiagram) {
+            $this->newLine();
+            $this->info("🚀 Generating DB diagram...");
+
+            $result = $this->call('dbdiagram:generate', [
+                '--file' => $path,
+                '--output' => 'module/dbdiagram.dbml',
+            ]);
+
+            if ($result === CommandAlias::SUCCESS) {
+                $this->newLine();
+                $this->info("🤧 DB diagram generated successfully at module/dbdiagram.dbml");
+            } else {
+                $this->warn("⚠️ Failed to generate DB diagram");
             }
         }
 
