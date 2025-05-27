@@ -13,7 +13,7 @@ class GenerateDbDiagram extends Command
 
     public function handle()
     {
-        $path = $this->option('yamlPath');
+        $path = $this->option('file');
         if (!$path) {
             $path = config('module-generator.models_path', 'module/models.yaml');
         }
