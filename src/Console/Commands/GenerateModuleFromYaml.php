@@ -11,7 +11,12 @@ use Symfony\Component\Yaml\Yaml;
 
 class GenerateModuleFromYaml extends Command
 {
-    protected $signature = 'module:generate {--force : Overwrite existing files} {--file= : Path to a YAML file}';
+    protected $signature = 'module:generate 
+                           {--force : Overwrite existing files} 
+                           {--file= : Path to a YAML file}
+                           {--skip-postman : Skip Postman collection generation}
+                           {--postman-base-url={{base-url}} : Base URL for Postman collection}
+                           {--postman-prefix=api/v1 : API prefix for Postman collection}';
 
     protected $description = 'Generate Laravel module files (model, migration, controller, etc.) from a YAML file';
 
@@ -20,10 +25,10 @@ class GenerateModuleFromYaml extends Command
         $defaultPath = config('module-generator.models_path');
         $path = $this->option('file') ?? $defaultPath;
         $force = $this->option('force');
+        $skipPostman = $this->option('skip-postman');
 
         if (!file_exists($path)) {
             $this->error("YAML file not found at: $path");
-
             return CommandAlias::FAILURE;
         }
 
@@ -88,28 +93,28 @@ class GenerateModuleFromYaml extends Command
             }
 
             // 2: Request
-//            if ($generate['request']) {
-//                $requestPath = app_path("Http/Requests/{$requestClass}.php");
-//                if (File::exists($requestPath) && !$force) {
-//                    $this->warn("⚠️ Request already exists: {$requestClass}");
-//                } else {
-//                    File::delete($requestPath);
-//                    $this->warn("⚠️ Deleted existing request: {$requestClass}");
-//                    $this->generateRequest($modelName, $fields);
-//                }
-//            }
+             if ($generate['request']) {
+                 $requestPath = app_path("Http/Requests/{$requestClass}.php");
+                 if (File::exists($requestPath) && !$force) {
+                     $this->warn("⚠️ Request already exists: {$requestClass}");
+                 } else {
+                     File::delete($requestPath);
+                     $this->warn("⚠️ Deleted existing request: {$requestClass}");
+                     $this->generateRequest($modelName, $fields);
+                 }
+             }
 
             // 3: Collection
-//            if ($generate['collection']) {
-//                $collectionPath = app_path("Http/Resources/{$modelName}/{$collectionClass}.php");
-//                if (File::exists($collectionPath) && !$force) {
-//                    $this->warn("⚠️ Collection already exists: {$collectionClass}");
-//                } else {
-//                    File::delete($collectionPath);
-//                    $this->warn("⚠️ Deleted existing collection: {$collectionClass}");
-//                    $this->generateCollection($modelName, $collectionClass, $modelVar);
-//                }
-//            }
+             if ($generate['collection']) {
+                 $collectionPath = app_path("Http/Resources/{$modelName}/{$collectionClass}.php");
+                 if (File::exists($collectionPath) && !$force) {
+                     $this->warn("⚠️ Collection already exists: {$collectionClass}");
+                 } else {
+                     File::delete($collectionPath);
+                     $this->warn("⚠️ Deleted existing collection: {$collectionClass}");
+                     $this->generateCollection($modelName, $collectionClass, $modelVar);
+                 }
+             }
 
             // 4: Resource
             if ($generate['resource']) {
@@ -154,6 +159,30 @@ class GenerateModuleFromYaml extends Command
             sleep(1);
         }
 
+        // Generate Postman Collection at the end (unless skipped)
+        if (!$skipPostman) {
+            $this->newLine();
+            $this->info("🚀 Generating Postman collection...");
+
+            $baseUrl = $this->option('postman-base-url');
+            $prefix = $this->option('postman-prefix');
+
+            $result = $this->call('postman:generate', [
+                '--file' => $path,
+                '--base-url' => $baseUrl,
+                '--prefix' => $prefix
+            ]);
+
+            if ($result === CommandAlias::SUCCESS) {
+                $this->info("✅ Postman collection generated successfully!");
+            } else {
+                $this->warn("⚠️ Failed to generate Postman collection");
+            }
+        }
+
+        $this->newLine();
+        $this->info("🎉 All modules generated successfully!");
+
         return CommandAlias::SUCCESS;
     }
 
@@ -164,7 +193,6 @@ class GenerateModuleFromYaml extends Command
         $modelPath = app_path("Models/{$modelName}.php");
         if (!File::exists($modelPath)) {
             $this->warn("⚠️ Model file not found for: {$modelName}");
-
             return;
         }
 
@@ -201,7 +229,6 @@ PHP;
         $this->info("🤫 Fillable fields and relationships added to {$modelName} model");
     }
 
-    //    protected function generateMigration(string $modelName, array $fields): void
     protected function generateMigration(string $modelName, array $fields, array $uniqueConstraints = []): void
     {
         $tableName = Str::snake(Str::pluralStudly($modelName));
@@ -209,7 +236,6 @@ PHP;
 
         if (empty($files)) {
             $this->warn("Migration file not found for $modelName.");
-
             return;
         }
 
@@ -247,26 +273,20 @@ PHP;
                 $line = "\$table->$type('$name')";
 
                 foreach ($parts as $modifier) {
-                    //                    $modifiers = $this->parseModifiers($parts);
                     if (str_starts_with($modifier, 'default(')) {
-                        // Already well-formed
                         $line .= "->{$modifier}";
                     } elseif (str_starts_with($modifier, 'default')) {
                         $value = trim(str_replace('default', '', $modifier), ':');
                         $value = trim($value);
 
-                        // Handle null
                         if (strtolower($value) === 'null') {
                             $line .= '->default(null)';
-                        } // Handle booleans
-                        elseif (in_array(strtolower($value), ['true', 'false'], true)) {
+                        } elseif (in_array(strtolower($value), ['true', 'false'], true)) {
                             $line .= '->default(' . $value . ')';
-                        }  // Handle numeric
-                        elseif (is_numeric($value)) {
+                        } elseif (is_numeric($value)) {
                             $line .= "->default($value)";
-                        } // Handle strings (with or without quotes)
-                        else {
-                            $value = trim($value, "'\""); // strip extra quotes
+                        } else {
+                            $value = trim($value, "'\"");
                             $line .= "->default('$value')";
                         }
                     } elseif ($modifier === 'nullable') {
@@ -280,7 +300,6 @@ PHP;
             $fieldStub .= $line . ";\n            ";
         }
 
-        // Add unique constraints
         if (!empty($uniqueConstraints)) {
             foreach ($uniqueConstraints as $columns) {
                 if (is_array($columns)) {
@@ -305,7 +324,6 @@ PHP;
         );
 
         file_put_contents($migrationFile, $migrationContent);
-
         $this->info("✅ Migration file updated for $modelName");
     }
 
@@ -332,7 +350,6 @@ PHP;
 
         if (!File::exists($stubPath)) {
             $this->error("Request stub not found: {$stubPath}");
-
             return;
         }
 
@@ -387,7 +404,6 @@ PHP;
         );
 
         File::put($requestPath, $stub);
-
         $this->info("🤫 Form Request created with validation: {$requestClass}");
     }
 
@@ -399,7 +415,6 @@ PHP;
 
         if (!File::exists($stubPath)) {
             $this->error("Service stub not found: {$stubPath}");
-
             return;
         }
 
@@ -413,7 +428,6 @@ PHP;
         );
 
         File::put($path, $stubContent);
-
         $this->info("🤫 Service created: {$serviceClass}");
     }
 
@@ -466,7 +480,6 @@ PHP;
             throw new \RuntimeException('Module generator stubs configuration not found.');
         }
 
-        // Get stub file name from config
         $stubFile = $config['stubs'][$stubKey] ?? null;
 
         if (!$stubFile) {
@@ -479,7 +492,6 @@ PHP;
             return $publishedPath;
         }
 
-        // Fallback to internal stub in the package
         $fallbackPath = __DIR__ . '/../../stubs/' . $stubFile;
 
         if (!file_exists($fallbackPath)) {

@@ -4,6 +4,7 @@ namespace NahidFerdous\LaravelModuleGenerator\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateModuleFromYaml;
+use NahidFerdous\LaravelModuleGenerator\Console\Commands\GeneratePostmanCollection;
 
 class LaravelModuleGeneratorServiceProvider extends ServiceProvider
 {
@@ -17,6 +18,7 @@ class LaravelModuleGeneratorServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 GenerateModuleFromYaml::class,
+                GeneratePostmanCollection::class,
             ]);
 
             // Publish stubs and config
