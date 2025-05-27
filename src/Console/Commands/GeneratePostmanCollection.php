@@ -58,7 +58,8 @@ class GeneratePostmanCollection extends Command
             $jsonOutput = json_encode($this->collection, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
             File::put($outputFile, $jsonOutput);
 
-            $this->info("✅ Postman collection generated successfully: {$outputFile}");
+            $this->newLine();
+            $this->info("🥵 Postman collection generated successfully: {$outputFile}");
             $this->info("📊 Generated endpoints for " . count($this->collection['item']) . " models");
 
         } catch (\Exception $e) {

@@ -174,7 +174,8 @@ class GenerateModuleFromYaml extends Command
             ]);
 
             if ($result === CommandAlias::SUCCESS) {
-                $this->info("✅ Postman collection generated successfully!");
+                $this->newLine();
+                $this->info("🥵 Postman collection generated successfully!");
             } else {
                 $this->warn("⚠️ Failed to generate Postman collection");
             }
