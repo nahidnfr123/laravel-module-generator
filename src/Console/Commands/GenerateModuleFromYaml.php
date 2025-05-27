@@ -232,7 +232,7 @@ class GenerateModuleFromYaml extends Command
                 $relationshipMethods .= <<<PHP
 
 
-    public function {$relationName}()
+    public function {$relationName}(): \Illuminate\Database\Eloquent\Relations\/{$type}
     {
         return \$this->{$type}({$relatedModel}::class);
     }
