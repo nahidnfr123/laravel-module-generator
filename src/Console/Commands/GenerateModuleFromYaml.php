@@ -340,7 +340,7 @@ class GenerateModuleFromYaml extends Command
 
     protected function generateModel(string $modelName, array $fields, array $relations = []): void
     {
-        Artisan::call('make:model', ['name' => $modelName, '--migration' => true]);
+        Artisan::call('make:model', ['name' => $modelName]);
 
         $modelPath = app_path("Models/{$modelName}.php");
         if (!File::exists($modelPath)) {
@@ -348,25 +348,57 @@ class GenerateModuleFromYaml extends Command
             return;
         }
 
-        $this->addRelationshipMethods($modelPath, $relations);
         $this->addFillableFields($modelPath, $modelName, $fields);
+        $this->addRelationshipMethods($modelPath, $relations);
+        $this->addMigrationToModel($modelPath);
 
-        $this->info("🤫 Fillable fields and relationships added to {$modelName} model");
+        $this->info("🤫 Fillable fields, relationships, and migration added to {$modelName} model");
+    }
+
+    private function addMigrationToModel(string $modelPath): void
+    {
+        $modelContent = File::get($modelPath);
+        $tableName = Str::snake(Str::pluralStudly(Str::studly(class_basename($modelPath))));
+        $migrationLine = "    protected \$table = '{$tableName}';\n";
+
+        // Insert after the namespace declaration
+        $namespaceLineEnd = strpos($modelContent, ';') + 1;
+        $classStart = strpos($modelContent, 'class');
+
+        if ($namespaceLineEnd !== false && $classStart !== false && $namespaceLineEnd < $classStart) {
+            $newContent = substr($modelContent, 0, $classStart) . $migrationLine . substr($modelContent, $classStart);
+            File::put($modelPath, $newContent);
+        } else {
+            // Fallback if namespace isn't found as expected
+            $modelContent = preg_replace(
+                '/(class\s+' . class_basename($modelPath) . '\s+extends\s+Model\s*\{)/',
+                "$1\n" . $migrationLine,
+                $modelContent
+            );
+            File::put($modelPath, $modelContent);
+        }
     }
 
     private function addFillableFields(string $modelPath, string $modelName, array $fields): void
     {
-        $fillableFields = array_map(fn($field) => "        '{$field}'", array_keys($fields));
+        $fillableFields = array_map(fn ($field) => "        '{$field}'", array_keys($fields));
         $fillableArray = "protected \$fillable = [\n" . implode(",\n", $fillableFields) . ",\n    ];";
 
         $modelContent = File::get($modelPath);
-        $modelContent = preg_replace(
-            '/(class\s+' . $modelName . '\s+extends\s+Model\s*\{)/',
-            "$1\n\n    {$fillableArray}\n",
-            $modelContent
-        );
+        // Insert fillable after the opening of the class
+        $classDefinitionEnd = strpos($modelContent, '{') + 1;
+        $insertPosition = $classDefinitionEnd;
 
-        File::put($modelPath, $modelContent);
+        // Check if there's already a property defined to insert after it
+        if (preg_match('/protected\s+\$[a-zA-Z_]+\s*=\s*\[.*?\];/s', $modelContent, $matches, PREG_OFFSET_CAPTURE)) {
+            $insertPosition = $matches[0][1] + strlen($matches[0][0]) + 2; // Insert after the existing property
+        } else if (preg_match('/use\s+[^;]+;/s', $modelContent, $matches, PREG_OFFSET_CAPTURE)) {
+            $insertPosition = $matches[0][1] + strlen($matches[0][0]) + 2; // Insert after the last use statement
+        }
+
+        $newModelContent = substr($modelContent, 0, $insertPosition) . "\n    " . $fillableArray . "\n" . substr($modelContent, $insertPosition);
+
+        File::put($modelPath, $newModelContent);
     }
 
     private function addRelationshipMethods(string $modelPath, array $relations): void
@@ -376,15 +408,18 @@ class GenerateModuleFromYaml extends Command
         }
 
         $relationshipMethods = $this->buildRelationshipMethods($relations);
-
         $modelContent = File::get($modelPath);
-        $modelContent = str_replace(
-            'protected $fillable = [',
-            $relationshipMethods . "\n\n    protected \$fillable = [",
-            $modelContent
-        );
 
-        File::put($modelPath, $modelContent);
+        // Find the insertion point - after the fillable array if it exists, or after the class definition
+        $insertAfter = '/protected \$fillable\s*=\s*\[.*?\];/';
+        if (preg_match($insertAfter, $modelContent, $matches, PREG_OFFSET_CAPTURE)) {
+            $insertPosition = $matches[0][1] + strlen($matches[0][0]) + 2;
+        } else {
+            $insertPosition = strpos($modelContent, '{') + 1;
+        }
+
+        $newModelContent = substr($modelContent, 0, $insertPosition) . "\n" . $relationshipMethods . substr($modelContent, $insertPosition);
+        File::put($modelPath, $newModelContent);
     }
 
     private function buildRelationshipMethods(array $relations): string
