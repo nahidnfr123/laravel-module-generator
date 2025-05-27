@@ -9,6 +9,7 @@ use Symfony\Component\Yaml\Yaml;
 class GenerateDbDiagram extends Command
 {
     protected $signature = 'dbdiagram:generate {--file=module/models.yaml : Path to the YAML schema file} {--output=module/dbdiagram.dbml}';
+
     protected $description = 'Generate dbdiagram.io syntax (DBML) from YAML schema';
 
     public function handle()
