@@ -223,11 +223,12 @@ class GenerateModuleFromYaml extends Command
 
         // Relationships
         $relationshipMethods = '';
-        foreach ($relations as $relationName => $meta) {
-            $type = $meta['type'];
-            $relatedModel = $meta['model'];
+        if ($relations && count($relations)) {
+            foreach ($relations as $relationName => $meta) {
+                $type = $meta['type'];
+                $relatedModel = $meta['model'];
 
-            $relationshipMethods .= <<<PHP
+                $relationshipMethods .= <<<PHP
 
 
     public function {$relationName}()
@@ -235,8 +236,8 @@ class GenerateModuleFromYaml extends Command
         return \$this->{$type}({$relatedModel}::class);
     }
 PHP;
+            }
         }
-
         $modelContent = File::get($modelPath);
 
         // Insert fillable and relationships after class declaration
