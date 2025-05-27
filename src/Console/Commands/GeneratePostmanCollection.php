@@ -9,44 +9,63 @@ use Symfony\Component\Yaml\Yaml;
 
 class GeneratePostmanCollection extends Command
 {
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
     protected $signature = 'postman:generate
                            {--file=module/models.yaml : Path to the YAML schema file}
                            {--base-url={{base-url}} : Base URL for API}
                            {--prefix=api/v1 : API prefix}';
 
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
     protected $description = 'Generate Postman collection from YAML schema';
 
+    /**
+     * @var string
+     */
     private $baseUrl;
+
+    /**
+     * @var string
+     */
     private $apiPrefix;
+
+    /**
+     * @var array
+     */
     private $collection;
 
-    public function handle()
+    /**
+     * Execute the console command.
+     *
+     * @return int
+     */
+    public function handle(): int
     {
         $yamlFile = $this->option('file');
-
-        // Generate random number for output file
         $randomNumber = rand(100, 999);
         $outputFile = "module/postman_collection_{$randomNumber}.json";
 
-        // Ensure module directory exists
-        if (!File::exists('module')) {
-            File::makeDirectory('module', 0755, true);
-        }
+        $this->ensureModuleDirectoryExists();
 
         $this->baseUrl = rtrim($this->option('base-url'), '/');
         $this->apiPrefix = trim($this->option('prefix'), '/');
 
         if (!File::exists($yamlFile)) {
             $this->error("YAML file not found: {$yamlFile}");
-            return 1;
+            return self::FAILURE;
         }
 
         $this->info("Parsing YAML schema from: {$yamlFile}");
 
         try {
-            $yamlContent = File::get($yamlFile);
-            $schema = Yaml::parse($yamlContent);
-
+            $schema = Yaml::parseFile($yamlFile);
             $this->collection = $this->initializeCollection();
 
             foreach ($schema as $modelName => $modelConfig) {
@@ -55,22 +74,34 @@ class GeneratePostmanCollection extends Command
                 }
             }
 
-            $jsonOutput = json_encode($this->collection, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-            File::put($outputFile, $jsonOutput);
-
-            $this->newLine();
-            $this->info("🥵 Postman collection generated successfully: {$outputFile}");
-            $this->info("📊 Generated endpoints for " . count($this->collection['item']) . " models");
+            $this->savePostmanCollection($outputFile);
 
         } catch (\Exception $e) {
             $this->error("Error generating collection: " . $e->getMessage());
-            return 1;
+            return self::FAILURE;
         }
 
-        return 0;
+        return self::SUCCESS;
     }
 
-    private function initializeCollection()
+    /**
+     * Ensures the 'module' directory exists.
+     *
+     * @return void
+     */
+    private function ensureModuleDirectoryExists(): void
+    {
+        if (!File::exists('module')) {
+            File::makeDirectory('module', 0755, true);
+        }
+    }
+
+    /**
+     * Initializes the base Postman collection structure.
+     *
+     * @return array
+     */
+    private function initializeCollection(): array
     {
         return [
             'info' => [
@@ -84,33 +115,45 @@ class GeneratePostmanCollection extends Command
                 [
                     'key' => 'baseUrl',
                     'value' => $this->baseUrl,
-                    'type' => 'string'
+                    'type' => 'string',
                 ],
                 [
                     'key' => 'token',
                     'value' => '',
-                    'type' => 'string'
-                ]
-            ]
+                    'type' => 'string',
+                ],
+            ],
         ];
     }
 
-    private function shouldGenerateController($modelConfig)
+    /**
+     * Checks if the controller generation is enabled for the model.
+     *
+     * @param array $modelConfig
+     * @return bool
+     */
+    private function shouldGenerateController(array $modelConfig): bool
     {
         return !isset($modelConfig['generate']['controller']) || $modelConfig['generate']['controller'] !== false;
     }
 
-    private function generateModelEndpoints($modelName, $modelConfig)
+    /**
+     * Generates the Postman endpoints for a given model.
+     *
+     * @param string $modelName
+     * @param array $modelConfig
+     * @return void
+     */
+    private function generateModelEndpoints(string $modelName, array $modelConfig): void
     {
         $resourceName = Str::kebab(Str::plural($modelName));
-        $singularName = Str::kebab($modelName);
 
         $modelFolder = [
             'name' => Str::plural($modelName),
-            'item' => []
+            'item' => [],
         ];
 
-        // GET /resources (List)
+        // List Resources
         $modelFolder['item'][] = $this->createRequest(
             'Get All ' . Str::plural($modelName),
             'GET',
@@ -119,7 +162,7 @@ class GeneratePostmanCollection extends Command
             $this->generateListResponse($modelName, $modelConfig)
         );
 
-        // GET /resources/{id} (Show)
+        // Show Resource
         $modelFolder['item'][] = $this->createRequest(
             'Get ' . $modelName . ' by ID',
             'GET',
@@ -128,7 +171,7 @@ class GeneratePostmanCollection extends Command
             $this->generateShowResponse($modelName, $modelConfig)
         );
 
-        // POST /resources (Store)
+        // Store Resource
         $modelFolder['item'][] = $this->createRequest(
             'Create ' . $modelName,
             'POST',
@@ -137,7 +180,7 @@ class GeneratePostmanCollection extends Command
             $this->generateCreateResponse($modelName, $modelConfig)
         );
 
-        // PUT /resources/{id} (Update)
+        // Update Resource
         $modelFolder['item'][] = $this->createRequest(
             'Update ' . $modelName,
             'PUT',
@@ -146,7 +189,7 @@ class GeneratePostmanCollection extends Command
             $this->generateUpdateResponse($modelName, $modelConfig)
         );
 
-        // DELETE /resources/{id} (Delete)
+        // Delete Resource
         $modelFolder['item'][] = $this->createRequest(
             'Delete ' . $modelName,
             'DELETE',
@@ -158,7 +201,17 @@ class GeneratePostmanCollection extends Command
         $this->collection['item'][] = $modelFolder;
     }
 
-    private function createRequest($name, $method, $url, $body = null, $exampleResponse = null)
+    /**
+     * Creates a single Postman request item.
+     *
+     * @param string $name
+     * @param string $method
+     * @param string $url
+     * @param array|null $body
+     * @param array|null $exampleResponse
+     * @return array
+     */
+    private function createRequest(string $name, string $method, string $url, ?array $body = null, ?array $exampleResponse = null): array
     {
         $request = [
             'name' => $name,
@@ -168,25 +221,25 @@ class GeneratePostmanCollection extends Command
                     [
                         'key' => 'Accept',
                         'value' => 'application/json',
-                        'type' => 'text'
+                        'type' => 'text',
                     ],
                     [
                         'key' => 'Content-Type',
                         'value' => 'application/json',
-                        'type' => 'text'
+                        'type' => 'text',
                     ],
                     [
                         'key' => 'Authorization',
                         'value' => 'Bearer {{token}}',
-                        'type' => 'text'
-                    ]
+                        'type' => 'text',
+                    ],
                 ],
                 'url' => [
                     'raw' => '{{baseUrl}}/' . $url,
                     'host' => ['{{baseUrl}}'],
-                    'path' => explode('/', $url)
-                ]
-            ]
+                    'path' => explode('/', $url),
+                ],
+            ],
         ];
 
         if ($body) {
@@ -195,9 +248,9 @@ class GeneratePostmanCollection extends Command
                 'raw' => json_encode($body, JSON_PRETTY_PRINT),
                 'options' => [
                     'raw' => [
-                        'language' => 'json'
-                    ]
-                ]
+                        'language' => 'json',
+                    ],
+                ],
             ];
         }
 
@@ -212,19 +265,25 @@ class GeneratePostmanCollection extends Command
                     'header' => [
                         [
                             'key' => 'Content-Type',
-                            'value' => 'application/json'
-                        ]
+                            'value' => 'application/json',
+                        ],
                     ],
                     'cookie' => [],
-                    'body' => json_encode($exampleResponse, JSON_PRETTY_PRINT)
-                ]
+                    'body' => json_encode($exampleResponse, JSON_PRETTY_PRINT),
+                ],
             ];
         }
 
         return $request;
     }
 
-    private function generateCreateBody($modelConfig)
+    /**
+     * Generates the request body for the create operation.
+     *
+     * @param array $modelConfig
+     * @return array
+     */
+    private function generateCreateBody(array $modelConfig): array
     {
         $body = [];
 
@@ -233,103 +292,139 @@ class GeneratePostmanCollection extends Command
         }
 
         foreach ($modelConfig['fields'] as $fieldName => $fieldType) {
-            // Skip auto-generated fields
             if (in_array($fieldName, ['id', 'created_at', 'updated_at', 'deleted_at'])) {
                 continue;
             }
-
             $body[$fieldName] = $this->generateExampleValue($fieldName, $fieldType);
         }
 
         return $body;
     }
 
-    private function generateUpdateBody($modelConfig)
+    /**
+     * Generates the request body for the update operation.
+     *
+     * @param array $modelConfig
+     * @return array
+     */
+    private function generateUpdateBody(array $modelConfig): array
     {
         $body = $this->generateCreateBody($modelConfig);
-
-        // Add id for context in examples
-        $body['id'] = 1;
-
+        $body['id'] = 1; // Add id for context in examples
         return $body;
     }
 
-    private function generateExampleValue($fieldName, $fieldType)
+    /**
+     * Generates an example value based on the field type.
+     *
+     * @param string $fieldName
+     * @param string $fieldType
+     * @return mixed
+     */
+    private function generateExampleValue(string $fieldName, string $fieldType): mixed
     {
         $baseType = explode(':', $fieldType)[0];
 
-        switch ($baseType) {
-            case 'string':
-                return "example_" . $fieldName;
-            case 'text':
-                return "This is an example " . $fieldName . " content.";
-            case 'boolean':
-                return str_contains($fieldType, 'default true') ? true : false;
-            case 'integer':
-            case 'foreignId':
-                return 1;
-            case 'double':
-            case 'decimal':
-                return 10.50;
-            case 'date':
-                return now()->format('Y-m-d');
-            case 'dateTime':
-                return now()->format('Y-m-d H:i:s');
-            default:
-                if (str_contains($fieldType, 'nullable')) {
-                    return null;
-                }
-                return "example_value";
-        }
+        return match ($baseType) {
+            'string' => "example_" . $fieldName,
+            'text' => "This is an example " . $fieldName . " content.",
+            'boolean' => str_contains($fieldType, 'default true') ? true : false,
+            'integer', 'foreignId' => 1,
+            'double', 'decimal' => 10.50,
+            'date' => now()->format('Y-m-d'),
+            'dateTime' => now()->format('Y-m-d H:i:s'),
+            default => str_contains($fieldType, 'nullable') ? null : "example_value",
+        };
     }
 
-    private function generateListResponse($modelName, $modelConfig)
+    /**
+     * Generates the example response for the list operation.
+     *
+     * @param string $modelName
+     * @param array $modelConfig
+     * @return array
+     */
+    private function generateListResponse(string $modelName, array $modelConfig): array
     {
         return [
             'data' => [
                 $this->generateSampleRecord($modelName, $modelConfig, 1),
-                $this->generateSampleRecord($modelName, $modelConfig, 2)
+                $this->generateSampleRecord($modelName, $modelConfig, 2),
             ],
             'meta' => [
                 'current_page' => 1,
                 'per_page' => 15,
                 'total' => 2,
-                'last_page' => 1
-            ]
+                'last_page' => 1,
+            ],
         ];
     }
 
-    private function generateShowResponse($modelName, $modelConfig)
-    {
-        return [
-            'data' => $this->generateSampleRecord($modelName, $modelConfig, 1)
-        ];
-    }
-
-    private function generateCreateResponse($modelName, $modelConfig)
-    {
-        return [
-            'data' => $this->generateSampleRecord($modelName, $modelConfig, 1),
-            'message' => $modelName . ' created successfully'
-        ];
-    }
-
-    private function generateUpdateResponse($modelName, $modelConfig)
+    /**
+     * Generates the example response for the show operation.
+     *
+     * @param string $modelName
+     * @param array $modelConfig
+     * @return array
+     */
+    private function generateShowResponse(string $modelName, array $modelConfig): array
     {
         return [
             'data' => $this->generateSampleRecord($modelName, $modelConfig, 1),
-            'message' => $modelName . ' updated successfully'
         ];
     }
 
-    private function generateDeleteResponse()
+    /**
+     * Generates the example response for the create operation.
+     *
+     * @param string $modelName
+     * @param array $modelConfig
+     * @return array
+     */
+    private function generateCreateResponse(string $modelName, array $modelConfig): array
     {
         return [
-            'message' => 'Resource deleted successfully'
+            'data' => $this->generateSampleRecord($modelName, $modelConfig, 1),
+            'message' => $modelName . ' created successfully',
         ];
     }
 
-    private function generateSampleRecord($modelName, $modelConfig, $id = 1)
+    /**
+     * Generates the example response for the update operation.
+     *
+     * @param string $modelName
+     * @param array $modelConfig
+     * @return array
+     */
+    private function generateUpdateResponse(string $modelName, array $modelConfig): array
+    {
+        return [
+            'data' => $this->generateSampleRecord($modelName, $modelConfig, 1),
+            'message' => $modelName . ' updated successfully',
+        ];
+    }
+
+    /**
+     * Generates the example response for the delete operation.
+     *
+     * @return array
+     */
+    private function generateDeleteResponse(): array
+    {
+        return [
+            'message' => 'Resource deleted successfully',
+        ];
+    }
+
+    /**
+     * Generates a sample record based on the model configuration.
+     *
+     * @param string $modelName
+     * @param array $modelConfig
+     * @param int $id
+     * @return array
+     */
+    private function generateSampleRecord(string $modelName, array $modelConfig, int $id = 1): array
     {
         $record = ['id' => $id];
 
@@ -341,26 +436,39 @@ class GeneratePostmanCollection extends Command
             if ($fieldName === 'deleted_at') {
                 continue; // Skip soft delete field in normal responses
             }
-
             $record[$fieldName] = $this->generateExampleValue($fieldName, $fieldType);
         }
 
-        // Add timestamps
         $record['created_at'] = now()->format('Y-m-d H:i:s');
         $record['updated_at'] = now()->format('Y-m-d H:i:s');
 
-        // Add related data examples for relations
         if (isset($modelConfig['relations'])) {
             foreach ($modelConfig['relations'] as $relationName => $relationConfig) {
                 if ($relationConfig['type'] === 'belongsTo') {
                     $record[$relationName] = [
                         'id' => 1,
-                        'name' => 'Related ' . $relationConfig['model']
+                        'name' => 'Related ' . $relationConfig['model'],
                     ];
                 }
             }
         }
 
         return $record;
+    }
+
+    /**
+     * Saves the generated Postman collection to a JSON file.
+     *
+     * @param string $outputFile
+     * @return void
+     */
+    private function savePostmanCollection(string $outputFile): void
+    {
+        $jsonOutput = json_encode($this->collection, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        File::put($outputFile, $jsonOutput);
+
+        $this->newLine();
+        $this->info("🥵 Postman collection generated successfully: {$outputFile}");
+        $this->info("📊 Generated endpoints for " . count($this->collection['item']) . " models");
     }
 }

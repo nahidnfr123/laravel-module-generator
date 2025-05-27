@@ -13,7 +13,9 @@ class GenerateDbDiagram extends Command
      *
      * @var string
      */
-    protected $signature = 'dbdiagram:generate {--file=module/models.yaml : Path to the YAML schema file} {--output=module/dbdiagram.dbml : Path to the output DBML file}';
+    protected $signature = 'dbdiagram:generate 
+                             {--file=module/models.yaml : Path to the YAML schema file}
+                             {--output=module/dbdiagram.dbml : Path to the output DBML file}';
 
     /**
      * The console command description.
