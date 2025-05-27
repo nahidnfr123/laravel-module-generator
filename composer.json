@@ -1,0 +1,56 @@
+{
+    "name": "nahid-ferdous/laravel-module-generator",
+    "description": "Laravel Package to generate module (service, controller, model, migration, resource, request, collection) from YAML file.",
+    "version": "0.0.1",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "laravel",
+        "laravel package",
+        "module generator",
+        "code generator",
+        "crud generator",
+        "yaml",
+        "scaffolding",
+        "laravel scaffolding",
+        "laravel module",
+        "controller generator",
+        "model generator",
+        "migration generator",
+        "request generator",
+        "resource generator",
+        "service layer",
+        "laravel development tools",
+        "laravel artisan",
+        "php code generation",
+        "laravel automation"
+    ],
+    "authors": [
+        {
+            "name": "Nahid Ferdous",
+            "email": "nahidferdous240@gmail.com",
+            "homepage": "https://nahidferdous.netlify.app/",
+            "role": "Developer"
+        }
+    ],
+    "homepage": "https://github.com/nahidnfr123/laravel-module-generator",
+    "require": {
+        "php": ">=8.1",
+        "illuminate/support": "^10.0|^11.0|^12.0",
+        "symfony/yaml": "^6.0 || ^7.0"
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "NahidFerdous\\LaravelModuleGenerator\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "NahidFerdous\\LaravelModuleGenerator\\Providers\\LaravelModuleGeneratorServiceProvider"
+            ]
+        }
+    }
+}

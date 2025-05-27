@@ -1,0 +1,24 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\{{ model }};
+
+class {{ model }}Service
+{
+    public function getAll()
+    {
+        return {{ model }}::paginate(perPage());
+    }
+
+    public function store($request)
+    {
+        return {{ model }}::create($request);
+    }
+
+    public function update($request, {{ variable }} ${{ variable }})
+    {
+        ${{ variable }}->update($request);
+        return ${{ variable }};
+    }
+}
