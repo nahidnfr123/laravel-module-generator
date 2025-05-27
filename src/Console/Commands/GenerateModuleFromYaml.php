@@ -348,8 +348,8 @@ class GenerateModuleFromYaml extends Command
             return;
         }
 
-        $this->addFillableFields($modelPath, $modelName, $fields);
         $this->addRelationshipMethods($modelPath, $relations);
+        $this->addFillableFields($modelPath, $modelName, $fields);
 
         $this->info("🤫 Fillable fields and relationships added to {$modelName} model");
     }
