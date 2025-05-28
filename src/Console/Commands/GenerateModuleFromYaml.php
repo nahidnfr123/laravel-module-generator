@@ -90,12 +90,12 @@ class GenerateModuleFromYaml extends Command
         //        $generateConfig = $this->normalizeGenerateConfiguration($modelData['generate'] ?? true);
         $this->generateConfig = $this->normalizeGenerateConfiguration($modelData['generate'] ?? true);
 
-        $this->info($this->generateConfig['model']);
-        $this->info($this->generateConfig['migration']);
         $this->generateModelAndMigration($modelConfig);
         $this->generateOptionalFiles($modelConfig);
 
+        $this->newLine();
         $this->info("🤫 Module generated for $modelName");
+        $this->newLine();
         sleep(1);
     }
 
@@ -166,8 +166,6 @@ class GenerateModuleFromYaml extends Command
                 $this->warn("⚠️ Model already exists: {$modelConfig['studlyName']}");
                 return;
             }
-
-            $this->info($this->generateConfig['model']);
 
             if (File::exists($modelPath)) {
                 File::delete($modelPath);
