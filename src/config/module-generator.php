@@ -14,4 +14,3 @@ return [
         'resource' => 'resource.stub',
     ],
 ];
-

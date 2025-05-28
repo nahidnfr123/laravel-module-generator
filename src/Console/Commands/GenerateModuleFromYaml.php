@@ -11,8 +11,8 @@ use Symfony\Component\Yaml\Yaml;
 
 class GenerateModuleFromYaml extends Command
 {
-    protected $signature = 'module:generate 
-                           {--force : Overwrite existing files} 
+    protected $signature = 'module:generate
+                           {--force : Overwrite existing files}
                            {--file= : Path to a YAML file}
                            {--skip-postman : Skip Postman collection generation}
                            {--skip-dbdiagram : Skip DB diagram generation}
@@ -23,213 +23,414 @@ class GenerateModuleFromYaml extends Command
 
     public function handle()
     {
-        $defaultPath = config('module-generator.models_path');
-        $path = $this->option('file') ?? $defaultPath;
-        $force = $this->option('force');
-        $skipPostman = $this->option('skip-postman');
-        $dbDiagram = $this->option('skip-dbdiagram');
+        $this->validateAndGetConfiguration();
 
-        if (!file_exists($path)) {
-            $this->error("YAML file not found at: $path");
-            return CommandAlias::FAILURE;
-        }
-
-        $models = Yaml::parseFile($path);
+        $models = $this->parseYamlFile();
 
         foreach ($models as $modelName => $modelData) {
-            $this->info("Generating files for: $modelName");
-
-            $fields = $modelData['fields'] ?? [];
-            $relations = $modelData['relations'] ?? [];
-
-            $modelName = Str::studly($modelName);
-            $modelVar = Str::camel($modelName);
-            $pluralModel = Str::pluralStudly($modelName);
-            $tableName = Str::snake(Str::plural($modelName));
-
-            $controllerClass = "{$modelName}Controller";
-            $serviceClass = "{$modelName}Service";
-            $collectionClass = "{$modelName}Collection";
-            $resourceClass = "{$modelName}Resource";
-            $requestClass = "{$modelName}Request";
-
-            // Determine what to generate
-            $generate = $modelData['generate'] ?? true;
-            if ($generate === false) {
-                $generate = array_fill_keys(['controller', 'service', 'request', 'resource', 'collection'], false);
-            } elseif ($generate === true) {
-                $generate = array_fill_keys(['controller', 'service', 'request', 'resource', 'collection'], true);
-            } else {
-                // Normalize: ensure all keys are set
-                $generate = array_merge([
-                    'controller' => true,
-                    'service' => true,
-                    'request' => true,
-                    'resource' => true,
-                    'collection' => true,
-                ], $generate);
-            }
-
-            // 1: Model & Migration
-            $modelPath = app_path("Models/{$modelName}.php");
-            $migrationPattern = database_path("migrations/*create_{$tableName}_table.php");
-            $migrationFiles = glob($migrationPattern);
-
-            if (File::exists($modelPath) && !$force) {
-                $this->warn("⚠️ Model already exists: {$modelName}");
-            } else {
-                if (File::exists($modelPath)) {
-                    File::delete($modelPath);
-                    foreach ($migrationFiles as $file) {
-                        File::delete($file);
-                        $this->warn('⚠️ Deleted existing migration: ' . basename($file));
-                    }
-                    $this->warn("⚠️ Deleted existing model: {$modelName}");
-                }
-
-                $this->generateModel($modelName, $fields, $relations);
-
-                // Migration is always generated
-                $uniqueConstraints = [];
-                $this->generateMigration($modelName, $fields, $uniqueConstraints);
-            }
-
-            // 2: Request
-            if ($generate['request']) {
-                $requestPath = app_path("Http/Requests/{$requestClass}.php");
-                if (File::exists($requestPath) && !$force) {
-                    $this->warn("⚠️ Request already exists: {$requestClass}");
-                } else {
-                    File::delete($requestPath);
-                    $this->warn("⚠️ Deleted existing request: {$requestClass}");
-                    $this->generateRequest($modelName, $fields);
-                }
-            }
-
-            // 3: Collection
-            if ($generate['collection']) {
-                $collectionPath = app_path("Http/Resources/{$modelName}/{$collectionClass}.php");
-                if (File::exists($collectionPath) && !$force) {
-                    $this->warn("⚠️ Collection already exists: {$collectionClass}");
-                } else {
-                    File::delete($collectionPath);
-                    $this->warn("⚠️ Deleted existing collection: {$collectionClass}");
-                    $this->generateCollection($modelName, $collectionClass, $modelVar);
-                }
-            }
-
-            // 4: Resource
-            if ($generate['resource']) {
-                $resourcePath = app_path("Http/Resources/{$modelName}/{$resourceClass}.php");
-                if (File::exists($resourcePath) && !$force) {
-                    $this->warn("⚠️ Resource already exists: {$resourceClass}");
-                } else {
-                    File::delete($resourcePath);
-                    $this->warn("⚠️ Deleted existing resource: {$resourceClass}");
-                    $this->call('make:resource', ['name' => "{$modelName}/{$resourceClass}"]);
-                }
-            }
-
-            // 5: Service
-            if ($generate['service']) {
-                $servicePath = app_path("Services/{$serviceClass}.php");
-                if (File::exists($servicePath) && !$force) {
-                    $this->warn("⚠️ Service already exists: {$serviceClass}");
-                } else {
-                    File::delete($servicePath);
-                    $this->warn("⚠️ Deleted existing service: {$serviceClass}");
-                    $this->generateService($serviceClass, $modelName, $modelVar);
-                }
-            }
-
-            // 6: Controller
-            if ($generate['controller']) {
-                $controllerPath = app_path("Http/Controllers/{$controllerClass}.php");
-                if (File::exists($controllerPath) && !$force) {
-                    $this->warn("⚠️ Controller already exists: {$controllerClass}");
-                } else {
-                    File::delete($controllerPath);
-                    $this->warn("⚠️ Deleted existing controller: {$controllerClass}");
-                    $this->generateController($controllerClass, $modelName, $modelVar, $pluralModel);
-                }
-
-                // Append route only if controller exists
-                $this->appendRoute($tableName, $controllerClass);
-            }
-
-            $this->info("🤫 Module generated for $modelName");
-            sleep(1);
+            $this->processModel($modelName, $modelData);
         }
 
-        // Generate Postman Collection at the end (unless skipped)
-        if (!$skipPostman) {
-            $this->newLine();
-            $this->info("🚀 Generating Postman collection...");
+        $this->generateAdditionalFiles();
 
-            $baseUrl = $this->option('postman-base-url');
-            $prefix = $this->option('postman-prefix');
-
-            $result = $this->call('postman:generate', [
-                '--file' => $path,
-                '--base-url' => $baseUrl,
-                '--prefix' => $prefix
-            ]);
-
-            if ($result === CommandAlias::SUCCESS) {
-                $this->newLine();
-                $this->info("🥵 Postman collection generated successfully!");
-            } else {
-                $this->warn("⚠️ Failed to generate Postman collection");
-            }
-        }
-
-        // Generate DB diagram if not skipped
-        if (!$dbDiagram) {
-            $this->newLine();
-            $this->info("🚀 Generating DB diagram...");
-
-            $result = $this->call('dbdiagram:generate', [
-                '--file' => $path,
-                '--output' => 'module/dbdiagram.dbml',
-            ]);
-
-            if ($result === CommandAlias::SUCCESS) {
-                $this->newLine();
-                $this->info("🤧 DB diagram generated successfully at module/dbdiagram.dbml");
-            } else {
-                $this->warn("⚠️ Failed to generate DB diagram");
-            }
-        }
-
-        $this->newLine();
-        $this->info("🎉 All modules generated successfully!");
+        $this->displaySuccessMessage();
 
         return CommandAlias::SUCCESS;
     }
 
+    /**
+     * Validate options and get configuration
+     */
+    private function validateAndGetConfiguration(): array
+    {
+        $defaultPath = config('module-generator.models_path');
+        $path = $this->option('file') ?? $defaultPath;
+
+        if (! file_exists($path)) {
+            $this->error("YAML file not found at: $path");
+            exit(CommandAlias::FAILURE);
+        }
+
+        return [
+            'path' => $path,
+            'force' => $this->option('force'),
+            'skipPostman' => $this->option('skip-postman'),
+            'skipDbDiagram' => $this->option('skip-dbdiagram'),
+        ];
+    }
+
+    /**
+     * Parse the YAML configuration file
+     */
+    private function parseYamlFile(): array
+    {
+        $config = $this->validateAndGetConfiguration();
+
+        return Yaml::parseFile($config['path']);
+    }
+
+    /**
+     * Process a single model from the YAML configuration
+     */
+    private function processModel(string $modelName, array $modelData): void
+    {
+        $this->info("Generating files for: $modelName");
+
+        $modelConfig = $this->buildModelConfiguration($modelName, $modelData);
+        $generateConfig = $this->normalizeGenerateConfiguration($modelData['generate'] ?? true);
+
+        $this->generateModelAndMigration($modelConfig);
+        $this->generateOptionalFiles($modelConfig, $generateConfig);
+
+        $this->info("🤫 Module generated for $modelName");
+        sleep(1);
+    }
+
+    /**
+     * Build configuration object for a model
+     */
+    private function buildModelConfiguration(string $modelName, array $modelData): array
+    {
+        $studlyModelName = Str::studly($modelName);
+
+        return [
+            'originalName' => $modelName,
+            'studlyName' => $studlyModelName,
+            'camelName' => Str::camel($studlyModelName),
+            'pluralStudlyName' => Str::pluralStudly($studlyModelName),
+            'tableName' => Str::snake(Str::plural($studlyModelName)),
+            'fields' => $modelData['fields'] ?? [],
+            'relations' => $modelData['relations'] ?? [],
+            'classes' => [
+                'controller' => "{$studlyModelName}Controller",
+                'service' => "{$studlyModelName}Service",
+                'collection' => "{$studlyModelName}Collection",
+                'resource' => "{$studlyModelName}Resource",
+                'request' => "{$studlyModelName}Request",
+            ],
+        ];
+    }
+
+    /**
+     * Normalize the generate configuration to ensure all keys are present
+     */
+    private function normalizeGenerateConfiguration($generate): array
+    {
+        $defaultGenerate = [
+            'controller' => true,
+            'service' => true,
+            'request' => true,
+            'resource' => true,
+            'collection' => true,
+        ];
+
+        if ($generate === false) {
+            return array_fill_keys(array_keys($defaultGenerate), false);
+        }
+
+        if ($generate === true) {
+            return $defaultGenerate;
+        }
+
+        return array_merge($defaultGenerate, $generate);
+    }
+
+    /**
+     * Generate model and migration files
+     */
+    private function generateModelAndMigration(array $modelConfig): void
+    {
+        $modelPath = app_path("Models/{$modelConfig['studlyName']}.php");
+        $migrationPattern = database_path("migrations/*create_{$modelConfig['tableName']}_table.php");
+        $migrationFiles = glob($migrationPattern);
+        $force = $this->option('force');
+
+        if (File::exists($modelPath) && ! $force) {
+            $this->warn("⚠️ Model already exists: {$modelConfig['studlyName']}");
+
+            return;
+        }
+
+        if (File::exists($modelPath)) {
+            $this->deleteExistingModelFiles($modelPath, $migrationFiles, $modelConfig['studlyName']);
+        }
+
+        $this->generateModel($modelConfig['studlyName'], $modelConfig['fields'], $modelConfig['relations']);
+        $this->generateMigration($modelConfig['studlyName'], $modelConfig['fields']);
+    }
+
+    /**
+     * Delete existing model and migration files
+     */
+    private function deleteExistingModelFiles(string $modelPath, array $migrationFiles, string $modelName): void
+    {
+        File::delete($modelPath);
+        $this->warn("⚠️ Deleted existing model: {$modelName}");
+
+        foreach ($migrationFiles as $file) {
+            File::delete($file);
+            $this->warn('⚠️ Deleted existing migration: '.basename($file));
+        }
+    }
+
+    /**
+     * Generate optional files based on configuration
+     */
+    private function generateOptionalFiles(array $modelConfig, array $generateConfig): void
+    {
+        $force = $this->option('force');
+
+        if ($generateConfig['request']) {
+            $this->handleRequestGeneration($modelConfig, $force);
+        }
+
+        if ($generateConfig['collection']) {
+            $this->handleCollectionGeneration($modelConfig, $force);
+        }
+
+        if ($generateConfig['resource']) {
+            $this->handleResourceGeneration($modelConfig, $force);
+        }
+
+        if ($generateConfig['service']) {
+            $this->handleServiceGeneration($modelConfig, $force);
+        }
+
+        if ($generateConfig['controller']) {
+            $this->handleControllerGeneration($modelConfig, $force);
+            $this->appendRoute($modelConfig['tableName'], $modelConfig['classes']['controller']);
+        }
+    }
+
+    /**
+     * Handle request file generation
+     */
+    private function handleRequestGeneration(array $modelConfig, bool $force): void
+    {
+        $requestPath = app_path("Http/Requests/{$modelConfig['classes']['request']}.php");
+
+        if (File::exists($requestPath) && ! $force) {
+            $this->warn("⚠️ Request already exists: {$modelConfig['classes']['request']}");
+
+            return;
+        }
+
+        if (File::exists($requestPath)) {
+            File::delete($requestPath);
+            $this->warn("⚠️ Deleted existing request: {$modelConfig['classes']['request']}");
+        }
+
+        $this->generateRequest($modelConfig['studlyName'], $modelConfig['fields']);
+    }
+
+    /**
+     * Handle collection file generation
+     */
+    private function handleCollectionGeneration(array $modelConfig, bool $force): void
+    {
+        $collectionPath = app_path("Http/Resources/{$modelConfig['studlyName']}/{$modelConfig['classes']['collection']}.php");
+
+        if (File::exists($collectionPath) && ! $force) {
+            $this->warn("⚠️ Collection already exists: {$modelConfig['classes']['collection']}");
+
+            return;
+        }
+
+        if (File::exists($collectionPath)) {
+            File::delete($collectionPath);
+            $this->warn("⚠️ Deleted existing collection: {$modelConfig['classes']['collection']}");
+        }
+
+        $this->generateCollection($modelConfig['studlyName'], $modelConfig['classes']['collection'], $modelConfig['camelName']);
+    }
+
+    /**
+     * Handle resource file generation
+     */
+    private function handleResourceGeneration(array $modelConfig, bool $force): void
+    {
+        $resourcePath = app_path("Http/Resources/{$modelConfig['studlyName']}/{$modelConfig['classes']['resource']}.php");
+
+        if (File::exists($resourcePath) && ! $force) {
+            $this->warn("⚠️ Resource already exists: {$modelConfig['classes']['resource']}");
+
+            return;
+        }
+
+        if (File::exists($resourcePath)) {
+            File::delete($resourcePath);
+            $this->warn("⚠️ Deleted existing resource: {$modelConfig['classes']['resource']}");
+        }
+
+        $this->call('make:resource', ['name' => "{$modelConfig['studlyName']}/{$modelConfig['classes']['resource']}"]);
+    }
+
+    /**
+     * Handle service file generation
+     */
+    private function handleServiceGeneration(array $modelConfig, bool $force): void
+    {
+        $servicePath = app_path("Services/{$modelConfig['classes']['service']}.php");
+
+        if (File::exists($servicePath) && ! $force) {
+            $this->warn("⚠️ Service already exists: {$modelConfig['classes']['service']}");
+
+            return;
+        }
+
+        if (File::exists($servicePath)) {
+            File::delete($servicePath);
+            $this->warn("⚠️ Deleted existing service: {$modelConfig['classes']['service']}");
+        }
+
+        $this->generateService($modelConfig['classes']['service'], $modelConfig['studlyName'], $modelConfig['camelName']);
+    }
+
+    /**
+     * Handle controller file generation
+     */
+    private function handleControllerGeneration(array $modelConfig, bool $force): void
+    {
+        $controllerPath = app_path("Http/Controllers/{$modelConfig['classes']['controller']}.php");
+
+        if (File::exists($controllerPath) && ! $force) {
+            $this->warn("⚠️ Controller already exists: {$modelConfig['classes']['controller']}");
+
+            return;
+        }
+
+        if (File::exists($controllerPath)) {
+            File::delete($controllerPath);
+            $this->warn("⚠️ Deleted existing controller: {$modelConfig['classes']['controller']}");
+        }
+
+        $this->generateController(
+            $modelConfig['classes']['controller'],
+            $modelConfig['studlyName'],
+            $modelConfig['camelName'],
+            $modelConfig['pluralStudlyName']
+        );
+    }
+
+    /**
+     * Generate additional files like Postman collection and DB diagram
+     */
+    private function generateAdditionalFiles(): void
+    {
+        $config = $this->validateAndGetConfiguration();
+
+        if (! $config['skipPostman']) {
+            $this->generatePostmanCollection($config['path']);
+        }
+
+        if (! $config['skipDbDiagram']) {
+            $this->generateDbDiagram($config['path']);
+        }
+    }
+
+    /**
+     * Generate Postman collection
+     */
+    private function generatePostmanCollection(string $path): void
+    {
+        $this->newLine();
+        $this->info('🚀 Generating Postman collection...');
+
+        $baseUrl = $this->option('postman-base-url');
+        $prefix = $this->option('postman-prefix');
+
+        $result = $this->call('postman:generate', [
+            '--file' => $path,
+            '--base-url' => $baseUrl,
+            '--prefix' => $prefix,
+        ]);
+
+        if ($result === CommandAlias::SUCCESS) {
+            $this->newLine();
+            $this->info('🥵 Postman collection generated successfully!');
+        } else {
+            $this->warn('⚠️ Failed to generate Postman collection');
+        }
+    }
+
+    /**
+     * Generate database diagram
+     */
+    private function generateDbDiagram(string $path): void
+    {
+        $this->newLine();
+        $this->info('🚀 Generating DB diagram...');
+
+        $result = $this->call('dbdiagram:generate', [
+            '--file' => $path,
+            '--output' => 'module/dbdiagram.dbml',
+        ]);
+
+        if ($result === CommandAlias::SUCCESS) {
+            $this->newLine();
+            $this->info('🤧 DB diagram generated successfully at module/dbdiagram.dbml');
+        } else {
+            $this->warn('⚠️ Failed to generate DB diagram');
+        }
+    }
+
+    /**
+     * Display final success message
+     */
+    private function displaySuccessMessage(): void
+    {
+        $this->newLine();
+        $this->info('🎉 All modules generated successfully!');
+    }
+
+    /**
+     * Generate model file with fillable fields and relationships
+     */
     protected function generateModel(string $modelName, array $fields, array $relations = []): void
     {
         Artisan::call('make:model', ['name' => $modelName, '--migration' => true]);
 
         $modelPath = app_path("Models/{$modelName}.php");
-        if (!File::exists($modelPath)) {
+        if (! File::exists($modelPath)) {
             $this->warn("⚠️ Model file not found for: {$modelName}");
+
             return;
         }
 
-        // Fillable properties
-        $fillableFields = array_map(fn($field) => "        '{$field}'", array_keys($fields));
-        $fillableArray = "protected \$fillable = [\n" . implode(",\n", $fillableFields) . ",\n    ];";
+        $fillableArray = $this->buildFillableArray($fields);
+        $relationshipMethods = $this->buildRelationshipMethods($relations);
 
-        // Relationships
+        $this->insertModelContent($modelPath, $modelName, $fillableArray, $relationshipMethods);
+
+        $this->info("🤫 Fillable fields and relationships added to {$modelName} model");
+    }
+
+    /**
+     * Build fillable array string for model
+     */
+    private function buildFillableArray(array $fields): string
+    {
+        $fillableFields = array_map(fn ($field) => "        '{$field}'", array_keys($fields));
+
+        return "protected \$fillable = [\n".implode(",\n", $fillableFields).",\n    ];";
+    }
+
+    /**
+     * Build relationship methods for model
+     */
+    private function buildRelationshipMethods(array $relations): string
+    {
+        if (empty($relations)) {
+            return '';
+        }
+
         $relationshipMethods = '';
-        if ($relations && count($relations)) {
-            foreach ($relations as $relationName => $meta) {
-                $relationName = Str::camel($relationName);
-                $type = $meta['type'];
-                $relatedModel = $meta['model'];
+        foreach ($relations as $relationName => $meta) {
+            $relationName = Str::camel($relationName);
+            $type = $meta['type'];
+            $relatedModel = $meta['model'];
 
-                $relationshipMethods .= <<<PHP
+            $relationshipMethods .= <<<PHP
 
 
     public function {$relationName}()
@@ -237,109 +438,192 @@ class GenerateModuleFromYaml extends Command
         return \$this->{$type}({$relatedModel}::class);
     }
 PHP;
-            }
         }
+
+        return $relationshipMethods;
+    }
+
+    /**
+     * Insert fillable and relationship content into model file
+     */
+    private function insertModelContent(string $modelPath, string $modelName, string $fillableArray, string $relationshipMethods): void
+    {
         $modelContent = File::get($modelPath);
 
-        // Insert fillable and relationships after class declaration
         $modelContent = preg_replace(
-            '/(class\s+' . $modelName . '\s+extends\s+Model\s*\{)/',
+            '/(class\s+'.$modelName.'\s+extends\s+Model\s*\{)/',
             "$1\n\n    {$fillableArray}\n{$relationshipMethods}\n",
             $modelContent
         );
 
         File::put($modelPath, $modelContent);
-        $this->info("🤫 Fillable fields and relationships added to {$modelName} model");
     }
 
+    /**
+     * Generate migration file with field definitions
+     */
     protected function generateMigration(string $modelName, array $fields, array $uniqueConstraints = []): void
     {
         $tableName = Str::snake(Str::pluralStudly($modelName));
-        $files = glob(database_path('migrations/*create_' . $tableName . '_table.php'));
+        $migrationFiles = glob(database_path('migrations/*create_'.$tableName.'_table.php'));
 
-        if (empty($files)) {
+        if (empty($migrationFiles)) {
             $this->warn("Migration file not found for $modelName.");
+
             return;
         }
 
-        $migrationFile = $files[0];
-        $migrationContent = file_get_contents($migrationFile);
+        $migrationFile = $migrationFiles[0];
+        $fieldStub = $this->buildMigrationFields($fields, $uniqueConstraints);
 
+        $this->updateMigrationFile($migrationFile, $fieldStub);
+
+        $this->info("✅ Migration file updated for $modelName");
+    }
+
+    /**
+     * Build field definitions for migration
+     */
+    private function buildMigrationFields(array $fields, array $uniqueConstraints): string
+    {
         $fieldStub = '';
 
         foreach ($fields as $name => $definition) {
-            $parts = explode(':', $definition);
-            $type = array_shift($parts);
+            $fieldStub .= $this->buildSingleFieldDefinition($name, $definition).";\n            ";
+        }
 
-            $modifiers = [];
-            $references = null;
+        $fieldStub .= $this->buildUniqueConstraints($uniqueConstraints);
 
-            if ($type === 'foreignId') {
-                $references = array_shift($parts);
+        return $fieldStub;
+    }
 
-                foreach ($parts as $modifier) {
-                    $modifiers[] = $modifier;
-                }
+    /**
+     * Build a single field definition for migration
+     */
+    private function buildSingleFieldDefinition(string $name, string $definition): string
+    {
+        $parts = explode(':', $definition);
+        $type = array_shift($parts);
 
-                $line = "\$table->{$type}('$name')";
+        if ($type === 'foreignId') {
+            return $this->buildForeignIdField($name, $parts);
+        }
 
-                foreach ($modifiers as $modifier) {
-                    if (str_starts_with($modifier, 'default(')) {
-                        $line .= "->{$modifier}";
-                    } else {
-                        $line .= "->$modifier()";
-                    }
-                }
+        return $this->buildRegularField($name, $type, $parts);
+    }
 
-                $line .= "->constrained('$references')->cascadeOnDelete()";
+    /**
+     * Build foreign ID field definition
+     */
+    private function buildForeignIdField(string $name, array $parts): string
+    {
+        $references = array_shift($parts);
+        $modifiers = $parts;
+
+        $line = "\$table->foreignId('$name')";
+
+        foreach ($modifiers as $modifier) {
+            if (str_starts_with($modifier, 'default(')) {
+                $line .= "->{$modifier}";
             } else {
-                $line = "\$table->$type('$name')";
-
-                foreach ($parts as $modifier) {
-                    if (str_starts_with($modifier, 'default(')) {
-                        $line .= "->{$modifier}";
-                    } elseif (str_starts_with($modifier, 'default')) {
-                        $value = trim(str_replace('default', '', $modifier), ':');
-                        $value = trim($value);
-
-                        if (strtolower($value) === 'null') {
-                            $line .= '->default(null)';
-                        } elseif (in_array(strtolower($value), ['true', 'false'], true)) {
-                            $line .= '->default(' . $value . ')';
-                        } elseif (is_numeric($value)) {
-                            $line .= "->default($value)";
-                        } else {
-                            $value = trim($value, "'\"");
-                            $line .= "->default('$value')";
-                        }
-                    } elseif ($modifier === 'nullable') {
-                        $line .= '->nullable()';
-                    } elseif ($modifier === 'unique') {
-                        $line .= '->unique()';
-                    }
-                }
-            }
-
-            $fieldStub .= $line . ";\n            ";
-        }
-
-        if (!empty($uniqueConstraints)) {
-            foreach ($uniqueConstraints as $columns) {
-                if (is_array($columns)) {
-                    $cols = implode("', '", $columns);
-                    $fieldStub .= "\$table->unique(['$cols']);\n            ";
-                } elseif (is_string($columns)) {
-                    $fieldStub .= "\$table->unique('$columns');\n            ";
-                }
+                $line .= "->$modifier()";
             }
         }
+
+        return $line."->constrained('$references')->cascadeOnDelete()";
+    }
+
+    /**
+     * Build regular field definition
+     */
+    private function buildRegularField(string $name, string $type, array $parts): string
+    {
+        $line = "\$table->$type('$name')";
+
+        foreach ($parts as $modifier) {
+            $line .= $this->processFieldModifier($modifier);
+        }
+
+        return $line;
+    }
+
+    /**
+     * Process individual field modifier
+     */
+    private function processFieldModifier(string $modifier): string
+    {
+        if (str_starts_with($modifier, 'default(')) {
+            return "->{$modifier}";
+        }
+
+        if (str_starts_with($modifier, 'default')) {
+            return $this->processDefaultModifier($modifier);
+        }
+
+        if (in_array($modifier, ['nullable', 'unique'])) {
+            return "->$modifier()";
+        }
+
+        return '';
+    }
+
+    /**
+     * Process default modifier with value
+     */
+    private function processDefaultModifier(string $modifier): string
+    {
+        $value = trim(str_replace('default', '', $modifier), ':');
+        $value = trim($value);
+
+        if (strtolower($value) === 'null') {
+            return '->default(null)';
+        }
+
+        if (in_array(strtolower($value), ['true', 'false'], true)) {
+            return '->default('.$value.')';
+        }
+
+        if (is_numeric($value)) {
+            return "->default($value)";
+        }
+
+        $value = trim($value, "'\"");
+
+        return "->default('$value')";
+    }
+
+    /**
+     * Build unique constraints for migration
+     */
+    private function buildUniqueConstraints(array $uniqueConstraints): string
+    {
+        $constraintStub = '';
+
+        foreach ($uniqueConstraints as $columns) {
+            if (is_array($columns)) {
+                $cols = implode("', '", $columns);
+                $constraintStub .= "\$table->unique(['$cols']);\n            ";
+            } elseif (is_string($columns)) {
+                $constraintStub .= "\$table->unique('$columns');\n            ";
+            }
+        }
+
+        return $constraintStub;
+    }
+
+    /**
+     * Update migration file with field definitions
+     */
+    private function updateMigrationFile(string $migrationFile, string $fieldStub): void
+    {
+        $migrationContent = file_get_contents($migrationFile);
 
         $migrationContent = preg_replace_callback(
             '/Schema::create\([^)]+function\s*\(Blueprint\s*\$table\)\s*{(.*?)(\$table->id\(\);)/s',
             function ($matches) use ($fieldStub) {
                 return str_replace(
                     $matches[2],
-                    $matches[2] . "\n            " . $fieldStub,
+                    $matches[2]."\n            ".$fieldStub,
                     $matches[0]
                 );
             },
@@ -347,78 +631,95 @@ PHP;
         );
 
         file_put_contents($migrationFile, $migrationContent);
-        $this->info("✅ Migration file updated for $modelName");
     }
 
-    protected function parseModifiers(array $parts): array
-    {
-        $modifiers = [];
-
-        foreach ($parts as $i => $iValue) {
-            if ($iValue === 'default' && isset($parts[$i + 1])) {
-                $modifiers[] = 'default:' . $parts[++$i];
-            } else {
-                $modifiers[] = $iValue;
-            }
-        }
-
-        return $modifiers;
-    }
-
+    /**
+     * Generate form request with validation rules
+     */
     protected function generateRequest(string $modelName, array $fields): void
     {
         $requestClass = "{$modelName}Request";
         $requestPath = app_path("Http/Requests/{$requestClass}.php");
         $stubPath = $this->resolveStubPath('request');
 
-        if (!File::exists($stubPath)) {
+        if (! File::exists($stubPath)) {
             $this->error("Request stub not found: {$stubPath}");
+
             return;
         }
 
-        // Generate validation rules
+        $rulesFormatted = $this->buildValidationRules($fields);
+        $this->createRequestFile($stubPath, $requestPath, $modelName, $rulesFormatted);
+
+        $this->info("🤫 Form Request created with validation: {$requestClass}");
+    }
+
+    /**
+     * Build validation rules for request
+     */
+    private function buildValidationRules(array $fields): string
+    {
         $rules = [];
 
         foreach ($fields as $name => $definition) {
-            $parts = explode(':', $definition);
-            $type = array_shift($parts);
-
-            $isNullable = in_array('nullable', $parts);
-            $ruleSet = [];
-
-            $ruleSet[] = $isNullable ? 'nullable' : 'required';
-
-            switch ($type) {
-                case 'string':
-                case 'text':
-                    $ruleSet[] = 'string';
-                    break;
-                case 'integer':
-                    $ruleSet[] = 'integer';
-                    break;
-                case 'decimal':
-                    $ruleSet[] = 'numeric';
-                    break;
-                case 'boolean':
-                    $ruleSet[] = 'boolean';
-                    break;
-                case 'foreignId':
-                    $relatedTable = $parts[0] ?? Str::snake(Str::pluralStudly(Str::beforeLast($name, '_id')));
-                    $ruleSet[] = 'exists:' . $relatedTable . ',id';
-                    break;
-            }
-
-            $rules[$name] = implode('|', $ruleSet);
+            $rules[$name] = $this->generateFieldValidationRule($name, $definition);
         }
 
-        // Format rules as string
+        return $this->formatValidationRules($rules);
+    }
+
+    /**
+     * Generate validation rule for a single field
+     */
+    private function generateFieldValidationRule(string $name, string $definition): string
+    {
+        $parts = explode(':', $definition);
+        $type = array_shift($parts);
+        $isNullable = in_array('nullable', $parts);
+
+        $ruleSet = [$isNullable ? 'nullable' : 'required'];
+
+        switch ($type) {
+            case 'string':
+            case 'text':
+                $ruleSet[] = 'string';
+                break;
+            case 'integer':
+                $ruleSet[] = 'integer';
+                break;
+            case 'decimal':
+                $ruleSet[] = 'numeric';
+                break;
+            case 'boolean':
+                $ruleSet[] = 'boolean';
+                break;
+            case 'foreignId':
+                $relatedTable = $parts[0] ?? Str::snake(Str::pluralStudly(Str::beforeLast($name, '_id')));
+                $ruleSet[] = 'exists:'.$relatedTable.',id';
+                break;
+        }
+
+        return implode('|', $ruleSet);
+    }
+
+    /**
+     * Format validation rules as string
+     */
+    private function formatValidationRules(array $rules): string
+    {
         $rulesFormatted = '';
         foreach ($rules as $field => $rule) {
             $rulesFormatted .= "            '{$field}' => '{$rule}',\n";
         }
-        $rulesFormatted = rtrim($rulesFormatted, "\n");
 
-        // Replace placeholders in stub
+        return rtrim($rulesFormatted, "\n");
+    }
+
+    /**
+     * Create request file from stub
+     */
+    private function createRequestFile(string $stubPath, string $requestPath, string $modelName, string $rulesFormatted): void
+    {
         $stub = File::get($stubPath);
         $stub = str_replace(
             ['{{ model }}', '{{ rules }}'],
@@ -427,17 +728,20 @@ PHP;
         );
 
         File::put($requestPath, $stub);
-        $this->info("🤫 Form Request created with validation: {$requestClass}");
     }
 
+    /**
+     * Generate service class
+     */
     protected function generateService(string $serviceClass, string $modelName, string $modelVar): void
     {
         $serviceDir = app_path('Services');
         $path = "{$serviceDir}/{$serviceClass}.php";
         $stubPath = $this->resolveStubPath('service');
 
-        if (!File::exists($stubPath)) {
+        if (! File::exists($stubPath)) {
             $this->error("Service stub not found: {$stubPath}");
+
             return;
         }
 
@@ -454,6 +758,9 @@ PHP;
         $this->info("🤫 Service created: {$serviceClass}");
     }
 
+    /**
+     * Generate controller class
+     */
     protected function generateController(string $controllerClass, string $modelName, string $modelVar, string $pluralModel): void
     {
         $path = app_path("Http/Controllers/{$controllerClass}.php");
@@ -465,9 +772,13 @@ PHP;
             [$controllerClass, $modelName, $modelVar, $pluralModel, Str::snake($modelName)],
             File::get($stubPath)
         ));
+
         $this->info("🤫 Controller created: $controllerClass");
     }
 
+    /**
+     * Generate resource collection class
+     */
     protected function generateCollection(string $modelName, string $collectionClass, string $modelVar): void
     {
         $dir = app_path("Http/Resources/{$modelName}");
@@ -480,15 +791,19 @@ PHP;
             [$modelName, $modelVar],
             File::get($stubPath)
         ));
+
         $this->info('🤫 Collection created.');
     }
 
+    /**
+     * Append API route to routes file
+     */
     protected function appendRoute(string $tableName, string $controllerClass): void
     {
         $routeLine = "Route::apiResource('{$tableName}', \\App\\Http\\Controllers\\{$controllerClass}::class);";
         $apiRoutesPath = base_path('routes/api.php');
 
-        if (!Str::contains(File::get($apiRoutesPath), $routeLine)) {
+        if (! Str::contains(File::get($apiRoutesPath), $routeLine)) {
             File::append($apiRoutesPath, "\n{$routeLine}\n");
             $this->info('🤫 API route added.');
         } else {
@@ -496,16 +811,19 @@ PHP;
         }
     }
 
+    /**
+     * Resolve the path to a stub file
+     */
     protected function resolveStubPath(string $stubKey): string
     {
         $config = config('module-generator');
-        if (!$config || !isset($config['stubs'])) {
+        if (! $config || ! isset($config['stubs'])) {
             throw new \RuntimeException('Module generator stubs configuration not found.');
         }
 
         $stubFile = $config['stubs'][$stubKey] ?? null;
 
-        if (!$stubFile) {
+        if (! $stubFile) {
             throw new \InvalidArgumentException("Stub not defined for key: {$stubKey}");
         }
 
@@ -515,9 +833,9 @@ PHP;
             return $publishedPath;
         }
 
-        $fallbackPath = __DIR__ . '/../../stubs/' . $stubFile;
+        $fallbackPath = __DIR__.'/../../stubs/'.$stubFile;
 
-        if (!file_exists($fallbackPath)) {
+        if (! file_exists($fallbackPath)) {
             throw new \RuntimeException("Stub file not found at fallback path: {$fallbackPath}");
         }
 

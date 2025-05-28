@@ -34,8 +34,9 @@ class GenerateDbDiagram extends Command
         $yamlFilePath = $this->option('file') ?? config('module-generator.models_path', 'module/models.yaml');
         $outputFilePath = $this->option('output');
 
-        if (!file_exists($yamlFilePath)) {
+        if (! file_exists($yamlFilePath)) {
             $this->error("File not found: $yamlFilePath");
+
             return Command::FAILURE;
         }
 
@@ -53,16 +54,13 @@ class GenerateDbDiagram extends Command
         }
 
         file_put_contents($outputFilePath, $dbmlOutput);
-        $this->info("DB diagram generated at: " . $outputFilePath);
+        $this->info('DB diagram generated at: '.$outputFilePath);
+
         return Command::SUCCESS;
     }
 
     /**
      * Generates the DBML definition for a single table.
-     *
-     * @param string $tableName
-     * @param array $tableDefinition
-     * @return string
      */
     protected function generateTableDefinition(string $tableName, array $tableDefinition): string
     {
@@ -75,15 +73,12 @@ class GenerateDbDiagram extends Command
         }
 
         $output .= "}\n\n";
+
         return $output;
     }
 
     /**
      * Parses a single field definition from the YAML schema.
-     *
-     * @param string $fieldName
-     * @param array|string $fieldDefinition
-     * @return string
      */
     protected function parseField(string $fieldName, array|string $fieldDefinition): string
     {
@@ -109,9 +104,6 @@ class GenerateDbDiagram extends Command
 
     /**
      * Maps Laravel migration field types to DBML types.
-     *
-     * @param string|null $laravelType
-     * @return string
      */
     protected function mapFieldType(?string $laravelType): string
     {
@@ -131,10 +123,6 @@ class GenerateDbDiagram extends Command
 
     /**
      * Generates the DBML relationship definitions for a table.
-     *
-     * @param string $tableName
-     * @param array $tableDefinition
-     * @return string
      */
     protected function generateRelationships(string $tableName, array $tableDefinition): string
     {
@@ -142,16 +130,12 @@ class GenerateDbDiagram extends Command
         foreach ($tableDefinition['relations'] ?? [] as $relationName => $relation) {
             $output .= $this->parseRelation($tableName, $relationName, $relation);
         }
+
         return $output;
     }
 
     /**
      * Parses a single relationship definition from the YAML schema.
-     *
-     * @param string $fromTable
-     * @param string $relationName
-     * @param array $relation
-     * @return string
      */
     protected function parseRelation(string $fromTable, string $relationName, array $relation): string
     {
@@ -160,12 +144,13 @@ class GenerateDbDiagram extends Command
             'updater' => 'updated_by',
         ];
 
-        $foreignKey = $columnOverrides[$relationName] ?? ($relationName . '_id');
+        $foreignKey = $columnOverrides[$relationName] ?? ($relationName.'_id');
         $fromTableName = Str::snake(Str::pluralStudly($fromTable));
 
         if ($relation['type'] === 'belongsTo') {
             $targetModel = $relation['model'];
             $targetTableName = Str::snake(Str::pluralStudly($targetModel));
+
             return "Ref: $fromTableName.$foreignKey > $targetTableName.id\n";
         }
 

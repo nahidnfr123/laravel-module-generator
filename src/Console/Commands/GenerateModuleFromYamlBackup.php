@@ -29,8 +29,9 @@ class GenerateModuleFromYamlBackup extends Command
         $skipPostman = $this->option('skip-postman');
         $dbDiagram = $this->option('skip-dbdiagram');
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             $this->error("YAML file not found at: $path");
+
             return CommandAlias::FAILURE;
         }
 
@@ -75,14 +76,14 @@ class GenerateModuleFromYamlBackup extends Command
             $migrationPattern = database_path("migrations/*create_{$tableName}_table.php");
             $migrationFiles = glob($migrationPattern);
 
-            if (File::exists($modelPath) && !$force) {
+            if (File::exists($modelPath) && ! $force) {
                 $this->warn("⚠️ Model already exists: {$modelName}");
             } else {
                 if (File::exists($modelPath)) {
                     File::delete($modelPath);
                     foreach ($migrationFiles as $file) {
                         File::delete($file);
-                        $this->warn('⚠️ Deleted existing migration: ' . basename($file));
+                        $this->warn('⚠️ Deleted existing migration: '.basename($file));
                     }
                     $this->warn("⚠️ Deleted existing model: {$modelName}");
                 }
@@ -97,7 +98,7 @@ class GenerateModuleFromYamlBackup extends Command
             // 2: Request
             if ($generate['request']) {
                 $requestPath = app_path("Http/Requests/{$requestClass}.php");
-                if (File::exists($requestPath) && !$force) {
+                if (File::exists($requestPath) && ! $force) {
                     $this->warn("⚠️ Request already exists: {$requestClass}");
                 } else {
                     File::delete($requestPath);
@@ -109,7 +110,7 @@ class GenerateModuleFromYamlBackup extends Command
             // 3: Collection
             if ($generate['collection']) {
                 $collectionPath = app_path("Http/Resources/{$modelName}/{$collectionClass}.php");
-                if (File::exists($collectionPath) && !$force) {
+                if (File::exists($collectionPath) && ! $force) {
                     $this->warn("⚠️ Collection already exists: {$collectionClass}");
                 } else {
                     File::delete($collectionPath);
@@ -121,7 +122,7 @@ class GenerateModuleFromYamlBackup extends Command
             // 4: Resource
             if ($generate['resource']) {
                 $resourcePath = app_path("Http/Resources/{$modelName}/{$resourceClass}.php");
-                if (File::exists($resourcePath) && !$force) {
+                if (File::exists($resourcePath) && ! $force) {
                     $this->warn("⚠️ Resource already exists: {$resourceClass}");
                 } else {
                     File::delete($resourcePath);
@@ -133,7 +134,7 @@ class GenerateModuleFromYamlBackup extends Command
             // 5: Service
             if ($generate['service']) {
                 $servicePath = app_path("Services/{$serviceClass}.php");
-                if (File::exists($servicePath) && !$force) {
+                if (File::exists($servicePath) && ! $force) {
                     $this->warn("⚠️ Service already exists: {$serviceClass}");
                 } else {
                     File::delete($servicePath);
@@ -145,7 +146,7 @@ class GenerateModuleFromYamlBackup extends Command
             // 6: Controller
             if ($generate['controller']) {
                 $controllerPath = app_path("Http/Controllers/{$controllerClass}.php");
-                if (File::exists($controllerPath) && !$force) {
+                if (File::exists($controllerPath) && ! $force) {
                     $this->warn("⚠️ Controller already exists: {$controllerClass}");
                 } else {
                     File::delete($controllerPath);
@@ -162,9 +163,9 @@ class GenerateModuleFromYamlBackup extends Command
         }
 
         // Generate Postman Collection at the end (unless skipped)
-        if (!$skipPostman) {
+        if (! $skipPostman) {
             $this->newLine();
-            $this->info("🚀 Generating Postman collection...");
+            $this->info('🚀 Generating Postman collection...');
 
             $baseUrl = $this->option('postman-base-url');
             $prefix = $this->option('postman-prefix');
@@ -172,21 +173,21 @@ class GenerateModuleFromYamlBackup extends Command
             $result = $this->call('postman:generate', [
                 '--file' => $path,
                 '--base-url' => $baseUrl,
-                '--prefix' => $prefix
+                '--prefix' => $prefix,
             ]);
 
             if ($result === CommandAlias::SUCCESS) {
                 $this->newLine();
-                $this->info("🥵 Postman collection generated successfully!");
+                $this->info('🥵 Postman collection generated successfully!');
             } else {
-                $this->warn("⚠️ Failed to generate Postman collection");
+                $this->warn('⚠️ Failed to generate Postman collection');
             }
         }
 
         // Generate DB diagram if not skipped
-        if (!$dbDiagram) {
+        if (! $dbDiagram) {
             $this->newLine();
-            $this->info("🚀 Generating DB diagram...");
+            $this->info('🚀 Generating DB diagram...');
 
             $result = $this->call('dbdiagram:generate', [
                 '--file' => $path,
@@ -195,14 +196,14 @@ class GenerateModuleFromYamlBackup extends Command
 
             if ($result === CommandAlias::SUCCESS) {
                 $this->newLine();
-                $this->info("🤧 DB diagram generated successfully at module/dbdiagram.dbml");
+                $this->info('🤧 DB diagram generated successfully at module/dbdiagram.dbml');
             } else {
-                $this->warn("⚠️ Failed to generate DB diagram");
+                $this->warn('⚠️ Failed to generate DB diagram');
             }
         }
 
         $this->newLine();
-        $this->info("🎉 All modules generated successfully!");
+        $this->info('🎉 All modules generated successfully!');
 
         return CommandAlias::SUCCESS;
     }
@@ -212,14 +213,15 @@ class GenerateModuleFromYamlBackup extends Command
         Artisan::call('make:model', ['name' => $modelName, '--migration' => true]);
 
         $modelPath = app_path("Models/{$modelName}.php");
-        if (!File::exists($modelPath)) {
+        if (! File::exists($modelPath)) {
             $this->warn("⚠️ Model file not found for: {$modelName}");
+
             return;
         }
 
         // Fillable properties
-        $fillableFields = array_map(fn($field) => "        '{$field}'", array_keys($fields));
-        $fillableArray = "protected \$fillable = [\n" . implode(",\n", $fillableFields) . ",\n    ];";
+        $fillableFields = array_map(fn ($field) => "        '{$field}'", array_keys($fields));
+        $fillableArray = "protected \$fillable = [\n".implode(",\n", $fillableFields).",\n    ];";
 
         // Relationships
         $relationshipMethods = '';
@@ -243,7 +245,7 @@ PHP;
 
         // Insert fillable and relationships after class declaration
         $modelContent = preg_replace(
-            '/(class\s+' . $modelName . '\s+extends\s+Model\s*\{)/',
+            '/(class\s+'.$modelName.'\s+extends\s+Model\s*\{)/',
             "$1\n\n    {$fillableArray}\n{$relationshipMethods}\n",
             $modelContent
         );
@@ -255,10 +257,11 @@ PHP;
     protected function generateMigration(string $modelName, array $fields, array $uniqueConstraints = []): void
     {
         $tableName = Str::snake(Str::pluralStudly($modelName));
-        $files = glob(database_path('migrations/*create_' . $tableName . '_table.php'));
+        $files = glob(database_path('migrations/*create_'.$tableName.'_table.php'));
 
         if (empty($files)) {
             $this->warn("Migration file not found for $modelName.");
+
             return;
         }
 
@@ -305,7 +308,7 @@ PHP;
                         if (strtolower($value) === 'null') {
                             $line .= '->default(null)';
                         } elseif (in_array(strtolower($value), ['true', 'false'], true)) {
-                            $line .= '->default(' . $value . ')';
+                            $line .= '->default('.$value.')';
                         } elseif (is_numeric($value)) {
                             $line .= "->default($value)";
                         } else {
@@ -320,10 +323,10 @@ PHP;
                 }
             }
 
-            $fieldStub .= $line . ";\n            ";
+            $fieldStub .= $line.";\n            ";
         }
 
-        if (!empty($uniqueConstraints)) {
+        if (! empty($uniqueConstraints)) {
             foreach ($uniqueConstraints as $columns) {
                 if (is_array($columns)) {
                     $cols = implode("', '", $columns);
@@ -339,7 +342,7 @@ PHP;
             function ($matches) use ($fieldStub) {
                 return str_replace(
                     $matches[2],
-                    $matches[2] . "\n            " . $fieldStub,
+                    $matches[2]."\n            ".$fieldStub,
                     $matches[0]
                 );
             },
@@ -356,7 +359,7 @@ PHP;
 
         foreach ($parts as $i => $iValue) {
             if ($iValue === 'default' && isset($parts[$i + 1])) {
-                $modifiers[] = 'default:' . $parts[++$i];
+                $modifiers[] = 'default:'.$parts[++$i];
             } else {
                 $modifiers[] = $iValue;
             }
@@ -371,8 +374,9 @@ PHP;
         $requestPath = app_path("Http/Requests/{$requestClass}.php");
         $stubPath = $this->resolveStubPath('request');
 
-        if (!File::exists($stubPath)) {
+        if (! File::exists($stubPath)) {
             $this->error("Request stub not found: {$stubPath}");
+
             return;
         }
 
@@ -404,7 +408,7 @@ PHP;
                     break;
                 case 'foreignId':
                     $relatedTable = $parts[0] ?? Str::snake(Str::pluralStudly(Str::beforeLast($name, '_id')));
-                    $ruleSet[] = 'exists:' . $relatedTable . ',id';
+                    $ruleSet[] = 'exists:'.$relatedTable.',id';
                     break;
             }
 
@@ -436,8 +440,9 @@ PHP;
         $path = "{$serviceDir}/{$serviceClass}.php";
         $stubPath = $this->resolveStubPath('service');
 
-        if (!File::exists($stubPath)) {
+        if (! File::exists($stubPath)) {
             $this->error("Service stub not found: {$stubPath}");
+
             return;
         }
 
@@ -488,7 +493,7 @@ PHP;
         $routeLine = "Route::apiResource('{$tableName}', \\App\\Http\\Controllers\\{$controllerClass}::class);";
         $apiRoutesPath = base_path('routes/api.php');
 
-        if (!Str::contains(File::get($apiRoutesPath), $routeLine)) {
+        if (! Str::contains(File::get($apiRoutesPath), $routeLine)) {
             File::append($apiRoutesPath, "\n{$routeLine}\n");
             $this->info('🤫 API route added.');
         } else {
@@ -499,13 +504,13 @@ PHP;
     protected function resolveStubPath(string $stubKey): string
     {
         $config = config('module-generator');
-        if (!$config || !isset($config['stubs'])) {
+        if (! $config || ! isset($config['stubs'])) {
             throw new \RuntimeException('Module generator stubs configuration not found.');
         }
 
         $stubFile = $config['stubs'][$stubKey] ?? null;
 
-        if (!$stubFile) {
+        if (! $stubFile) {
             throw new \InvalidArgumentException("Stub not defined for key: {$stubKey}");
         }
 
@@ -515,9 +520,9 @@ PHP;
             return $publishedPath;
         }
 
-        $fallbackPath = __DIR__ . '/../../stubs/' . $stubFile;
+        $fallbackPath = __DIR__.'/../../stubs/'.$stubFile;
 
-        if (!file_exists($fallbackPath)) {
+        if (! file_exists($fallbackPath)) {
             throw new \RuntimeException("Stub file not found at fallback path: {$fallbackPath}");
         }
 
