@@ -66,12 +66,12 @@ User:
   # all the generatable modules are false, 
   # so the user model only generates the Postman collection and dbdiagram files
   generate:
-    model: false,
+    model: false
     migration: false
     controller: false
     service: false
     request: false
-    resource: true
+    resource: false
     collection: false
   fields:
     name: string
