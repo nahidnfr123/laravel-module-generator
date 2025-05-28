@@ -128,13 +128,13 @@ class GenerateModuleFromYaml extends Command
     private function normalizeGenerateConfiguration($generate): array
     {
         $defaultGenerate = [
+            'model' => true,
+            'migration' => true,
             'controller' => true,
             'service' => true,
             'request' => true,
             'resource' => true,
             'collection' => true,
-            'model' => true,
-            'migration' => true,
         ];
 
         if ($generate === false) {
@@ -180,12 +180,16 @@ class GenerateModuleFromYaml extends Command
      */
     private function deleteExistingModelFiles(string $modelPath, array $migrationFiles, string $modelName): void
     {
-        File::delete($modelPath);
-        $this->warn("⚠️ Deleted existing model: {$modelName}");
+        if ($this->generateConfig['model']) {
+            File::delete($modelPath);
+            $this->warn("⚠️ Deleted existing model: {$modelName}");
+        }
 
-        foreach ($migrationFiles as $file) {
-            File::delete($file);
-            $this->warn('⚠️ Deleted existing migration: ' . basename($file));
+        if ($this->generateConfig['migration']) {
+            foreach ($migrationFiles as $file) {
+                File::delete($file);
+                $this->warn('⚠️ Deleted existing migration: ' . basename($file));
+            }
         }
     }
 
