@@ -22,13 +22,13 @@ class GenerateModuleFromYaml extends Command
     protected $description = 'Generate Laravel module files (model, migration, controller, etc.) from a YAML file';
 
     public array $generateConfig = [
+        'model' => true,
+        'migration' => true,
         'controller' => true,
         'service' => true,
         'request' => true,
         'resource' => true,
         'collection' => true,
-        'model' => true,
-        'migration' => true,
     ];
 
     public function handle()
@@ -160,19 +160,31 @@ class GenerateModuleFromYaml extends Command
         $migrationFiles = glob($migrationPattern);
         $force = $this->option('force');
 
-        if (File::exists($modelPath) && !$force) {
-            $this->warn("⚠️ Model already exists: {$modelConfig['studlyName']}");
-
-            return;
-        }
-
+        // Check if model generation is enabled
         if ($this->generateConfig['model']) {
-            if (File::exists($modelPath)) {
-                $this->deleteExistingModelFiles($modelPath, $migrationFiles, $modelConfig['studlyName']);
+            if (File::exists($modelPath) && !$force) {
+                $this->warn("⚠️ Model already exists: {$modelConfig['studlyName']}");
+                return;
             }
+
+            if (File::exists($modelPath)) {
+                File::delete($modelPath);
+                $this->warn("⚠️ Deleted existing model: {$modelConfig['studlyName']}");
+            }
+
             $this->generateModel($modelConfig['studlyName'], $modelConfig['fields'], $modelConfig['relations']);
         }
+
+        // Check if migration generation is enabled
         if ($this->generateConfig['migration']) {
+            // Delete existing migration files if they exist
+            if (!empty($migrationFiles)) {
+                foreach ($migrationFiles as $file) {
+                    File::delete($file);
+                    $this->warn('⚠️ Deleted existing migration: ' . basename($file));
+                }
+            }
+
             $this->generateMigration($modelConfig['studlyName'], $modelConfig['fields']);
         }
     }
