@@ -250,7 +250,7 @@ To change the YAML path or customize stub names, update `config/module-generator
 <?php
 
 return [
-    'default_path' => base_path('module'),
+    'base_path' => base_path('module'),
     'models_path' => base_path('module/models.yaml'),
     'stubs' => [
         'model' => 'model.stub',

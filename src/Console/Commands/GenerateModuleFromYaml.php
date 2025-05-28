@@ -894,7 +894,7 @@ PHP;
     protected function resolveStubPath(string $stubKey): string
     {
         $config = config('module-generator');
-        if (!$config || !isset($config['stubs'])) {
+        if (!isset($config['stubs'], $config['base_path']) || !$config) {
             throw new \RuntimeException('Module generator stubs configuration not found.');
         }
 
@@ -904,11 +904,14 @@ PHP;
             throw new \InvalidArgumentException("Stub not defined for key: {$stubKey}");
         }
 
-        $publishedPath = base_path("module/stub/{$stubFile}");
+        // $publishedPath = base_path("module/stubs/{$stubFile}");
+        $publishedPath = $config['base_path'] . "/stubs/{$stubFile}";
 
         if (file_exists($publishedPath)) {
             return $publishedPath;
         }
+
+        $this->warn($publishedPath . ' stub path not found, using fallback path.');
 
         $fallbackPath = __DIR__ . '/../../stubs/' . $stubFile;
 

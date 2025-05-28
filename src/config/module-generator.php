@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'default_path' => base_path('module'),
+    'base_path' => base_path('module'),
     'models_path' => base_path('module/models.yaml'),
     'stubs' => [
         'model' => 'model.stub',

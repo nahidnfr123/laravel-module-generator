@@ -8,7 +8,7 @@ class {{ model }}Service
 {
     public function getAll()
     {
-        return {{ model }}::paginate(perPage());
+        return {{ model }}::paginate();
     }
 
     public function store($request)
@@ -16,9 +16,15 @@ class {{ model }}Service
         return {{ model }}::create($request);
     }
 
-    public function update($request, {{ variable }} ${{ variable }})
+    public function update($request, {{ model }} ${{ variable }})
     {
         ${{ variable }}->update($request);
+        return ${{ variable }};
+    }
+
+    public function delete({{ model }} ${{ variable }})
+    {
+        ${{ variable }}->delete();
         return ${{ variable }};
     }
 }
