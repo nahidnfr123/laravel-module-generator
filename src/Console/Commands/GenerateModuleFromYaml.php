@@ -167,6 +167,8 @@ class GenerateModuleFromYaml extends Command
                 return;
             }
 
+            $this->info($this->generateConfig['model']);
+
             if (File::exists($modelPath)) {
                 File::delete($modelPath);
                 $this->warn("⚠️ Deleted existing model: {$modelConfig['studlyName']}");
