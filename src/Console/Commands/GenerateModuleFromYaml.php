@@ -21,6 +21,14 @@ class GenerateModuleFromYaml extends Command
 
     protected $description = 'Generate Laravel module files (model, migration, controller, etc.) from a YAML file';
 
+    public array $generateConfig = [
+        'controller' => true,
+        'service' => true,
+        'request' => true,
+        'resource' => true,
+        'collection' => true,
+    ];
+
     public function handle()
     {
         $this->validateAndGetConfiguration();
@@ -77,10 +85,11 @@ class GenerateModuleFromYaml extends Command
         $this->info("Generating files for: $modelName");
 
         $modelConfig = $this->buildModelConfiguration($modelName, $modelData);
-        $generateConfig = $this->normalizeGenerateConfiguration($modelData['generate'] ?? true);
+        //        $generateConfig = $this->normalizeGenerateConfiguration($modelData['generate'] ?? true);
+        $this->generateConfig = $this->normalizeGenerateConfiguration($modelData['generate'] ?? true);
 
         $this->generateModelAndMigration($modelConfig);
-        $this->generateOptionalFiles($modelConfig, $generateConfig);
+        $this->generateOptionalFiles($modelConfig);
 
         $this->info("🤫 Module generated for $modelName");
         sleep(1);
@@ -151,12 +160,15 @@ class GenerateModuleFromYaml extends Command
             return;
         }
 
-        if (File::exists($modelPath)) {
-            $this->deleteExistingModelFiles($modelPath, $migrationFiles, $modelConfig['studlyName']);
+        if ($this->generateConfig['model']) {
+            if (File::exists($modelPath)) {
+                $this->deleteExistingModelFiles($modelPath, $migrationFiles, $modelConfig['studlyName']);
+            }
+            $this->generateModel($modelConfig['studlyName'], $modelConfig['fields'], $modelConfig['relations']);
         }
-
-        $this->generateModel($modelConfig['studlyName'], $modelConfig['fields'], $modelConfig['relations']);
-        $this->generateMigration($modelConfig['studlyName'], $modelConfig['fields']);
+        if ($this->generateConfig['migration']) {
+            $this->generateMigration($modelConfig['studlyName'], $modelConfig['fields']);
+        }
     }
 
     /**
@@ -176,8 +188,9 @@ class GenerateModuleFromYaml extends Command
     /**
      * Generate optional files based on configuration
      */
-    private function generateOptionalFiles(array $modelConfig, array $generateConfig): void
+    private function generateOptionalFiles(array $modelConfig): void
     {
+        $generateConfig = $this->generateConfig;
         $force = $this->option('force');
 
         if ($generateConfig['request']) {
@@ -215,12 +228,14 @@ class GenerateModuleFromYaml extends Command
             return;
         }
 
-        if (File::exists($requestPath)) {
-            File::delete($requestPath);
-            $this->warn("⚠️ Deleted existing request: {$modelConfig['classes']['request']}");
-        }
+        if ($this->generateConfig['request']) {
+            if (File::exists($requestPath)) {
+                File::delete($requestPath);
+                $this->warn("⚠️ Deleted existing request: {$modelConfig['classes']['request']}");
+            }
 
-        $this->generateRequest($modelConfig['studlyName'], $modelConfig['fields']);
+            $this->generateRequest($modelConfig['studlyName'], $modelConfig['fields']);
+        }
     }
 
     /**
@@ -235,13 +250,14 @@ class GenerateModuleFromYaml extends Command
 
             return;
         }
+        if ($this->generateConfig['collection']) {
+            if (File::exists($collectionPath)) {
+                File::delete($collectionPath);
+                $this->warn("⚠️ Deleted existing collection: {$modelConfig['classes']['collection']}");
+            }
 
-        if (File::exists($collectionPath)) {
-            File::delete($collectionPath);
-            $this->warn("⚠️ Deleted existing collection: {$modelConfig['classes']['collection']}");
+            $this->generateCollection($modelConfig['studlyName'], $modelConfig['classes']['collection'], $modelConfig['camelName']);
         }
-
-        $this->generateCollection($modelConfig['studlyName'], $modelConfig['classes']['collection'], $modelConfig['camelName']);
     }
 
     /**
@@ -257,12 +273,14 @@ class GenerateModuleFromYaml extends Command
             return;
         }
 
-        if (File::exists($resourcePath)) {
-            File::delete($resourcePath);
-            $this->warn("⚠️ Deleted existing resource: {$modelConfig['classes']['resource']}");
-        }
+        if ($this->generateConfig['resource']) {
+            if (File::exists($resourcePath)) {
+                File::delete($resourcePath);
+                $this->warn("⚠️ Deleted existing resource: {$modelConfig['classes']['resource']}");
+            }
 
-        $this->call('make:resource', ['name' => "{$modelConfig['studlyName']}/{$modelConfig['classes']['resource']}"]);
+            $this->call('make:resource', ['name' => "{$modelConfig['studlyName']}/{$modelConfig['classes']['resource']}"]);
+        }
     }
 
     /**
@@ -277,13 +295,14 @@ class GenerateModuleFromYaml extends Command
 
             return;
         }
+        if ($this->generateConfig['service']) {
+            if (File::exists($servicePath)) {
+                File::delete($servicePath);
+                $this->warn("⚠️ Deleted existing service: {$modelConfig['classes']['service']}");
+            }
 
-        if (File::exists($servicePath)) {
-            File::delete($servicePath);
-            $this->warn("⚠️ Deleted existing service: {$modelConfig['classes']['service']}");
+            $this->generateService($modelConfig['classes']['service'], $modelConfig['studlyName'], $modelConfig['camelName']);
         }
-
-        $this->generateService($modelConfig['classes']['service'], $modelConfig['studlyName'], $modelConfig['camelName']);
     }
 
     /**
@@ -299,17 +318,19 @@ class GenerateModuleFromYaml extends Command
             return;
         }
 
-        if (File::exists($controllerPath)) {
-            File::delete($controllerPath);
-            $this->warn("⚠️ Deleted existing controller: {$modelConfig['classes']['controller']}");
-        }
+        if ($this->generateConfig['controller']) {
+            if (File::exists($controllerPath)) {
+                File::delete($controllerPath);
+                $this->warn("⚠️ Deleted existing controller: {$modelConfig['classes']['controller']}");
+            }
 
-        $this->generateController(
-            $modelConfig['classes']['controller'],
-            $modelConfig['studlyName'],
-            $modelConfig['camelName'],
-            $modelConfig['pluralStudlyName']
-        );
+            $this->generateController(
+                $modelConfig['classes']['controller'],
+                $modelConfig['studlyName'],
+                $modelConfig['camelName'],
+                $modelConfig['pluralStudlyName']
+            );
+        }
     }
 
     /**

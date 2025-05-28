@@ -1,3 +1,27 @@
+User:
+  # all the generatable modules are false,
+  # so the user model only generates the Postman collection and dbdiagram files
+  generate:
+    model: false,
+    migration: false
+    controller: false
+    service: false
+    request: false
+    resource: false
+    collection: false
+  fields:
+    name: string
+    username: string:nullable
+    email: string:unique
+    email_verified_at: dateTime:nullable
+    password: string
+    avatar: string:nullable
+    status: boolean:default true
+    created_by: foreignId:users:nullable
+    updated_by: foreignId:users:nullable
+    timezone: string:nullable
+    last_login_at: timestamp:nullable
+
 Unit:
   fields:
     name: string:unique
@@ -7,12 +31,12 @@ Unit:
     created_by: foreignId:users:nullable
     updated_by: foreignId:users:nullable
   relations:
-    creator:
-      type: belongsTo
-      model: User
-    updater:
-      type: belongsTo
-      model: User
+#    creator:
+#      type: belongsTo
+#      model: User
+#    updater:
+#      type: belongsTo
+#      model: User
 
 UnitConversion:
   fields:
@@ -47,12 +71,12 @@ Branch:
     manager:
       type: belongsTo
       model: User
-    creator:
-      type: belongsTo
-      model: User
-    updater:
-      type: belongsTo
-      model: User
+#    creator:
+#      type: belongsTo
+#      model: User
+#    updater:
+#      type: belongsTo
+#      model: User
 
 Category:
   fields:
@@ -68,12 +92,12 @@ Category:
     parent:
       type: belongsTo
       model: Category
-    creator:
-      type: belongsTo
-      model: User
-    updater:
-      type: belongsTo
-      model: User
+#    creator:
+#      type: belongsTo
+#      model: User
+#    updater:
+#      type: belongsTo
+#      model: User
 
 Brand:
   fields:
@@ -85,12 +109,12 @@ Brand:
     created_by: foreignId:users:nullable
     updated_by: foreignId:users:nullable
   relations:
-    creator:
-      type: belongsTo
-      model: User
-    updater:
-      type: belongsTo
-      model: User
+#    creator:
+#      type: belongsTo
+#      model: User
+#    updater:
+#      type: belongsTo
+#      model: User
 
 Supplier:
   fields:
@@ -112,12 +136,12 @@ Product:
     created_by: foreignId:users:nullable
     updated_by: foreignId:users:nullable
   relations:
-    creator:
-      type: belongsTo
-      model: User
-    updater:
-      type: belongsTo
-      model: User
+#    creator:
+#      type: belongsTo
+#      model: User
+#    updater:
+#      type: belongsTo
+#      model: User
 
 ProductUnit:
   fields:
@@ -152,12 +176,12 @@ Recipe:
     created_by: foreignId:users:nullable
     updated_by: foreignId:users:nullable
   relations:
-    creator:
-      type: belongsTo
-      model: User
-    updater:
-      type: belongsTo
-      model: User
+#    creator:
+#      type: belongsTo
+#      model: User
+#    updater:
+#      type: belongsTo
+#      model: User
 
 RecipeIngredient:
   generate:
@@ -184,11 +208,11 @@ RecipeIngredient:
 
 IntermediateProduct:
   fields:
-    base_product_id: foreignId:products
+    product_id: foreignId:products
     name: string
     yield: double:default 1
   relations:
-    base_product:
+    product:
       type: belongsTo
       model: Product
 
@@ -243,12 +267,12 @@ Transfer:
     to_branch:
       type: belongsTo
       model: Branch
-    creator:
-      type: belongsTo
-      model: User
-    updater:
-      type: belongsTo
-      model: User
+#    creator:
+#      type: belongsTo
+#      model: User
+#    updater:
+#      type: belongsTo
+#      model: User
 
 TransferItem:
   fields:

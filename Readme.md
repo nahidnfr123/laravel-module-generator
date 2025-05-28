@@ -63,11 +63,24 @@ Define your models with their fields, validation rules, and relationships:
 
 ```yaml
 User:
+  # all the generatable modules are false, 
+  # so the user model only generates the Postman collection and dbdiagram files
+  generate:
+    model: false,
+    migration: false
+    controller: false
+    service: false
+    request: false
+    resource: true
+    collection: false
   fields:
-    name: string:unique
+    name: string
     email: string:unique
+    email_verified_at: dateTime:nullable
     password: string
-    is_active: boolean:default true
+    avatar: string:nullable
+    status: boolean:default true
+    last_login_at: timestamp:nullable
 
 Unit:
   fields:
@@ -98,7 +111,7 @@ UnitConversion:
       type: belongsTo
       model: Unit
   unique:
-    - [from_unit_id, to_unit_id]
+    - [ from_unit_id, to_unit_id ]
 ```
 
 ### 2. Generate Your Complete Module

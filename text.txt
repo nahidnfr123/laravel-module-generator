@@ -1,1 +1,14 @@
 git add . && git commit -m "_ _" && git push && git tag v1.0.7 && git push origin v1.0.7
+
+
+git tag v1.0.7 && git push origin v1.0.7
+
+"repositories": [
+        {
+            "type": "path",
+            "url": "./packages/nahid-ferdous/laravel-module-generator",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
