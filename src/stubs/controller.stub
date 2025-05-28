@@ -70,7 +70,7 @@ class {{ class }} extends Controller implements HasMiddleware
      public function destroy({{ model }} ${{ variable }}): \Illuminate\Http\JsonResponse
     {
         try {
-            $this->{{ variable }}Service->delete(${{ variable }});
+             $this->{{ variable }}Service->delete(${{ variable }});
 
             return $this->success('{{ model }} deleted successfully');
         } catch (\Exception $e) {
