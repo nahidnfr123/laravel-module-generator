@@ -94,7 +94,7 @@ class GenerateModuleFromYaml extends Command
         $this->generateOptionalFiles($modelConfig);
 
         $this->newLine();
-        $this->info("🤫 Module generated for $modelName");
+        $this->info("🎉 Module generated for $modelName");
         $this->newLine();
         sleep(1);
     }
