@@ -90,6 +90,8 @@ class GenerateModuleFromYaml extends Command
         //        $generateConfig = $this->normalizeGenerateConfiguration($modelData['generate'] ?? true);
         $this->generateConfig = $this->normalizeGenerateConfiguration($modelData['generate'] ?? true);
 
+//        $this->info($this->generateConfig['model']);
+//        $this->info($this->generateConfig['migration']);
         $this->generateModelAndMigration($modelConfig);
         $this->generateOptionalFiles($modelConfig);
 
