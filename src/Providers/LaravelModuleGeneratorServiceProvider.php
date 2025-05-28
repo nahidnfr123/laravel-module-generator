@@ -25,6 +25,22 @@ class LaravelModuleGeneratorServiceProvider extends ServiceProvider
                 GenerateDbDiagram::class,
             ]);
 
+            // Publish stubs separately
+            $this->publishes([
+                __DIR__.'/../../stubs' => base_path('generate-module/stubs'),
+            ], 'module-generator-stubs');
+
+            // Publish config separately
+            $this->publishes([
+                __DIR__.'/../../config/module-generator.php' => config_path('module-generator.php'),
+            ], 'module-generator-config');
+
+            // Publish both together with general tag
+//            $this->publishes([
+//                __DIR__.'/../../stubs' => base_path('generate-module/stubs'),
+//                __DIR__.'/../../config/module-generator.php' => config_path('module-generator.php'),
+//            ], 'module-generator');
+
             // Publish stubs and config
             $this->publishes([
                 __DIR__.'/stub' => base_path('generate-module/stub'),
