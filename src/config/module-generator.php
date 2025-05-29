@@ -1,5 +1,7 @@
 <?php
 
+$randomNumber = rand(100, 999);
+
 return [
     'base_path' => base_path('module'),
     'models_path' => base_path('module/models.yaml'),
@@ -17,7 +19,7 @@ return [
     'postman' => [
         'default_base_url' => '{{base-url}}',
         'default_prefix' => 'api',
-        'output_path' => 'module/postman_collection.json',
+        'output_path' => "module/postman_collection_{$randomNumber}.json",
     ],
     // DB diagram settings
     'dbdiagram' => [
