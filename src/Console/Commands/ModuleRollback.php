@@ -71,7 +71,7 @@ class ModuleRollback extends Command
      */
     private function cleanupBackups(): int
     {
-        $keepCount = (int) $this->ask('How many recent backups to keep?', '5');
+        $keepCount = (int) $this->ask('How many recent backups to keep?', '2');
 
         if ($keepCount < 0) {
             $this->error('Must keep at least 0 backup.');
