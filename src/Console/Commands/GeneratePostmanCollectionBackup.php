@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Symfony\Component\Yaml\Yaml;
 
-class GeneratePostmanCollection extends Command
+class GeneratePostmanCollectionBackup extends Command
 {
     /**
      * The name and signature of the console command.
@@ -43,11 +43,6 @@ class GeneratePostmanCollection extends Command
     private $collection;
 
     /**
-     * @var array
-     */
-    private $fullSchema;
-
-    /**
      * Execute the console command.
      */
     public function handle(): int
@@ -63,6 +58,7 @@ class GeneratePostmanCollection extends Command
         // Handle output file
         $outputFile = $this->option('output');
         if (!$outputFile) {
+            // If no output specified, use config or generate random
             $configOutput = $config['postman']['output_path'] ?? null;
             if ($configOutput) {
                 $outputFile = $configOutput;
@@ -84,11 +80,11 @@ class GeneratePostmanCollection extends Command
         $this->info("API Prefix: {$this->apiPrefix}");
 
         try {
-            $this->fullSchema = Yaml::parseFile($yamlFile);
+            $schema = Yaml::parseFile($yamlFile);
             $this->collection = $this->initializeCollection();
 
-            foreach ($this->fullSchema as $modelName => $modelConfig) {
-                if ($this->shouldGenerateController($modelConfig) && !$this->hasRequestParent($modelConfig)) {
+            foreach ($schema as $modelName => $modelConfig) {
+                if ($this->shouldGenerateController($modelConfig)) {
                     $this->generateModelEndpoints($modelName, $modelConfig);
                 }
             }
@@ -150,36 +146,6 @@ class GeneratePostmanCollection extends Command
     }
 
     /**
-     * Checks if the model has a requestParent defined.
-     */
-    private function hasRequestParent(array $modelConfig): bool
-    {
-        return isset($modelConfig['requestParent']);
-    }
-
-    /**
-     * Gets nested models that belong to the given parent model (recursive).
-     */
-    private function getNestedModels(string $parentModelName): array
-    {
-        $nestedModels = [];
-
-        foreach ($this->fullSchema as $modelName => $modelConfig) {
-            if (isset($modelConfig['requestParent']) && $modelConfig['requestParent'] === $parentModelName) {
-                $nestedModels[$modelName] = $modelConfig;
-
-                // Recursively get nested models of this nested model
-                $deeperNested = $this->getNestedModels($modelName);
-                if (!empty($deeperNested)) {
-                    $nestedModels[$modelName]['_nested'] = $deeperNested;
-                }
-            }
-        }
-
-        return $nestedModels;
-    }
-
-    /**
      * Generates the Postman endpoints for a given model.
      */
     private function generateModelEndpoints(string $modelName, array $modelConfig): void
@@ -191,16 +157,13 @@ class GeneratePostmanCollection extends Command
             'item' => [],
         ];
 
-        // Get nested models for this parent
-        $nestedModels = $this->getNestedModels($modelName);
-
         // List Resources
         $modelFolder['item'][] = $this->createRequest(
             'Get All ' . Str::plural($modelName),
             'GET',
             "{$this->apiPrefix}/{$resourceName}",
             null,
-            $this->generateListResponse($modelName, $modelConfig, $nestedModels)
+            $this->generateListResponse($modelName, $modelConfig)
         );
 
         // Show Resource
@@ -209,7 +172,7 @@ class GeneratePostmanCollection extends Command
             'GET',
             "{$this->apiPrefix}/{$resourceName}/{{id}}",
             null,
-            $this->generateShowResponse($modelName, $modelConfig, $nestedModels)
+            $this->generateShowResponse($modelName, $modelConfig)
         );
 
         // Store Resource
@@ -217,8 +180,8 @@ class GeneratePostmanCollection extends Command
             'Create ' . $modelName,
             'POST',
             "{$this->apiPrefix}/{$resourceName}",
-            $this->generateCreateBody($modelConfig, $nestedModels),
-            $this->generateCreateResponse($modelName, $modelConfig, $nestedModels)
+            $this->generateCreateBody($modelConfig),
+            $this->generateCreateResponse($modelName, $modelConfig)
         );
 
         // Update Resource
@@ -226,8 +189,8 @@ class GeneratePostmanCollection extends Command
             'Update ' . $modelName,
             'PUT',
             "{$this->apiPrefix}/{$resourceName}/{{id}}",
-            $this->generateUpdateBody($modelConfig, $nestedModels),
-            $this->generateUpdateResponse($modelName, $modelConfig, $nestedModels)
+            $this->generateUpdateBody($modelConfig),
+            $this->generateUpdateResponse($modelName, $modelConfig)
         );
 
         // Delete Resource
@@ -314,7 +277,7 @@ class GeneratePostmanCollection extends Command
     /**
      * Generates the request body for the create operation.
      */
-    private function generateCreateBody(array $modelConfig, array $nestedModels = []): array
+    private function generateCreateBody(array $modelConfig): array
     {
         $body = [];
 
@@ -329,91 +292,16 @@ class GeneratePostmanCollection extends Command
             $body[$fieldName] = $this->generateExampleValue($fieldName, $fieldType);
         }
 
-        // Add nested models data
-        $body = array_merge($body, $this->generateNestedModelsBody($nestedModels));
-
         return $body;
     }
 
     /**
      * Generates the request body for the update operation.
      */
-    private function generateUpdateBody(array $modelConfig, array $nestedModels = []): array
+    private function generateUpdateBody(array $modelConfig): array
     {
-        $body = $this->generateCreateBody($modelConfig, $nestedModels);
+        $body = $this->generateCreateBody($modelConfig);
         $body['id'] = 1; // Add id for context in examples
-
-        return $body;
-    }
-
-    /**
-     * Generates nested models body data recursively.
-     */
-    private function generateNestedModelsBody(array $nestedModels): array
-    {
-        $body = [];
-
-        foreach ($nestedModels as $nestedModelName => $nestedModelConfig) {
-            $nestedResourceName = Str::snake(Str::plural($nestedModelName));
-            $nestedBody = $this->generateNestedResourceBody($nestedModelConfig);
-
-            // Handle deeper nesting
-            if (isset($nestedModelConfig['_nested']) && !empty($nestedModelConfig['_nested'])) {
-                $deeperNestedBody = $this->generateNestedModelsBody($nestedModelConfig['_nested']);
-                $nestedBody = array_merge($nestedBody, $deeperNestedBody);
-            }
-
-            $body[$nestedResourceName] = [$nestedBody];
-        }
-
-        return $body;
-    }
-
-    /**
-     * Generates nested models response data recursively.
-     */
-    private function generateNestedModelsResponse(array $nestedModels): array
-    {
-        $responseData = [];
-
-        foreach ($nestedModels as $nestedModelName => $nestedModelConfig) {
-            $nestedResourceName = Str::snake(Str::plural($nestedModelName));
-            $nestedResponse = array_merge(
-                ['id' => 1],
-                $this->generateNestedResourceBody($nestedModelConfig),
-                [
-                    'created_at' => now()->format('Y-m-d H:i:s'),
-                    'updated_at' => now()->format('Y-m-d H:i:s'),
-                ]
-            );
-
-            // Handle deeper nesting
-            if (isset($nestedModelConfig['_nested']) && !empty($nestedModelConfig['_nested'])) {
-                $deeperNestedResponse = $this->generateNestedModelsResponse($nestedModelConfig['_nested']);
-                $nestedResponse = array_merge($nestedResponse, $deeperNestedResponse);
-            }
-
-            $responseData[$nestedResourceName] = [$nestedResponse];
-        }
-
-        return $responseData;
-    }
-
-    /**
-     * Generates the request body for a nested resource.
-     */
-    private function generateNestedResourceBody(array $nestedModelConfig): array
-    {
-        $body = [];
-
-        foreach ($nestedModelConfig['fields'] ?? [] as $fieldName => $fieldType) {
-            // Skip id, timestamps, and parent foreign keys for nested creation
-            if (in_array($fieldName, ['id', 'created_at', 'updated_at', 'deleted_at']) ||
-                (str_contains($fieldName, '_id') && str_contains($fieldType, 'foreignId'))) {
-                continue;
-            }
-            $body[$fieldName] = $this->generateExampleValue($fieldName, $fieldType);
-        }
 
         return $body;
     }
@@ -433,7 +321,6 @@ class GeneratePostmanCollection extends Command
             'double', 'decimal' => 10.50,
             'date' => now()->format('Y-m-d'),
             'dateTime' => now()->format('Y-m-d H:i:s'),
-            'timestamp' => now()->format('Y-m-d H:i:s'),
             default => str_contains($fieldType, 'nullable') ? null : 'example_value',
         };
     }
@@ -441,12 +328,12 @@ class GeneratePostmanCollection extends Command
     /**
      * Generates the example response for the list operation.
      */
-    private function generateListResponse(string $modelName, array $modelConfig, array $nestedModels = []): array
+    private function generateListResponse(string $modelName, array $modelConfig): array
     {
         return [
             'data' => [
-                $this->generateSampleRecord($modelName, $modelConfig, 1, $nestedModels),
-                $this->generateSampleRecord($modelName, $modelConfig, 2, $nestedModels),
+                $this->generateSampleRecord($modelName, $modelConfig, 1),
+                $this->generateSampleRecord($modelName, $modelConfig, 2),
             ],
             'meta' => [
                 'current_page' => 1,
@@ -460,20 +347,20 @@ class GeneratePostmanCollection extends Command
     /**
      * Generates the example response for the show operation.
      */
-    private function generateShowResponse(string $modelName, array $modelConfig, array $nestedModels = []): array
+    private function generateShowResponse(string $modelName, array $modelConfig): array
     {
         return [
-            'data' => $this->generateSampleRecord($modelName, $modelConfig, 1, $nestedModels),
+            'data' => $this->generateSampleRecord($modelName, $modelConfig, 1),
         ];
     }
 
     /**
      * Generates the example response for the create operation.
      */
-    private function generateCreateResponse(string $modelName, array $modelConfig, array $nestedModels = []): array
+    private function generateCreateResponse(string $modelName, array $modelConfig): array
     {
         return [
-            'data' => $this->generateSampleRecord($modelName, $modelConfig, 1, $nestedModels),
+            'data' => $this->generateSampleRecord($modelName, $modelConfig, 1),
             'message' => $modelName . ' created successfully',
         ];
     }
@@ -481,10 +368,10 @@ class GeneratePostmanCollection extends Command
     /**
      * Generates the example response for the update operation.
      */
-    private function generateUpdateResponse(string $modelName, array $modelConfig, array $nestedModels = []): array
+    private function generateUpdateResponse(string $modelName, array $modelConfig): array
     {
         return [
-            'data' => $this->generateSampleRecord($modelName, $modelConfig, 1, $nestedModels),
+            'data' => $this->generateSampleRecord($modelName, $modelConfig, 1),
             'message' => $modelName . ' updated successfully',
         ];
     }
@@ -502,7 +389,7 @@ class GeneratePostmanCollection extends Command
     /**
      * Generates a sample record based on the model configuration.
      */
-    private function generateSampleRecord(string $modelName, array $modelConfig, int $id = 1, array $nestedModels = []): array
+    private function generateSampleRecord(string $modelName, array $modelConfig, int $id = 1): array
     {
         $record = ['id' => $id];
 
@@ -520,7 +407,6 @@ class GeneratePostmanCollection extends Command
         $record['created_at'] = now()->format('Y-m-d H:i:s');
         $record['updated_at'] = now()->format('Y-m-d H:i:s');
 
-        // Add explicit relations
         if (isset($modelConfig['relations'])) {
             foreach ($modelConfig['relations'] as $relationName => $relationConfig) {
                 if ($relationConfig['type'] === 'belongsTo') {
@@ -531,10 +417,6 @@ class GeneratePostmanCollection extends Command
                 }
             }
         }
-
-        // Add nested models in response (recursively)
-        $nestedResponseData = $this->generateNestedModelsResponse($nestedModels);
-        $record = array_merge($record, $nestedResponseData);
 
         return $record;
     }

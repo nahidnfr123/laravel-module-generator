@@ -22,108 +22,6 @@ User:
     timezone: string:nullable
     last_login_at: timestamp:nullable
 
-Unit:
-  fields:
-    name: string:unique
-    code: string:nullable
-    description: string
-    is_active: boolean:default true
-    created_by: foreignId:users:nullable
-    updated_by: foreignId:users:nullable
-  relations:
-#    creator:
-#      type: belongsTo
-#      model: User
-#    updater:
-#      type: belongsTo
-#      model: User
-
-UnitConversion:
-  fields:
-    from_unit_id: foreignId:units
-    to_unit_id: foreignId:units
-    multiplier: double:default 1
-  relations:
-    from_unit:
-      type: belongsTo
-      model: Unit
-    to_unit:
-      type: belongsTo
-      model: Unit
-  unique:
-    - [ from_unit_id, to_unit_id ]
-
-Branch:
-  fields:
-    name: string
-    is_commissary: boolean:default false
-    code: string:unique
-    address: string:nullable
-    phone: string:nullable
-    email: string:nullable
-    is_active: boolean:default true
-    is_default: boolean:default false
-    logo: string:nullable
-    manager_id: foreignId:users:nullable
-    created_by: foreignId:users:nullable
-    updated_by: foreignId:users:nullable
-  relations:
-    manager:
-      type: belongsTo
-      model: User
-#    creator:
-#      type: belongsTo
-#      model: User
-#    updater:
-#      type: belongsTo
-#      model: User
-
-Category:
-  fields:
-    name: string:unique
-    code: string:unique
-    description: string:nullable
-    image: string:nullable
-    is_active: boolean:default true
-    parent_id: foreignId:categories:nullable
-    created_by: foreignId:users:nullable
-    updated_by: foreignId:users:nullable
-  relations:
-    parent:
-      type: belongsTo
-      model: Category
-#    creator:
-#      type: belongsTo
-#      model: User
-#    updater:
-#      type: belongsTo
-#      model: User
-
-Brand:
-  fields:
-    name: string:unique
-    description: string:nullable
-    logo: string:nullable
-    is_active: boolean:default true
-    is_default: boolean:default false
-    created_by: foreignId:users:nullable
-    updated_by: foreignId:users:nullable
-  relations:
-#    creator:
-#      type: belongsTo
-#      model: User
-#    updater:
-#      type: belongsTo
-#      model: User
-
-Supplier:
-  fields:
-    name: string:unique
-    contact_person: string:nullable
-    email: string:nullable
-    phone: string:nullable
-    address: string:nullable
-
 Product:
   fields:
     name: string:unique
@@ -144,6 +42,11 @@ Product:
 #      model: User
 
 ProductUnit:
+  postmanParent: Product
+  generate:
+    controller: true
+    service: true
+    request: true
   fields:
     product_id: foreignId:products
     unit_price: double:default 0
@@ -167,147 +70,17 @@ ProductUnit:
       type: belongsTo
       model: Supplier
 
-Recipe:
-  fields:
-    name: string
-    description: text:nullable
-    image: string:nullable
-    is_active: boolean:default true
-    created_by: foreignId:users:nullable
-    updated_by: foreignId:users:nullable
-  relations:
-#    creator:
-#      type: belongsTo
-#      model: User
-#    updater:
-#      type: belongsTo
-#      model: User
-
-RecipeIngredient:
+ProductImages:
+  requestParent: ProductUnit
   generate:
-    controller: false
-    service: false
-    request: false
-    resource: false
-    collection: false
+    controller: true
+    service: true
+    request: true
   fields:
-    recipe_id: foreignId:recipes
-    product_id: foreignId:products
-    quantity: decimal
-    unit_id: foreignId:units:nullable
+    product_unit_id: foreignId:product_units
+    image: string
+    is_default: boolean:default false
   relations:
-    recipe:
-      type: belongsTo
-      model: Recipe
-    product:
+    productUnit:
       type: belongsTo
       model: Product
-    unit:
-      type: belongsTo
-      model: Unit
-
-IntermediateProduct:
-  fields:
-    product_id: foreignId:products
-    name: string
-    yield: double:default 1
-  relations:
-    product:
-      type: belongsTo
-      model: Product
-
-Purchase:
-  fields:
-    brand_id: foreignId:brands
-    supplier_id: foreignId:suppliers
-    purchase_date: date
-    invoice_number: string:nullable
-    status: string:default pending
-  relations:
-    brand:
-      type: belongsTo
-      model: Brand
-    supplier:
-      type: belongsTo
-      model: Supplier
-
-PurchaseItem:
-  fields:
-    purchase_id: foreignId:purchases
-    product_id: foreignId:products
-    unit_id: foreignId:units
-    quantity: double
-    unit_price: double
-    total_price: double
-  relations:
-    purchase:
-      type: belongsTo
-      model: Purchase
-    product:
-      type: belongsTo
-      model: Product
-    unit:
-      type: belongsTo
-      model: Unit
-
-Transfer:
-  fields:
-    from_branch_id: foreignId:branches
-    to_branch_id: foreignId:branches
-    transfer_date: dateTime:nullable
-    status: string:default pending
-    notes: text:nullable
-    created_by: foreignId:users:nullable
-    updated_by: foreignId:users:nullable
-    deleted_at: softDeletes
-  relations:
-    from_branch:
-      type: belongsTo
-      model: Branch
-    to_branch:
-      type: belongsTo
-      model: Branch
-#    creator:
-#      type: belongsTo
-#      model: User
-#    updater:
-#      type: belongsTo
-#      model: User
-
-TransferItem:
-  fields:
-    transfer_id: foreignId:transfers
-    product_id: foreignId:products
-    unit_id: foreignId:units
-    quantity: double
-    unit_price: double:default 0
-  relations:
-    transfer:
-      type: belongsTo
-      model: Transfer
-    product:
-      type: belongsTo
-      model: Product
-    unit:
-      type: belongsTo
-      model: Unit
-
-InventoryCount:
-  fields:
-    branch_id: foreignId:branches
-    product_id: foreignId:products
-    unit_id: foreignId:units
-    quantity: double
-    count_date: date
-    deleted_at: softDeletes
-  relations:
-    branch:
-      type: belongsTo
-      model: Branch
-    product:
-      type: belongsTo
-      model: Product
-    unit:
-      type: belongsTo
-      model: Unit
-
