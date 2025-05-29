@@ -41,14 +41,15 @@ class GenerateDbDiagram extends Command
         $this->info("Reading YAML schema from: {$yamlFilePath}");
         $this->info("Output will be saved to: {$outputFilePath}");
 
-        if (!file_exists($yamlFilePath)) {
+        if (! file_exists($yamlFilePath)) {
             $this->error("File not found: $yamlFilePath");
+
             return Command::FAILURE;
         }
 
         // Ensure output directory exists
         $outputDir = dirname($outputFilePath);
-        if (!is_dir($outputDir)) {
+        if (! is_dir($outputDir)) {
             mkdir($outputDir, 0755, true);
         }
 
@@ -66,8 +67,8 @@ class GenerateDbDiagram extends Command
         }
 
         file_put_contents($outputFilePath, $dbmlOutput);
-        $this->info('🎯 DB diagram generated successfully at: ' . $outputFilePath);
-        $this->info('📊 Generated tables for ' . count($schema) . ' models');
+        $this->info('🎯 DB diagram generated successfully at: '.$outputFilePath);
+        $this->info('📊 Generated tables for '.count($schema).' models');
 
         return Command::SUCCESS;
     }
@@ -86,10 +87,10 @@ class GenerateDbDiagram extends Command
         }
 
         // Add timestamps if not explicitly defined
-        if (!isset($tableDefinition['fields']['created_at'])) {
+        if (! isset($tableDefinition['fields']['created_at'])) {
             $output .= "  created_at datetime\n";
         }
-        if (!isset($tableDefinition['fields']['updated_at'])) {
+        if (! isset($tableDefinition['fields']['updated_at'])) {
             $output .= "  updated_at datetime\n";
         }
 

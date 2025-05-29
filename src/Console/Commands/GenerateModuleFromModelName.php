@@ -9,14 +9,15 @@ use Illuminate\Support\Str;
 class GenerateModuleFromModelName extends Command
 {
     protected $signature = 'make:module {modelName}';
+
     protected $description = 'Generate model, controller, service, request, collection, and resource using custom stubs';
 
     public function handle(): int
     {
-        $modelName    = Str::studly($this->argument('modelName'));
-        $modelVar     = Str::camel($modelName);
-        $pluralModel  = Str::pluralStudly($modelName);
-        $tableName    = Str::snake(Str::plural($modelName));
+        $modelName = Str::studly($this->argument('modelName'));
+        $modelVar = Str::camel($modelName);
+        $pluralModel = Str::pluralStudly($modelName);
+        $tableName = Str::snake(Str::plural($modelName));
 
         // Step 0: Migration
         $this->createMigration($tableName);
@@ -40,11 +41,11 @@ class GenerateModuleFromModelName extends Command
             app_path("Http/Controllers/v1/{$modelName}Controller.php"),
             'controller',
             [
-                '{{ class }}'      => "{$modelName}Controller",
-                '{{ model }}'      => $modelName,
-                '{{ variable }}'   => $modelVar,
-                '{{ modelPlural }}'=> $pluralModel,
-                '{{ route }}'      => Str::snake($modelName),
+                '{{ class }}' => "{$modelName}Controller",
+                '{{ model }}' => $modelName,
+                '{{ variable }}' => $modelVar,
+                '{{ modelPlural }}' => $pluralModel,
+                '{{ route }}' => Str::snake($modelName),
             ],
             "App\\Http\\Controllers\\v1\\{$modelName}Controller"
         );
@@ -75,7 +76,7 @@ class GenerateModuleFromModelName extends Command
     {
         $migrationName = "create_{$tableName}_table";
         $this->call('make:migration', [
-            'name'     => $migrationName,
+            'name' => $migrationName,
             '--create' => $tableName,
         ]);
         $this->info("Migration created: {$migrationName}");
@@ -85,6 +86,7 @@ class GenerateModuleFromModelName extends Command
     {
         if (File::exists($filePath)) {
             $this->warn("Already exists: {$displayName}");
+
             return;
         }
 
@@ -121,7 +123,7 @@ class GenerateModuleFromModelName extends Command
 
         $stubFile = $config['stubs'][$stubKey];
         $publishedPath = base_path("module/stub/{$stubFile}");
-        $fallbackPath = __DIR__ . "/../../stubs/{$stubFile}";
+        $fallbackPath = __DIR__."/../../stubs/{$stubFile}";
 
         if (file_exists($publishedPath)) {
             return $publishedPath;

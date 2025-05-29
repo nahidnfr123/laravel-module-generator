@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Symfony\Component\Yaml\Yaml;
+
 use function NahidFerdous\LaravelModuleGenerator\Console\Commands\config;
 use function NahidFerdous\LaravelModuleGenerator\Console\Commands\env;
 use function NahidFerdous\LaravelModuleGenerator\Console\Commands\now;
@@ -60,7 +61,7 @@ class GeneratePostmanCollectionBackup extends Command
 
         // Handle output file
         $outputFile = $this->option('output');
-        if (!$outputFile) {
+        if (! $outputFile) {
             // If no output specified, use config or generate random
             $configOutput = $config['postman']['output_path'] ?? null;
             if ($configOutput) {
@@ -73,8 +74,9 @@ class GeneratePostmanCollectionBackup extends Command
 
         $this->ensureModuleDirectoryExists();
 
-        if (!File::exists($yamlFile)) {
+        if (! File::exists($yamlFile)) {
             $this->error("YAML file not found: {$yamlFile}");
+
             return self::FAILURE;
         }
 
@@ -95,7 +97,8 @@ class GeneratePostmanCollectionBackup extends Command
             $this->savePostmanCollection($outputFile);
 
         } catch (\Exception $e) {
-            $this->error('Error generating collection: ' . $e->getMessage());
+            $this->error('Error generating collection: '.$e->getMessage());
+
             return self::FAILURE;
         }
 
@@ -107,7 +110,7 @@ class GeneratePostmanCollectionBackup extends Command
      */
     private function ensureModuleDirectoryExists(): void
     {
-        if (!File::exists('module')) {
+        if (! File::exists('module')) {
             File::makeDirectory('module', 0755, true);
         }
     }
@@ -119,7 +122,7 @@ class GeneratePostmanCollectionBackup extends Command
     {
         return [
             'info' => [
-                'name' => env('APP_NAME', 'Laravel') . ' API Collection',
+                'name' => env('APP_NAME', 'Laravel').' API Collection',
                 'description' => 'Auto-generated from YAML schema',
                 'schema' => 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
                 '_postman_id' => Str::uuid()->toString(),
@@ -145,7 +148,7 @@ class GeneratePostmanCollectionBackup extends Command
      */
     private function shouldGenerateController(array $modelConfig): bool
     {
-        return !isset($modelConfig['generate']['controller']) || $modelConfig['generate']['controller'] !== false;
+        return ! isset($modelConfig['generate']['controller']) || $modelConfig['generate']['controller'] !== false;
     }
 
     /**
@@ -162,7 +165,7 @@ class GeneratePostmanCollectionBackup extends Command
 
         // List Resources
         $modelFolder['item'][] = $this->createRequest(
-            'Get All ' . Str::plural($modelName),
+            'Get All '.Str::plural($modelName),
             'GET',
             "{$this->apiPrefix}/{$resourceName}",
             null,
@@ -171,7 +174,7 @@ class GeneratePostmanCollectionBackup extends Command
 
         // Show Resource
         $modelFolder['item'][] = $this->createRequest(
-            'Get ' . $modelName . ' by ID',
+            'Get '.$modelName.' by ID',
             'GET',
             "{$this->apiPrefix}/{$resourceName}/{{id}}",
             null,
@@ -180,7 +183,7 @@ class GeneratePostmanCollectionBackup extends Command
 
         // Store Resource
         $modelFolder['item'][] = $this->createRequest(
-            'Create ' . $modelName,
+            'Create '.$modelName,
             'POST',
             "{$this->apiPrefix}/{$resourceName}",
             $this->generateCreateBody($modelConfig),
@@ -189,7 +192,7 @@ class GeneratePostmanCollectionBackup extends Command
 
         // Update Resource
         $modelFolder['item'][] = $this->createRequest(
-            'Update ' . $modelName,
+            'Update '.$modelName,
             'PUT',
             "{$this->apiPrefix}/{$resourceName}/{{id}}",
             $this->generateUpdateBody($modelConfig),
@@ -198,7 +201,7 @@ class GeneratePostmanCollectionBackup extends Command
 
         // Delete Resource
         $modelFolder['item'][] = $this->createRequest(
-            'Delete ' . $modelName,
+            'Delete '.$modelName,
             'DELETE',
             "{$this->apiPrefix}/{$resourceName}/{{id}}",
             null,
@@ -235,7 +238,7 @@ class GeneratePostmanCollectionBackup extends Command
                     ],
                 ],
                 'url' => [
-                    'raw' => '{{baseUrl}}/' . $url,
+                    'raw' => '{{baseUrl}}/'.$url,
                     'host' => ['{{baseUrl}}'],
                     'path' => explode('/', $url),
                 ],
@@ -284,7 +287,7 @@ class GeneratePostmanCollectionBackup extends Command
     {
         $body = [];
 
-        if (!isset($modelConfig['fields'])) {
+        if (! isset($modelConfig['fields'])) {
             return $body;
         }
 
@@ -317,8 +320,8 @@ class GeneratePostmanCollectionBackup extends Command
         $baseType = explode(':', $fieldType)[0];
 
         return match ($baseType) {
-            'string' => 'example_' . $fieldName,
-            'text' => 'This is an example ' . $fieldName . ' content.',
+            'string' => 'example_'.$fieldName,
+            'text' => 'This is an example '.$fieldName.' content.',
             'boolean' => str_contains($fieldType, 'default true') ? true : false,
             'integer', 'foreignId' => 1,
             'double', 'decimal' => 10.50,
@@ -364,7 +367,7 @@ class GeneratePostmanCollectionBackup extends Command
     {
         return [
             'data' => $this->generateSampleRecord($modelName, $modelConfig, 1),
-            'message' => $modelName . ' created successfully',
+            'message' => $modelName.' created successfully',
         ];
     }
 
@@ -375,7 +378,7 @@ class GeneratePostmanCollectionBackup extends Command
     {
         return [
             'data' => $this->generateSampleRecord($modelName, $modelConfig, 1),
-            'message' => $modelName . ' updated successfully',
+            'message' => $modelName.' updated successfully',
         ];
     }
 
@@ -396,7 +399,7 @@ class GeneratePostmanCollectionBackup extends Command
     {
         $record = ['id' => $id];
 
-        if (!isset($modelConfig['fields'])) {
+        if (! isset($modelConfig['fields'])) {
             return $record;
         }
 
@@ -415,7 +418,7 @@ class GeneratePostmanCollectionBackup extends Command
                 if ($relationConfig['type'] === 'belongsTo') {
                     $record[$relationName] = [
                         'id' => 1,
-                        'name' => 'Related ' . $relationConfig['model'],
+                        'name' => 'Related '.$relationConfig['model'],
                     ];
                 }
             }
@@ -434,6 +437,6 @@ class GeneratePostmanCollectionBackup extends Command
 
         $this->newLine();
         $this->info("🥵 Postman collection generated successfully: {$outputFile}");
-        $this->info('📊 Generated endpoints for ' . count($this->collection['item']) . ' models');
+        $this->info('📊 Generated endpoints for '.count($this->collection['item']).' models');
     }
 }

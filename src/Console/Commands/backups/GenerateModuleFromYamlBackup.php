@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Command\Command as CommandAlias;
 use Symfony\Component\Yaml\Yaml;
+
 use function NahidFerdous\LaravelModuleGenerator\Console\Commands\app_path;
 use function NahidFerdous\LaravelModuleGenerator\Console\Commands\base_path;
 use function NahidFerdous\LaravelModuleGenerator\Console\Commands\config;

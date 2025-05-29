@@ -62,7 +62,7 @@ class GeneratePostmanCollection extends Command
 
         // Handle output file
         $outputFile = $this->option('output');
-        if (!$outputFile) {
+        if (! $outputFile) {
             $configOutput = $config['postman']['output_path'] ?? null;
             if ($configOutput) {
                 $outputFile = $configOutput;
@@ -74,8 +74,9 @@ class GeneratePostmanCollection extends Command
 
         $this->ensureModuleDirectoryExists();
 
-        if (!File::exists($yamlFile)) {
+        if (! File::exists($yamlFile)) {
             $this->error("YAML file not found: {$yamlFile}");
+
             return self::FAILURE;
         }
 
@@ -88,7 +89,7 @@ class GeneratePostmanCollection extends Command
             $this->collection = $this->initializeCollection();
 
             foreach ($this->fullSchema as $modelName => $modelConfig) {
-                if ($this->shouldGenerateController($modelConfig) && !$this->hasRequestParent($modelConfig)) {
+                if ($this->shouldGenerateController($modelConfig) && ! $this->hasRequestParent($modelConfig)) {
                     $this->generateModelEndpoints($modelName, $modelConfig);
                 }
             }
@@ -96,7 +97,8 @@ class GeneratePostmanCollection extends Command
             $this->savePostmanCollection($outputFile);
 
         } catch (\Exception $e) {
-            $this->error('Error generating collection: ' . $e->getMessage());
+            $this->error('Error generating collection: '.$e->getMessage());
+
             return self::FAILURE;
         }
 
@@ -108,7 +110,7 @@ class GeneratePostmanCollection extends Command
      */
     private function ensureModuleDirectoryExists(): void
     {
-        if (!File::exists('module')) {
+        if (! File::exists('module')) {
             File::makeDirectory('module', 0755, true);
         }
     }
@@ -120,7 +122,7 @@ class GeneratePostmanCollection extends Command
     {
         return [
             'info' => [
-                'name' => env('APP_NAME', 'Laravel') . ' API Collection',
+                'name' => env('APP_NAME', 'Laravel').' API Collection',
                 'description' => 'Auto-generated from YAML schema',
                 'schema' => 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
                 '_postman_id' => Str::uuid()->toString(),
@@ -146,7 +148,7 @@ class GeneratePostmanCollection extends Command
      */
     private function shouldGenerateController(array $modelConfig): bool
     {
-        return !isset($modelConfig['generate']['controller']) || $modelConfig['generate']['controller'] !== false;
+        return ! isset($modelConfig['generate']['controller']) || $modelConfig['generate']['controller'] !== false;
     }
 
     /**
@@ -170,7 +172,7 @@ class GeneratePostmanCollection extends Command
 
                 // Recursively get nested models of this nested model
                 $deeperNested = $this->getNestedModels($modelName);
-                if (!empty($deeperNested)) {
+                if (! empty($deeperNested)) {
                     $nestedModels[$modelName]['_nested'] = $deeperNested;
                 }
             }
@@ -196,7 +198,7 @@ class GeneratePostmanCollection extends Command
 
         // List Resources
         $modelFolder['item'][] = $this->createRequest(
-            'Get All ' . Str::plural($modelName),
+            'Get All '.Str::plural($modelName),
             'GET',
             "{$this->apiPrefix}/{$resourceName}",
             null,
@@ -205,7 +207,7 @@ class GeneratePostmanCollection extends Command
 
         // Show Resource
         $modelFolder['item'][] = $this->createRequest(
-            'Get ' . $modelName . ' by ID',
+            'Get '.$modelName.' by ID',
             'GET',
             "{$this->apiPrefix}/{$resourceName}/{{id}}",
             null,
@@ -214,7 +216,7 @@ class GeneratePostmanCollection extends Command
 
         // Store Resource
         $modelFolder['item'][] = $this->createRequest(
-            'Create ' . $modelName,
+            'Create '.$modelName,
             'POST',
             "{$this->apiPrefix}/{$resourceName}",
             $this->generateCreateBody($modelConfig, $nestedModels),
@@ -223,7 +225,7 @@ class GeneratePostmanCollection extends Command
 
         // Update Resource
         $modelFolder['item'][] = $this->createRequest(
-            'Update ' . $modelName,
+            'Update '.$modelName,
             'PUT',
             "{$this->apiPrefix}/{$resourceName}/{{id}}",
             $this->generateUpdateBody($modelConfig, $nestedModels),
@@ -232,7 +234,7 @@ class GeneratePostmanCollection extends Command
 
         // Delete Resource
         $modelFolder['item'][] = $this->createRequest(
-            'Delete ' . $modelName,
+            'Delete '.$modelName,
             'DELETE',
             "{$this->apiPrefix}/{$resourceName}/{{id}}",
             null,
@@ -269,7 +271,7 @@ class GeneratePostmanCollection extends Command
                     ],
                 ],
                 'url' => [
-                    'raw' => '{{baseUrl}}/' . $url,
+                    'raw' => '{{baseUrl}}/'.$url,
                     'host' => ['{{baseUrl}}'],
                     'path' => explode('/', $url),
                 ],
@@ -318,7 +320,7 @@ class GeneratePostmanCollection extends Command
     {
         $body = [];
 
-        if (!isset($modelConfig['fields'])) {
+        if (! isset($modelConfig['fields'])) {
             return $body;
         }
 
@@ -358,7 +360,7 @@ class GeneratePostmanCollection extends Command
             $nestedBody = $this->generateNestedResourceBody($nestedModelConfig);
 
             // Handle deeper nesting
-            if (isset($nestedModelConfig['_nested']) && !empty($nestedModelConfig['_nested'])) {
+            if (isset($nestedModelConfig['_nested']) && ! empty($nestedModelConfig['_nested'])) {
                 $deeperNestedBody = $this->generateNestedModelsBody($nestedModelConfig['_nested']);
                 $nestedBody = array_merge($nestedBody, $deeperNestedBody);
             }
@@ -388,7 +390,7 @@ class GeneratePostmanCollection extends Command
             );
 
             // Handle deeper nesting
-            if (isset($nestedModelConfig['_nested']) && !empty($nestedModelConfig['_nested'])) {
+            if (isset($nestedModelConfig['_nested']) && ! empty($nestedModelConfig['_nested'])) {
                 $deeperNestedResponse = $this->generateNestedModelsResponse($nestedModelConfig['_nested']);
                 $nestedResponse = array_merge($nestedResponse, $deeperNestedResponse);
             }
@@ -426,8 +428,8 @@ class GeneratePostmanCollection extends Command
         $baseType = explode(':', $fieldType)[0];
 
         return match ($baseType) {
-            'string' => 'example_' . $fieldName,
-            'text' => 'This is an example ' . $fieldName . ' content.',
+            'string' => 'example_'.$fieldName,
+            'text' => 'This is an example '.$fieldName.' content.',
             'boolean' => str_contains($fieldType, 'default true') ? true : false,
             'integer', 'foreignId' => 1,
             'double', 'decimal' => 10.50,
@@ -474,7 +476,7 @@ class GeneratePostmanCollection extends Command
     {
         return [
             'data' => $this->generateSampleRecord($modelName, $modelConfig, 1, $nestedModels),
-            'message' => $modelName . ' created successfully',
+            'message' => $modelName.' created successfully',
         ];
     }
 
@@ -485,7 +487,7 @@ class GeneratePostmanCollection extends Command
     {
         return [
             'data' => $this->generateSampleRecord($modelName, $modelConfig, 1, $nestedModels),
-            'message' => $modelName . ' updated successfully',
+            'message' => $modelName.' updated successfully',
         ];
     }
 
@@ -506,7 +508,7 @@ class GeneratePostmanCollection extends Command
     {
         $record = ['id' => $id];
 
-        if (!isset($modelConfig['fields'])) {
+        if (! isset($modelConfig['fields'])) {
             return $record;
         }
 
@@ -526,7 +528,7 @@ class GeneratePostmanCollection extends Command
                 if ($relationConfig['type'] === 'belongsTo') {
                     $record[$relationName] = [
                         'id' => 1,
-                        'name' => 'Related ' . $relationConfig['model'],
+                        'name' => 'Related '.$relationConfig['model'],
                     ];
                 }
             }
@@ -549,6 +551,6 @@ class GeneratePostmanCollection extends Command
 
         $this->newLine();
         $this->info("🥵 Postman collection generated successfully: {$outputFile}");
-        $this->info('📊 Generated endpoints for ' . count($this->collection['item']) . ' models');
+        $this->info('📊 Generated endpoints for '.count($this->collection['item']).' models');
     }
 }
