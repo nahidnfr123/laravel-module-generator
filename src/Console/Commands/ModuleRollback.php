@@ -73,8 +73,8 @@ class ModuleRollback extends Command
     {
         $keepCount = (int) $this->ask('How many recent backups to keep?', '5');
 
-        if ($keepCount < 1) {
-            $this->error('Must keep at least 1 backup.');
+        if ($keepCount < 0) {
+            $this->error('Must keep at least 0 backup.');
 
             return CommandAlias::FAILURE;
         }

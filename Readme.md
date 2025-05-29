@@ -69,11 +69,11 @@ User:
     generate:
         model: false
         migration: false
-        controller: false
-        service: false
-        request: false
-        resource: false
-        collection: false
+        controller: true
+        service: true
+        request: true
+        resource: true
+        collection: true
     fields:
         name: string
         email: string:unique
@@ -100,6 +100,7 @@ Unit:
             model: User
 
 UnitConversion:
+    requestParent: Unit
     fields:
         from_unit_id: foreignId:units
         to_unit_id: foreignId:units
