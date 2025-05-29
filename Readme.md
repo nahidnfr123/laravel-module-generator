@@ -64,56 +64,56 @@ Define your models with their fields, validation rules, and relationships:
 
 ```yaml
 User:
-    # all the generatable modules are false, 
-    # so the user model only generates the Postman collection and dbdiagram files
-    generate:
-        model: false
-        migration: false
-        controller: true
-        service: true
-        request: true
-        resource: true
-        collection: true
-    fields:
-        name: string
-        email: string:unique
-        email_verified_at: dateTime:nullable
-        password: string
-        avatar: string:nullable
-        status: boolean:default true
-        last_login_at: timestamp:nullable
+  # all the generatable modules are false, 
+  # so the user model only generates the Postman collection and dbdiagram files
+  generate:
+    model: false
+    migration: false
+    controller: true
+    service: true
+    request: true
+    resource: true
+    collection: true
+  fields:
+    name: string
+    email: string:unique
+    email_verified_at: dateTime:nullable
+    password: string
+    avatar: string:nullable
+    status: boolean:default true
+    last_login_at: timestamp:nullable
 
 Unit:
-    fields:
-        name: string:unique
-        code: string:nullable
-        description: string
-        is_active: boolean:default true
-        created_by: foreignId:users:nullable
-        updated_by: foreignId:users:nullable
-    relations:
-        creator:
-            type: belongsTo
-            model: User
-        updater:
-            type: belongsTo
-            model: User
+  fields:
+    name: string:unique
+    code: string:nullable
+    description: string
+    is_active: boolean:default true
+    created_by: foreignId:users:nullable
+    updated_by: foreignId:users:nullable
+  relations:
+    creator:
+      type: belongsTo
+      model: User
+    updater:
+      type: belongsTo
+      model: User
 
 UnitConversion:
-    requestParent: Unit
-    fields:
-        from_unit_id: foreignId:units
-        to_unit_id: foreignId:units
-        multiplier: double:default 1
-    relations:
-        from_unit:
-            type: belongsTo
-            model: Unit
-        to_unit:
-            type: belongsTo
-            model: Unit
-    unique:
-        - [ from_unit_id, to_unit_id ]
+  requestParent: Unit
+  fields:
+    from_unit_id: foreignId:units
+    to_unit_id: foreignId:units
+    multiplier: double:default 1
+  relations:
+    from_unit:
+      type: belongsTo
+      model: Unit
+    to_unit:
+      type: belongsTo
+      model: Unit
+  unique:
+    - [ from_unit_id, to_unit_id ]
 ```
 
 ### 2. Generate Your Complete Module
@@ -154,7 +154,7 @@ php artisan dbdiagram:generate
 php artisan dbdiagram:generate --file=custom/models.yaml --output=custom/database.dbml
 ```
 
-#### Backup Existing Files
+#### Backup Existing Files While Generating
 
 ```bash
 # Generate with backup (default)
@@ -332,8 +332,8 @@ Define composite unique constraints:
 
 ```yaml
 unique:
-    - [ field1, field2 ]
-    - [ field3, field4, field5 ]
+  - [ field1, field2 ]
+  - [ field3, field4, field5 ]
 ```
 
 ### Selective Generation
@@ -342,15 +342,15 @@ Control what gets generated for each model:
 
 ```yaml
 User:
-    fields:
-        name: string
-        email: string
-    generate:
-        controller: true
-        service: false
-        request: true
-        resource: true
-        collection: false
+  fields:
+    name: string
+    email: string
+  generate:
+    controller: true
+    service: false
+    request: true
+    resource: true
+    collection: false
 ```
 
 ---
