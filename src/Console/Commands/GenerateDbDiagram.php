@@ -14,8 +14,8 @@ class GenerateDbDiagram extends Command
      * @var string
      */
     protected $signature = 'dbdiagram:generate 
-                             {--file=module/models.yaml : Path to the YAML schema file}
-                             {--output=module/dbdiagram.dbml : Path to the output DBML file}';
+                             {--file= : Path to the YAML schema file}
+                             {--output= : Path to the output DBML file}';
 
     /**
      * The console command description.
@@ -31,13 +31,25 @@ class GenerateDbDiagram extends Command
      */
     public function handle()
     {
-        $yamlFilePath = $this->option('file') ?? config('module-generator.models_path', 'module/models.yaml');
-        $outputFilePath = $this->option('output');
+        // Get config values
+        $config = config('module-generator');
 
-        if (! file_exists($yamlFilePath)) {
+        // Resolve options with config fallbacks
+        $yamlFilePath = $this->option('file') ?: $config['models_path'];
+        $outputFilePath = $this->option('output') ?: $config['dbdiagram']['output_path'];
+
+        $this->info("Reading YAML schema from: {$yamlFilePath}");
+        $this->info("Output will be saved to: {$outputFilePath}");
+
+        if (!file_exists($yamlFilePath)) {
             $this->error("File not found: $yamlFilePath");
-
             return Command::FAILURE;
+        }
+
+        // Ensure output directory exists
+        $outputDir = dirname($outputFilePath);
+        if (!is_dir($outputDir)) {
+            mkdir($outputDir, 0755, true);
         }
 
         $schema = Yaml::parseFile($yamlFilePath);
@@ -54,7 +66,8 @@ class GenerateDbDiagram extends Command
         }
 
         file_put_contents($outputFilePath, $dbmlOutput);
-        $this->info('DB diagram generated at: '.$outputFilePath);
+        $this->info('🎯 DB diagram generated successfully at: ' . $outputFilePath);
+        $this->info('📊 Generated tables for ' . count($schema) . ' models');
 
         return Command::SUCCESS;
     }
@@ -70,6 +83,14 @@ class GenerateDbDiagram extends Command
 
         foreach ($tableDefinition['fields'] ?? [] as $fieldName => $fieldDefinition) {
             $output .= $this->parseField($fieldName, $fieldDefinition);
+        }
+
+        // Add timestamps if not explicitly defined
+        if (!isset($tableDefinition['fields']['created_at'])) {
+            $output .= "  created_at datetime\n";
+        }
+        if (!isset($tableDefinition['fields']['updated_at'])) {
+            $output .= "  updated_at datetime\n";
         }
 
         $output .= "}\n\n";
@@ -112,6 +133,7 @@ class GenerateDbDiagram extends Command
             'string' => 'string',
             'text' => 'text',
             'boolean' => 'boolean',
+            'integer' => 'integer',
             'double' => 'double',
             'decimal' => 'decimal',
             'date' => 'date',
