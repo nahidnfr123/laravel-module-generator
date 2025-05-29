@@ -327,8 +327,6 @@ Here's a complete workflow from YAML to production-ready API:
 vim module/models.yaml
 
 # 2. Generate everything at once
-php artisan module:generate
-# or use force to overwrite existing files
 php artisan module:generate --force
 
 # 3. Run migrations
@@ -382,7 +380,7 @@ Special thanks to the Laravel community and all contributors who help improve th
 
 If you encounter any issues or have questions:
 
-1. Check the [existing issues](https://github.com/nahidnfr123/laravel-module-generator/issues)
+1. Check the [existing issues](https://github.com/nahid-ferdous/laravel-module-generator/issues)
 2. Create a new issue with detailed information
 3. Include your YAML configuration and error messages
 

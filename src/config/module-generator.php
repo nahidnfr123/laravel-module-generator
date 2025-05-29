@@ -13,4 +13,14 @@ return [
         'collection' => 'collection.stub',
         'resource' => 'resource.stub',
     ],
+    // Postman collection settings
+    'postman' => [
+        'default_base_url' => '{{base-url}}',
+        'default_prefix' => 'api',
+        'output_path' => 'module/postman_collection.json',
+    ],
+    // DB diagram settings
+    'dbdiagram' => [
+        'output_path' => 'module/dbdiagram.dbml',
+    ],
 ];
