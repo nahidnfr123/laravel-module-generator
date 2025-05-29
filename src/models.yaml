@@ -42,7 +42,7 @@ Product:
 #      model: User
 
 ProductUnit:
-  postmanParent: Product
+  requestParent: Product
   generate:
     controller: true
     service: true
