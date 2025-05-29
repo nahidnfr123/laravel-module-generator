@@ -144,6 +144,8 @@ Product:
 #      model: User
 
 ProductUnit:
+  # and nested validation rule and Postman request body
+  requestParent: Product
   fields:
     product_id: foreignId:products
     unit_price: double:default 0
@@ -184,6 +186,8 @@ Recipe:
 #      model: User
 
 RecipeIngredient:
+  # and nested validation rule and Postman request body
+  requestParent: Recipe
   generate:
     controller: false
     service: false
@@ -232,6 +236,13 @@ Purchase:
       model: Supplier
 
 PurchaseItem:
+  # and nested validation rule and Postman request body
+  requestParent: Purchase
+  generate:
+    controller: false
+    service: false
+    request: false
+    collection: false
   fields:
     purchase_id: foreignId:purchases
     product_id: foreignId:products

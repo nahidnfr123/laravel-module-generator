@@ -12,3 +12,22 @@ git tag v1.0.7 && git push origin v1.0.7
             }
         }
     ],
+
+
+    # Generate with backup (default)
+    php artisan module:generate --file=models.yaml
+
+    # Generate without backup
+    php artisan module:generate --file=models.yaml --skip-backup
+
+    # List available backups
+    php artisan module:rollback --list
+
+    # Rollback to latest backup
+    php artisan module:rollback
+
+    # Rollback to specific backup
+    php artisan module:rollback --backup=2025-01-15_14-30-22
+
+    # Clean up old backups
+    php artisan module:rollback --cleanup

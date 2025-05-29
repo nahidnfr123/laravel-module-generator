@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use NahidFerdous\LaravelModuleGenerator\Services\BackupService;
 use Symfony\Component\Console\Command\Command as CommandAlias;
 use Symfony\Component\Yaml\Yaml;
 
@@ -16,10 +17,15 @@ class GenerateModuleFromYaml extends Command
                            {--file= : Path to a YAML file}
                            {--skip-postman : Skip Postman collection generation}
                            {--skip-dbdiagram : Skip DB diagram generation}
+                            {--skip-backup : Skip backup creation}
                            {--postman-base-url={{base-url}} : Base URL for Postman collection}
                            {--postman-prefix=api/v1 : API prefix for Postman collection}';
 
     protected $description = 'Generate Laravel module files (model, migration, controller, etc.) from a YAML file';
+
+    private BackupService $backupService;
+
+    private ?string $currentBackupPath = null;
 
     public array $generateConfig = [
         'model' => true,
@@ -33,19 +39,49 @@ class GenerateModuleFromYaml extends Command
 
     public function handle()
     {
-        $this->validateAndGetConfiguration();
+        $this->backupService = new BackupService($this);
 
+        $this->validateAndGetConfiguration();
         $models = $this->parseYamlFile();
+
+        // Create backup unless explicitly skipped
+        if (! $this->option('skip-backup')) {
+            $this->currentBackupPath = $this->backupService->createBackup($models);
+            $this->displayBackupInfo();
+        }
 
         foreach ($models as $modelName => $modelData) {
             $this->processModel($modelName, $modelData);
         }
 
         $this->generateAdditionalFiles();
-
         $this->displaySuccessMessage();
 
         return CommandAlias::SUCCESS;
+    }
+
+    /**
+     * Display backup information to user
+     */
+    private function displayBackupInfo(): void
+    {
+        if ($this->currentBackupPath) {
+            $this->newLine();
+            $this->info("💾 Backup created at: {$this->currentBackupPath}");
+            $this->info("💡 Use 'php artisan module:rollback' to restore if needed");
+            $this->newLine();
+        }
+    }
+
+    // Remove the old backup() method completely
+    // Keep all your existing methods as they are...
+
+    /**
+     * Get the backup service instance (useful for rollback command)
+     */
+    public function getBackupService(): BackupService
+    {
+        return $this->backupService ?? new BackupService($this);
     }
 
     /**

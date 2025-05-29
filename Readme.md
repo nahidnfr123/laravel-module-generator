@@ -11,15 +11,15 @@ A developer-friendly Laravel package to generate complete modules (Model, Migrat
 - **🆕 Postman collection generation** for instant API testing
 - **🆕 Database diagram export** compatible with [dbdiagram.io](https://dbdiagram.io)
 - Generates:
-  - Models with relationships
-  - Database migrations
-  - API Controllers
-  - Service classes
-  - Form Request validation
-  - API Resources & Collections
-  - Route entries
-  - **Postman collection files**
-  - **DB diagram files (.dbml)**
+    - Models with relationships
+    - Database migrations
+    - API Controllers
+    - Service classes
+    - Form Request validation
+    - API Resources & Collections
+    - Route entries
+    - **Postman collection files**
+    - **DB diagram files (.dbml)**
 - Smart fillable and relationship handling
 - Designed for rapid development and prototyping
 
@@ -46,6 +46,7 @@ php artisan vendor:publish --tag=module-generator-stubs
 ```
 
 This will publish:
+
 - **Config**: `config/module-generator.php`
 - **Stubs**: `module/stub/`
 
@@ -63,55 +64,55 @@ Define your models with their fields, validation rules, and relationships:
 
 ```yaml
 User:
-  # all the generatable modules are false, 
-  # so the user model only generates the Postman collection and dbdiagram files
-  generate:
-    model: false
-    migration: false
-    controller: false
-    service: false
-    request: false
-    resource: false
-    collection: false
-  fields:
-    name: string
-    email: string:unique
-    email_verified_at: dateTime:nullable
-    password: string
-    avatar: string:nullable
-    status: boolean:default true
-    last_login_at: timestamp:nullable
+    # all the generatable modules are false, 
+    # so the user model only generates the Postman collection and dbdiagram files
+    generate:
+        model: false
+        migration: false
+        controller: false
+        service: false
+        request: false
+        resource: false
+        collection: false
+    fields:
+        name: string
+        email: string:unique
+        email_verified_at: dateTime:nullable
+        password: string
+        avatar: string:nullable
+        status: boolean:default true
+        last_login_at: timestamp:nullable
 
 Unit:
-  fields:
-    name: string:unique
-    code: string:nullable
-    description: string
-    is_active: boolean:default true
-    created_by: foreignId:users:nullable
-    updated_by: foreignId:users:nullable
-  relations:
-    creator:
-      type: belongsTo
-      model: User
-    updater:
-      type: belongsTo
-      model: User
+    fields:
+        name: string:unique
+        code: string:nullable
+        description: string
+        is_active: boolean:default true
+        created_by: foreignId:users:nullable
+        updated_by: foreignId:users:nullable
+    relations:
+        creator:
+            type: belongsTo
+            model: User
+        updater:
+            type: belongsTo
+            model: User
 
 UnitConversion:
-  fields:
-    from_unit_id: foreignId:units
-    to_unit_id: foreignId:units
-    multiplier: double:default 1
-  relations:
-    from_unit:
-      type: belongsTo
-      model: Unit
-    to_unit:
-      type: belongsTo
-      model: Unit
-  unique:
-    - [ from_unit_id, to_unit_id ]
+    fields:
+        from_unit_id: foreignId:units
+        to_unit_id: foreignId:units
+        multiplier: double:default 1
+    relations:
+        from_unit:
+            type: belongsTo
+            model: Unit
+        to_unit:
+            type: belongsTo
+            model: Unit
+    unique:
+        - [ from_unit_id, to_unit_id ]
 ```
 
 ### 2. Generate Your Complete Module
@@ -138,6 +139,7 @@ php artisan module:generate --postman-prefix=api/v2                   # Custom A
 You can also generate specific components separately:
 
 #### Generate Postman Collection Only
+
 ```bash
 php artisan postman:generate
 php artisan postman:generate --file=custom/models.yaml
@@ -145,9 +147,32 @@ php artisan postman:generate --base-url=https://api.myapp.com --prefix=api/v1
 ```
 
 #### Generate DB Diagram Only
+
 ```bash
 php artisan dbdiagram:generate
 php artisan dbdiagram:generate --file=custom/models.yaml --output=custom/database.dbml
+```
+
+#### Backup Existing Files
+
+```bash
+# Generate with backup (default)
+php artisan module:generate --file=models.yaml
+
+# Generate without backup
+php artisan module:generate --file=models.yaml --skip-backup
+
+# List available backups
+php artisan module:rollback --list
+
+# Rollback to latest backup  
+php artisan module:rollback
+
+# Rollback to specific backup
+php artisan module:rollback --backup=2025-01-15_14-30-22
+
+# Clean up old backups
+php artisan module:rollback --cleanup
 ```
 
 ---
@@ -157,6 +182,7 @@ php artisan dbdiagram:generate --file=custom/models.yaml --output=custom/databas
 For each model defined in your YAML file, the package will generate:
 
 ### Core Laravel Components
+
 - ✅ **Eloquent Model** → `app/Models/`
 - ✅ **Migration** → `database/migrations/`
 - ✅ **API Controller** → `app/Http/Controllers/`
@@ -167,6 +193,7 @@ For each model defined in your YAML file, the package will generate:
 - ✅ **Route Registration** → `routes/api.php`
 
 ### 🆕 Documentation & Testing
+
 - ✅ **Postman Collection** → `module/postman_collection.json`
 - ✅ **DB Diagram** → `module/dbdiagram.dbml`
 
@@ -184,6 +211,7 @@ The generated Postman collection includes:
 - **Authentication placeholders**
 
 **Sample generated endpoints:**
+
 ```
 GET    {{base_url}}/{{api_prefix}}/users        # List all users
 POST   {{base_url}}/{{api_prefix}}/users        # Create user
@@ -203,6 +231,7 @@ The generated DB diagram (.dbml) includes:
 - **Exportable to various formats** (PNG, PDF, SQL)
 
 **Usage with dbdiagram.io:**
+
 1. Copy the content from `module/dbdiagram.dbml`
 2. Visit [dbdiagram.io](https://dbdiagram.io)
 3. Paste the content to visualize your database schema
@@ -232,6 +261,7 @@ This package allows you to override any of the stubs it uses for complete custom
 ### Customizing Stubs
 
 If you published the stubs with:
+
 ```bash
 php artisan vendor:publish --tag=module-generator-stubs
 ```
@@ -280,6 +310,7 @@ return [
 ## 📝 YAML Schema Guide
 
 ### Field Types
+
 - `string` - VARCHAR field
 - `string:unique` - VARCHAR with unique constraint
 - `string:nullable` - Nullable VARCHAR
@@ -288,32 +319,37 @@ return [
 - `double` - Double/float field
 
 ### Relationship Types
+
 - `belongsTo` - Belongs to relationship
 - `hasMany` - Has many relationship
 - `hasOne` - Has one relationship
 - `belongsToMany` - Many-to-many relationship
 
 ### Unique Constraints
+
 Define composite unique constraints:
+
 ```yaml
 unique:
-  - [field1, field2]
-  - [field3, field4, field5]
+    - [ field1, field2 ]
+    - [ field3, field4, field5 ]
 ```
 
 ### Selective Generation
+
 Control what gets generated for each model:
+
 ```yaml
 User:
-  fields:
-    name: string
-    email: string
-  generate:
-    controller: true
-    service: false
-    request: true
-    resource: true
-    collection: false
+    fields:
+        name: string
+        email: string
+    generate:
+        controller: true
+        service: false
+        request: true
+        resource: true
+        collection: false
 ```
 
 ---
@@ -404,6 +440,7 @@ If you encounter any issues or have questions:
 ## 📈 Recent Updates
 
 ### v1.0.10
+
 - ✅ **NEW**: Postman collection generation
 - ✅ **NEW**: Database diagram export (dbdiagram.io compatible)
 - ✅ **NEW**: Selective component generation
