@@ -151,6 +151,7 @@ class GeneratePostmanCollection extends Command
 
     /**
      * Gets relations that have makeRequest: true.
+     * Only hasMany and hasOne relations are allowed to prevent circular references.
      */
     private function getRequestableRelations(array $modelConfig): array
     {
@@ -161,7 +162,9 @@ class GeneratePostmanCollection extends Command
         }
 
         foreach ($modelConfig['relations'] as $relationName => $relationConfig) {
-            if (isset($relationConfig['makeRequest']) && $relationConfig['makeRequest'] === true) {
+            if (isset($relationConfig['makeRequest']) &&
+                $relationConfig['makeRequest'] === true &&
+                in_array($relationConfig['type'], ['hasMany', 'hasOne'])) {
                 $requestableRelations[$relationName] = $relationConfig;
             }
         }
@@ -171,9 +174,16 @@ class GeneratePostmanCollection extends Command
 
     /**
      * Recursively collects all nested requestable relations.
+     * Includes circular reference detection to prevent infinite loops.
      */
-    private function collectNestedRequestableRelations(string $modelName): array
+    private function collectNestedRequestableRelations(string $modelName, array $visited = []): array
     {
+        // Prevent circular references
+        if (in_array($modelName, $visited)) {
+            return [];
+        }
+
+        $visited[] = $modelName;
         $nestedRelations = [];
         $modelConfig = $this->fullSchema[$modelName] ?? [];
 
@@ -184,7 +194,7 @@ class GeneratePostmanCollection extends Command
             $nestedRelations[$relationName] = [
                 'config' => $relationConfig,
                 'model_config' => $this->fullSchema[$relatedModelName] ?? [],
-                'nested' => $this->collectNestedRequestableRelations($relatedModelName)
+                'nested' => $this->collectNestedRequestableRelations($relatedModelName, $visited)
             ];
         }
 
@@ -381,7 +391,7 @@ class GeneratePostmanCollection extends Command
                 $relationBody = array_merge($relationBody, $deeperNestedBody);
             }
 
-            // For hasMany relations, wrap in array
+            // For hasMany/hasOne relations, wrap hasMany in array
             if ($relationConfig['type'] === 'hasMany') {
                 $body[$fieldName] = [$relationBody];
             } else {
@@ -421,7 +431,7 @@ class GeneratePostmanCollection extends Command
                 $relationResponse = array_merge($relationResponse, $deeperNestedResponse);
             }
 
-            // For hasMany relations, wrap in array
+            // For hasMany/hasOne relations, wrap hasMany in array
             if ($relationConfig['type'] === 'hasMany') {
                 $responseData[$fieldName] = [$relationResponse];
             } else {
@@ -437,7 +447,7 @@ class GeneratePostmanCollection extends Command
      */
     private function getRelationFieldName(string $relationName, array $relationConfig): string
     {
-        if ($relationConfig['type'] === 'hasMany') {
+        if (in_array($relationConfig['type'], ['hasMany'])) {
             return Str::snake(Str::plural($relationName));
         }
 
