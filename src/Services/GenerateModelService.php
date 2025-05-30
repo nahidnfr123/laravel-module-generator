@@ -24,7 +24,7 @@ class GenerateModelService
         Artisan::call('make:model', ['name' => $modelName, '--migration' => true]);
 
         $modelPath = app_path("Models/{$modelName}.php");
-        if (!File::exists($modelPath)) {
+        if (! File::exists($modelPath)) {
             $this->command->warn("⚠️ Model file not found for: {$modelName}");
 
             return;
@@ -43,9 +43,9 @@ class GenerateModelService
      */
     private function buildFillableArray(array $fields): string
     {
-        $fillableFields = array_map(fn($field) => "        '{$field}'", array_keys($fields));
+        $fillableFields = array_map(fn ($field) => "        '{$field}'", array_keys($fields));
 
-        return "protected \$fillable = [\n" . implode(",\n", $fillableFields) . ",\n    ];";
+        return "protected \$fillable = [\n".implode(",\n", $fillableFields).",\n    ];";
     }
 
     /**
@@ -84,7 +84,7 @@ PHP;
         $modelContent = File::get($modelPath);
 
         $modelContent = preg_replace(
-            '/(class\s+' . $modelName . '\s+extends\s+Model\s*\{)/',
+            '/(class\s+'.$modelName.'\s+extends\s+Model\s*\{)/',
             "$1\n\n    {$fillableArray}\n{$relationshipMethods}\n",
             $modelContent
         );

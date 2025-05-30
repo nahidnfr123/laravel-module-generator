@@ -31,10 +31,6 @@ Unit:
     created_by: foreignId:users:nullable
     updated_by: foreignId:users:nullable
   relations:
-    unitConversions:
-      type: hasMany
-      model: UnitConversion
-      makeRequest: true
 #    creator:
 #      type: belongsTo
 #      model: User
@@ -96,9 +92,6 @@ Category:
     parent:
       type: belongsTo
       model: Category
-    products:
-      type: hasMany
-      model: Product
 #    creator:
 #      type: belongsTo
 #      model: User
@@ -116,9 +109,6 @@ Brand:
     created_by: foreignId:users:nullable
     updated_by: foreignId:users:nullable
   relations:
-    productUnits:
-      type: hasMany
-      model: ProductUnit
 #    creator:
 #      type: belongsTo
 #      model: User
@@ -146,10 +136,6 @@ Product:
     created_by: foreignId:users:nullable
     updated_by: foreignId:users:nullable
   relations:
-    productUnits:
-      type: hasMany
-      model: ProductUnit
-      makeRequest: true
 #    creator:
 #      type: belongsTo
 #      model: User
@@ -158,6 +144,8 @@ Product:
 #      model: User
 
 ProductUnit:
+  # and nested validation rule and Postman request body
+  requestParent: Product
   fields:
     product_id: foreignId:products
     unit_price: double:default 0
@@ -190,10 +178,6 @@ Recipe:
     created_by: foreignId:users:nullable
     updated_by: foreignId:users:nullable
   relations:
-    recipeIngredients:
-      type: hasMany
-      model: RecipeIngredient
-      makeRequest: true
 #    creator:
 #      type: belongsTo
 #      model: User
@@ -201,12 +185,14 @@ Recipe:
 #      type: belongsTo
 #      model: User
 
-
 RecipeIngredient:
+  # and nested validation rule and Postman request body
+  requestParent: Recipe
   generate:
     controller: false
     service: false
     request: false
+    resource: false
     collection: false
   fields:
     recipe_id: foreignId:recipes
@@ -248,12 +234,15 @@ Purchase:
     supplier:
       type: belongsTo
       model: Supplier
-    purchaseItems:
-      type: hasMany
-      model: PurchaseItem
-      makeRequest: true
 
 PurchaseItem:
+  # and nested validation rule and Postman request body
+  requestParent: Purchase
+  generate:
+    controller: false
+    service: false
+    request: false
+    collection: false
   fields:
     purchase_id: foreignId:purchases
     product_id: foreignId:products

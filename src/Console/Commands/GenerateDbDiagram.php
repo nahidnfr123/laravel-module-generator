@@ -39,7 +39,7 @@ class GenerateDbDiagram extends Command
         $outputFilePath = $this->option('output') ?: $config['dbdiagram']['output_path'];
 
         $this->info("Reading YAML schema from: {$yamlFilePath}");
-       // $this->info("Output will be saved to: {$outputFilePath}");
+        // $this->info("Output will be saved to: {$outputFilePath}");
 
         if (! file_exists($yamlFilePath)) {
             $this->error("File not found: $yamlFilePath");

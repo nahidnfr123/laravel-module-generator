@@ -3,7 +3,6 @@
 namespace NahidFerdous\LaravelModuleGenerator\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use NahidFerdous\LaravelModuleGenerator\Services\AppendRouteService;
@@ -50,6 +49,7 @@ class GenerateModuleFromYaml extends Command
             $confirmation = $this->ask('This command will replace existing module files and generate module files based on a YAML configuration. Do you want to proceed? (yes/no)', 'yes');
             if (strtolower($confirmation) !== 'yes') {
                 $this->info('Command cancelled.');
+
                 return CommandAlias::SUCCESS;
             }
         }
@@ -60,7 +60,7 @@ class GenerateModuleFromYaml extends Command
         $models = $this->parseYamlFile();
 
         // Create backup unless explicitly skipped
-        if (!$this->option('skip-backup')) {
+        if (! $this->option('skip-backup')) {
             $this->currentBackupPath = $backupService->createBackup($models);
             $this->displayBackupInfo();
         }
@@ -98,7 +98,7 @@ class GenerateModuleFromYaml extends Command
         $defaultPath = config('module-generator.models_path');
         $path = $this->option('file') ?? $defaultPath;
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             $this->error("YAML file not found at: $path");
             exit(CommandAlias::FAILURE);
         }
@@ -204,7 +204,7 @@ class GenerateModuleFromYaml extends Command
 
         // Check if model generation is enabled
         if ($this->generateConfig['model']) {
-            if (File::exists($modelPath) && !$force) {
+            if (File::exists($modelPath) && ! $force) {
                 $this->warn("⚠️ Model already exists: {$modelConfig['studlyName']}");
 
                 return;
@@ -222,10 +222,10 @@ class GenerateModuleFromYaml extends Command
         // Check if migration generation is enabled
         if ($this->generateConfig['migration']) {
             // Delete existing migration files if they exist
-            if (!empty($migrationFiles)) {
+            if (! empty($migrationFiles)) {
                 foreach ($migrationFiles as $file) {
                     File::delete($file);
-                    $this->warn('⚠️ Deleted existing migration: ' . basename($file));
+                    $this->warn('⚠️ Deleted existing migration: '.basename($file));
                 }
             }
 
@@ -273,7 +273,7 @@ class GenerateModuleFromYaml extends Command
     {
         if ($this->generateConfig['controller']) {
             $controllerPath = app_path("Http/Controllers/{$modelConfig['classes']['controller']}.php");
-            if (File::exists($controllerPath) && !$force) {
+            if (File::exists($controllerPath) && ! $force) {
                 $this->warn("⚠️ Controller already exists: {$modelConfig['classes']['controller']}");
 
                 return;
@@ -300,7 +300,7 @@ class GenerateModuleFromYaml extends Command
         if ($this->generateConfig['service']) {
             $servicePath = app_path("Services/{$modelConfig['classes']['service']}.php");
 
-            if (File::exists($servicePath) && !$force) {
+            if (File::exists($servicePath) && ! $force) {
                 $this->warn("⚠️ Service already exists: {$modelConfig['classes']['service']}");
 
                 return;
@@ -336,11 +336,11 @@ class GenerateModuleFromYaml extends Command
     {
         $config = $this->validateAndGetConfiguration();
 
-        if (!$config['skipPostman']) {
+        if (! $config['skipPostman']) {
             $this->generatePostmanCollection($config['path']);
         }
 
-        if (!$config['skipDbDiagram']) {
+        if (! $config['skipDbDiagram']) {
             $this->generateDbDiagram($config['path']);
         }
     }
@@ -364,7 +364,7 @@ class GenerateModuleFromYaml extends Command
 
         if ($result === CommandAlias::SUCCESS) {
             $this->newLine();
-            //$this->info('🥵 Postman collection generated successfully!');
+            // $this->info('🥵 Postman collection generated successfully!');
         } else {
             $this->warn('⚠️ Failed to generate Postman collection');
         }
@@ -385,55 +385,9 @@ class GenerateModuleFromYaml extends Command
 
         if ($result === CommandAlias::SUCCESS) {
             $this->newLine();
-            //$this->info('🤧 DB diagram generated successfully at module/dbdiagram.dbml');
+            // $this->info('🤧 DB diagram generated successfully at module/dbdiagram.dbml');
         } else {
             $this->warn('⚠️ Failed to generate DB diagram');
         }
-    }
-
-    /**
-     * Generate service class
-     */
-    protected function generateService(string $serviceClass, string $modelName, string $modelVar): void
-    {
-        $serviceDir = app_path('Services');
-        $path = "{$serviceDir}/{$serviceClass}.php";
-        $stubPath = $this->pathResolverService->resolveStubPath('service');
-
-        if (!File::exists($stubPath)) {
-            $this->error("Service stub not found: {$stubPath}");
-
-            return;
-        }
-
-        File::ensureDirectoryExists($serviceDir);
-
-        $stubContent = File::get($stubPath);
-        $stubContent = str_replace(
-            ['{{ model }}', '{{ variable }}'],
-            [$modelName, $modelVar],
-            $stubContent
-        );
-
-        File::put($path, $stubContent);
-        $this->info("🤫 Service created: {$serviceClass}");
-    }
-
-    /**
-     * Generate controller class
-     */
-    protected function generateController(string $controllerClass, string $modelName, string $modelVar, string $pluralModel): void
-    {
-        $path = app_path("Http/Controllers/{$controllerClass}.php");
-        $stubPath = $this->pathResolverService->resolveStubPath('controller');
-
-        File::ensureDirectoryExists(app_path('Http/Controllers'));
-        File::put($path, str_replace(
-            ['{{ class }}', '{{ model }}', '{{ variable }}', '{{ modelPlural }}', '{{ route }}'],
-            [$controllerClass, $modelName, $modelVar, $pluralModel, Str::snake($modelName)],
-            File::get($stubPath)
-        ));
-
-        $this->info("🤫 Controller created: $controllerClass");
     }
 }

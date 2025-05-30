@@ -21,7 +21,7 @@ class GenerateMigrationService
     public function generateMigration(string $modelName, array $fields, array $uniqueConstraints = []): void
     {
         $tableName = Str::snake(Str::pluralStudly($modelName));
-        $migrationFiles = glob(database_path('migrations/*create_' . $tableName . '_table.php'));
+        $migrationFiles = glob(database_path('migrations/*create_'.$tableName.'_table.php'));
 
         if (empty($migrationFiles)) {
             $this->command->warn("Migration file not found for $modelName.");
@@ -45,7 +45,7 @@ class GenerateMigrationService
         $fieldStub = '';
 
         foreach ($fields as $name => $definition) {
-            $fieldStub .= $this->buildSingleFieldDefinition($name, $definition) . ";\n            ";
+            $fieldStub .= $this->buildSingleFieldDefinition($name, $definition).";\n            ";
         }
 
         $fieldStub .= $this->buildUniqueConstraints($uniqueConstraints);
@@ -86,7 +86,7 @@ class GenerateMigrationService
             }
         }
 
-        return $line . "->constrained('$references')->cascadeOnDelete()";
+        return $line."->constrained('$references')->cascadeOnDelete()";
     }
 
     /**
@@ -136,7 +136,7 @@ class GenerateMigrationService
         }
 
         if (in_array(strtolower($value), ['true', 'false'], true)) {
-            return '->default(' . $value . ')';
+            return '->default('.$value.')';
         }
 
         if (is_numeric($value)) {
@@ -179,7 +179,7 @@ class GenerateMigrationService
             function ($matches) use ($fieldStub) {
                 return str_replace(
                     $matches[2],
-                    $matches[2] . "\n            " . $fieldStub,
+                    $matches[2]."\n            ".$fieldStub,
                     $matches[0]
                 );
             },

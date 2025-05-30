@@ -439,4 +439,51 @@ class GenerateControllerService
 
         return $imports;
     }
+
+    //    /**
+    //     * Generate service class
+    //     */
+    //    protected function generateService(string $serviceClass, string $modelName, string $modelVar): void
+    //    {
+    //        $serviceDir = app_path('Services');
+    //        $path = "{$serviceDir}/{$serviceClass}.php";
+    //        $stubPath = $this->pathResolverService->resolveStubPath('service');
+    //
+    //        if (!File::exists($stubPath)) {
+    //            $this->error("Service stub not found: {$stubPath}");
+    //
+    //            return;
+    //        }
+    //
+    //        File::ensureDirectoryExists($serviceDir);
+    //
+    //        $stubContent = File::get($stubPath);
+    //        $stubContent = str_replace(
+    //            ['{{ model }}', '{{ variable }}'],
+    //            [$modelName, $modelVar],
+    //            $stubContent
+    //        );
+    //
+    //        File::put($path, $stubContent);
+    //        $this->info("🤫 Service created: {$serviceClass}");
+    //    }
+    //
+    //    /**
+    //     * Generate controller class
+    //     */
+    //    protected function generateController(string $controllerClass, string $modelName, string $modelVar, string $pluralModel): void
+    //    {
+    //        $path = app_path("Http/Controllers/{$controllerClass}.php");
+    //        $stubPath = $this->pathResolverService->resolveStubPath('controller');
+    //
+    //        File::ensureDirectoryExists(app_path('Http/Controllers'));
+    //        File::put($path, str_replace(
+    //            ['{{ class }}', '{{ model }}', '{{ variable }}', '{{ modelPlural }}', '{{ route }}'],
+    //            [$controllerClass, $modelName, $modelVar, $pluralModel, Str::snake($modelName)],
+    //            File::get($stubPath)
+    //        ));
+    //
+    //        $this->info("🤫 Controller created: $controllerClass");
+    //    }
+
 }
