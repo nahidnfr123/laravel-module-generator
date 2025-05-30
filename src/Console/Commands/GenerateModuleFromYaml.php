@@ -364,7 +364,7 @@ class GenerateModuleFromYaml extends Command
 
         if ($result === CommandAlias::SUCCESS) {
             $this->newLine();
-            $this->info('🥵 Postman collection generated successfully!');
+            //$this->info('🥵 Postman collection generated successfully!');
         } else {
             $this->warn('⚠️ Failed to generate Postman collection');
         }
@@ -385,7 +385,7 @@ class GenerateModuleFromYaml extends Command
 
         if ($result === CommandAlias::SUCCESS) {
             $this->newLine();
-            $this->info('🤧 DB diagram generated successfully at module/dbdiagram.dbml');
+            //$this->info('🤧 DB diagram generated successfully at module/dbdiagram.dbml');
         } else {
             $this->warn('⚠️ Failed to generate DB diagram');
         }
