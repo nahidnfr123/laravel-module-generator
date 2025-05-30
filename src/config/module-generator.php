@@ -8,7 +8,12 @@ return [
     'stubs' => [
         'model' => 'model.stub',
         'controller' => 'controller.stub',
+        'controller-relation' => 'controller-relation.stub',
+        'controller-without-service.stub' => 'controller-without-service.stub',
+
         'service' => 'service.stub',
+        'service-relation' => 'service-relation.stub',
+
         'repository' => 'repository.stub',
         'migration' => 'migration.stub',
         'request' => 'request.stub',
