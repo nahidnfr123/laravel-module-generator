@@ -6,7 +6,12 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use NahidFerdous\LaravelModuleGenerator\Services\AppendRouteService;
+use NahidFerdous\LaravelModuleGenerator\Services\GenerateControllerService;
 use NahidFerdous\LaravelModuleGenerator\Services\BackupService;
+use NahidFerdous\LaravelModuleGenerator\Services\GenerateRequestService;
+use NahidFerdous\LaravelModuleGenerator\Services\GenerateResourceCollectionService;
+use NahidFerdous\LaravelModuleGenerator\Services\StubPathResolverService;
 use Symfony\Component\Console\Command\Command as CommandAlias;
 use Symfony\Component\Yaml\Yaml;
 
@@ -25,6 +30,8 @@ class GenerateModuleFromYaml extends Command
 
     private BackupService $backupService;
 
+    private StubPathResolverService $pathResolverService;
+
     private ?string $currentBackupPath = null;
 
     public array $generateConfig = [
@@ -39,22 +46,23 @@ class GenerateModuleFromYaml extends Command
 
     public function handle()
     {
-        if ($this->option('force')) {
-            $confirmation = $this->ask('This command will replace existing module files and generate module files based on a YAML configuration. Do you want to proceed? (yes/no)', 'yes');
-            if (strtolower($confirmation) !== 'yes') {
-                $this->info('Command cancelled.');
-                return CommandAlias::SUCCESS;
-            }
-        }
+        //        if ($this->option('force')) {
+        //            $confirmation = $this->ask('This command will replace existing module files and generate module files based on a YAML configuration. Do you want to proceed? (yes/no)', 'yes');
+        //            if (strtolower($confirmation) !== 'yes') {
+        //                $this->info('Command cancelled.');
+        //                return CommandAlias::SUCCESS;
+        //            }
+        //        }
 
         $this->backupService = new BackupService($this);
+        $this->pathResolverService = new StubPathResolverService;
         $this->validateAndGetConfiguration();
         $models = $this->parseYamlFile();
 
         // Create backup unless explicitly skipped
         if (!$this->option('skip-backup')) {
-            $this->currentBackupPath = $this->backupService->createBackup($models);
-            $this->displayBackupInfo();
+            //$this->currentBackupPath = $this->backupService->createBackup($models);
+            //$this->displayBackupInfo();
         }
 
         foreach ($models as $modelName => $modelData) {
@@ -62,7 +70,9 @@ class GenerateModuleFromYaml extends Command
         }
 
         $this->generateAdditionalFiles();
-        $this->displaySuccessMessage();
+
+        $this->newLine();
+        $this->info('🎉 All modules generated successfully!');
 
         return CommandAlias::SUCCESS;
     }
@@ -78,17 +88,6 @@ class GenerateModuleFromYaml extends Command
             $this->info("💡 Use 'php artisan module:rollback' to restore if needed");
             $this->newLine();
         }
-    }
-
-    // Remove the old backup() method completely
-    // Keep all your existing methods as they are...
-
-    /**
-     * Get the backup service instance (useful for rollback command)
-     */
-    public function getBackupService(): BackupService
-    {
-        return $this->backupService ?? new BackupService($this);
     }
 
     /**
@@ -234,24 +233,6 @@ class GenerateModuleFromYaml extends Command
     }
 
     /**
-     * Delete existing model and migration files
-     */
-    private function deleteExistingModelFiles(string $modelPath, array $migrationFiles, string $modelName): void
-    {
-        if ($this->generateConfig['model']) {
-            File::delete($modelPath);
-            $this->warn("⚠️ Deleted existing model: {$modelName}");
-        }
-
-        if ($this->generateConfig['migration']) {
-            foreach ($migrationFiles as $file) {
-                File::delete($file);
-                $this->warn('⚠️ Deleted existing migration: ' . basename($file));
-            }
-        }
-    }
-
-    /**
      * Generate optional files based on configuration
      */
     private function generateOptionalFiles(array $modelConfig): void
@@ -260,15 +241,17 @@ class GenerateModuleFromYaml extends Command
         $force = $this->option('force');
 
         if ($generateConfig['request']) {
-            $this->handleRequestGeneration($modelConfig, $force);
+            (new GenerateRequestService($this, $this->parseYamlFile(), $this->generateConfig))
+                ->handleRequestGeneration($modelConfig, $force);
         }
 
+        $resourceCollectionService = new GenerateResourceCollectionService($this, $generateConfig);
         if ($generateConfig['collection']) {
-            $this->handleCollectionGeneration($modelConfig, $force);
+            $resourceCollectionService->handleCollectionGeneration($modelConfig, $force);
         }
 
         if ($generateConfig['resource']) {
-            $this->handleResourceGeneration($modelConfig, $force);
+            $resourceCollectionService->handleResourceGeneration($modelConfig, $force);
         }
 
         if ($generateConfig['service']) {
@@ -277,126 +260,71 @@ class GenerateModuleFromYaml extends Command
 
         if ($generateConfig['controller']) {
             $this->handleControllerGeneration($modelConfig, $force);
-            $this->appendRoute($modelConfig['tableName'], $modelConfig['classes']['controller']);
+            (new AppendRouteService($this))->appendRoute($modelConfig['tableName'], $modelConfig['classes']['controller']);
         }
     }
 
     /**
-     * Handle request file generation
-     */
-    private function handleRequestGeneration(array $modelConfig, bool $force): void
-    {
-        $requestPath = app_path("Http/Requests/{$modelConfig['classes']['request']}.php");
-
-        if (File::exists($requestPath) && !$force) {
-            $this->warn("⚠️ Request already exists: {$modelConfig['classes']['request']}");
-
-            return;
-        }
-
-        if ($this->generateConfig['request']) {
-            if (File::exists($requestPath)) {
-                File::delete($requestPath);
-                $this->warn("⚠️ Deleted existing request: {$modelConfig['classes']['request']}");
-            }
-
-            $this->generateRequest($modelConfig['studlyName'], $modelConfig['fields']);
-        }
-    }
-
-    /**
-     * Handle collection file generation
-     */
-    private function handleCollectionGeneration(array $modelConfig, bool $force): void
-    {
-        $collectionPath = app_path("Http/Resources/{$modelConfig['studlyName']}/{$modelConfig['classes']['collection']}.php");
-
-        if (File::exists($collectionPath) && !$force) {
-            $this->warn("⚠️ Collection already exists: {$modelConfig['classes']['collection']}");
-
-            return;
-        }
-        if ($this->generateConfig['collection']) {
-            if (File::exists($collectionPath)) {
-                File::delete($collectionPath);
-                $this->warn("⚠️ Deleted existing collection: {$modelConfig['classes']['collection']}");
-            }
-
-            $this->generateCollection($modelConfig['studlyName'], $modelConfig['classes']['collection'], $modelConfig['camelName']);
-        }
-    }
-
-    /**
-     * Handle resource file generation
-     */
-    private function handleResourceGeneration(array $modelConfig, bool $force): void
-    {
-        $resourcePath = app_path("Http/Resources/{$modelConfig['studlyName']}/{$modelConfig['classes']['resource']}.php");
-
-        if (File::exists($resourcePath) && !$force) {
-            $this->warn("⚠️ Resource already exists: {$modelConfig['classes']['resource']}");
-
-            return;
-        }
-
-        if ($this->generateConfig['resource']) {
-            if (File::exists($resourcePath)) {
-                File::delete($resourcePath);
-                $this->warn("⚠️ Deleted existing resource: {$modelConfig['classes']['resource']}");
-            }
-
-            $this->call('make:resource', ['name' => "{$modelConfig['studlyName']}/{$modelConfig['classes']['resource']}"]);
-        }
-    }
-
-    /**
-     * Handle service file generation
-     */
-    private function handleServiceGeneration(array $modelConfig, bool $force): void
-    {
-        $servicePath = app_path("Services/{$modelConfig['classes']['service']}.php");
-
-        if (File::exists($servicePath) && !$force) {
-            $this->warn("⚠️ Service already exists: {$modelConfig['classes']['service']}");
-
-            return;
-        }
-        if ($this->generateConfig['service']) {
-            if (File::exists($servicePath)) {
-                File::delete($servicePath);
-                $this->warn("⚠️ Deleted existing service: {$modelConfig['classes']['service']}");
-            }
-
-            $this->generateService($modelConfig['classes']['service'], $modelConfig['studlyName'], $modelConfig['camelName']);
-        }
-    }
-
-    /**
-     * Handle controller file generation
+     * Handle controller file generation (Updated)
      */
     private function handleControllerGeneration(array $modelConfig, bool $force): void
     {
-        $controllerPath = app_path("Http/Controllers/{$modelConfig['classes']['controller']}.php");
-
-        if (File::exists($controllerPath) && !$force) {
-            $this->warn("⚠️ Controller already exists: {$modelConfig['classes']['controller']}");
-
-            return;
-        }
-
         if ($this->generateConfig['controller']) {
+            $controllerPath = app_path("Http/Controllers/{$modelConfig['classes']['controller']}.php");
+            if (File::exists($controllerPath) && !$force) {
+                $this->warn("⚠️ Controller already exists: {$modelConfig['classes']['controller']}");
+
+                return;
+            }
+
             if (File::exists($controllerPath)) {
                 File::delete($controllerPath);
                 $this->warn("⚠️ Deleted existing controller: {$modelConfig['classes']['controller']}");
             }
 
-            $this->generateController(
-                $modelConfig['classes']['controller'],
-                $modelConfig['studlyName'],
-                $modelConfig['camelName'],
-                $modelConfig['pluralStudlyName']
-            );
+            // Use the new service for controller generation
+            $controllerService = new GenerateControllerService($this, $this->parseYamlFile());
+            $modelData = $this->getCurrentModelData($modelConfig['originalName']);
+
+            $controllerService->generateController($modelConfig, $modelData);
         }
+    }
+
+    /**
+     * Handle service file generation (Updated)
+     */
+    private function handleServiceGeneration(array $modelConfig, bool $force): void
+    {
+        if ($this->generateConfig['service']) {
+            $servicePath = app_path("Services/{$modelConfig['classes']['service']}.php");
+
+            if (File::exists($servicePath) && !$force) {
+                $this->warn("⚠️ Service already exists: {$modelConfig['classes']['service']}");
+
+                return;
+            }
+
+            if (File::exists($servicePath)) {
+                File::delete($servicePath);
+                $this->warn("⚠️ Deleted existing service: {$modelConfig['classes']['service']}");
+            }
+
+            // Use the new service for service generation
+            $controllerService = new GenerateControllerService($this, $this->parseYamlFile());
+            $modelData = $this->getCurrentModelData($modelConfig['originalName']);
+
+            $controllerService->generateService($modelConfig, $modelData);
+        }
+    }
+
+    /**
+     * Get current model data from parsed YAML
+     */
+    private function getCurrentModelData(string $modelName): array
+    {
+        $models = $this->parseYamlFile();
+
+        return $models[$modelName] ?? [];
     }
 
     /**
@@ -459,15 +387,6 @@ class GenerateModuleFromYaml extends Command
         } else {
             $this->warn('⚠️ Failed to generate DB diagram');
         }
-    }
-
-    /**
-     * Display final success message
-     */
-    private function displaySuccessMessage(): void
-    {
-        $this->newLine();
-        $this->info('🎉 All modules generated successfully!');
     }
 
     /**
@@ -721,219 +640,13 @@ PHP;
     }
 
     /**
-     * Generate form request with validation rules
-     */
-    protected function generateRequest(string $modelName, array $fields, ?string $originalModelName = null): void
-    {
-        // If originalModelName is not provided, use modelName (backward compatibility)
-        $originalModelName = $originalModelName ?? $modelName;
-
-        $requestClass = "{$modelName}Request";
-        $requestPath = app_path("Http/Requests/{$requestClass}.php");
-        $stubPath = $this->resolveStubPath('request');
-
-        if (!File::exists($stubPath)) {
-            $this->error("Request stub not found: {$stubPath}");
-            return;
-        }
-
-        // Get validation rules including nested relations with makeRequest: true
-        $rulesFormatted = $this->buildValidationRulesWithRelations($originalModelName, $fields);
-        $this->createRequestFile($stubPath, $requestPath, $modelName, $rulesFormatted);
-
-        $this->info("🤫 Form Request created with validation: {$requestClass}");
-    }
-
-    /**
-     * Build validation rules for request including nested relations with makeRequest: true
-     */
-    private function buildValidationRulesWithRelations(string $modelName, array $fields): string
-    {
-        $rules = [];
-
-        // Get current model's validation rules
-        foreach ($fields as $name => $definition) {
-            $rules[$name] = $this->generateFieldValidationRule($name, $definition);
-        }
-
-        // Add validation rules for relations with makeRequest: true
-        $relationRules = $this->getRelationValidationRules($modelName);
-        if (!empty($relationRules)) {
-            $rules = array_merge($rules, $relationRules);
-        }
-
-        return $this->formatValidationRules($rules);
-    }
-
-    /**
-     * Get validation rules for relations marked with makeRequest: true
-     */
-    private function getRelationValidationRules(string $modelName, string $prefix = ''): array
-    {
-        $models = $this->parseYamlFile();
-        $relationRules = [];
-
-        // Check if current model has relations defined
-        if (!isset($models[$modelName]['relations'])) {
-            return $relationRules;
-        }
-
-        $relations = $models[$modelName]['relations'];
-
-        foreach ($relations as $relationName => $relationConfig) {
-            // Skip if makeRequest is not true
-            if (!isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
-                continue;
-            }
-
-            // Only process hasMany and hasOne relations (not belongsTo)
-            if (!in_array($relationConfig['type'], ['hasMany', 'hasOne'])) {
-                continue;
-            }
-
-            $relatedModelName = $relationConfig['model'];
-
-            // Check if related model exists in YAML
-            if (!isset($models[$relatedModelName])) {
-                $this->warn("⚠️ Related model '{$relatedModelName}' not found in YAML configuration");
-                continue;
-            }
-
-            $relatedModelData = $models[$relatedModelName];
-
-            // Generate the array name based on relation type
-            if ($relationConfig['type'] === 'hasMany') {
-                $arrayName = Str::snake($relationName); // Use the relation name directly
-                $currentPrefix = $prefix ? $prefix . '.' : '';
-                $fullArrayPath = $currentPrefix . $arrayName;
-
-                // Add validation for the array itself
-                $relationRules[$fullArrayPath] = 'nullable|array';
-                $relationRules["{$fullArrayPath}.*"] = 'required|array';
-
-            } else { // hasOne
-                $objectName = Str::snake($relationName);
-                $currentPrefix = $prefix ? $prefix . '.' : '';
-                $fullObjectPath = $currentPrefix . $objectName;
-
-                // Add validation for the object itself
-                $relationRules[$fullObjectPath] = 'nullable|array';
-            }
-
-            // Add validation for each field in the related model
-            if (isset($relatedModelData['fields'])) {
-                foreach ($relatedModelData['fields'] as $fieldName => $fieldDefinition) {
-                    // Skip foreign key fields that reference the parent
-                    $parentForeignKey = Str::snake($modelName) . '_id';
-                    if ($fieldName === $parentForeignKey) {
-                        continue;
-                    }
-
-                    $validationRule = $this->generateFieldValidationRule($fieldName, $fieldDefinition);
-
-                    if ($relationConfig['type'] === 'hasMany') {
-                        $relationRules["{$fullArrayPath}.*.{$fieldName}"] = $validationRule;
-                    } else { // hasOne
-                        $relationRules["{$fullObjectPath}.{$fieldName}"] = $validationRule;
-                    }
-                }
-            }
-
-            // Recursively get validation rules for nested relations
-            $nestedRules = $this->getRelationValidationRules(
-                $relatedModelName,
-                $relationConfig['type'] === 'hasMany' ? "{$fullArrayPath}.*" : $fullObjectPath
-            );
-
-            if (!empty($nestedRules)) {
-                $relationRules = array_merge($relationRules, $nestedRules);
-            }
-        }
-
-        return $relationRules;
-    }
-
-    /**
-     * Generate validation rule for a single field
-     */
-    private function generateFieldValidationRule(string $name, string $definition): string
-    {
-        $parts = explode(':', $definition);
-        $type = array_shift($parts);
-        $isNullable = in_array('nullable', $parts);
-
-        $ruleSet = [$isNullable ? 'nullable' : 'required'];
-
-        switch ($type) {
-            case 'string':
-            case 'text':
-                $ruleSet[] = 'string';
-                break;
-            case 'integer':
-                $ruleSet[] = 'integer';
-                break;
-            case 'decimal':
-            case 'double':
-                $ruleSet[] = 'numeric';
-                break;
-            case 'boolean':
-                $ruleSet[] = 'boolean';
-                break;
-            case 'dateTime':
-            case 'timestamp':
-                $ruleSet[] = 'date';
-                break;
-            case 'foreignId':
-                $relatedTable = $parts[0] ?? Str::snake(Str::pluralStudly(Str::beforeLast($name, '_id')));
-                $ruleSet[] = 'exists:' . $relatedTable . ',id';
-                break;
-        }
-
-        return implode('|', $ruleSet);
-    }
-
-    /**
-     * Format validation rules as string
-     */
-    private function formatValidationRules(array $rules): string
-    {
-        $rulesFormatted = '';
-        foreach ($rules as $field => $rule) {
-            $rulesFormatted .= "            '{$field}' => '{$rule}',\n";
-        }
-
-        return rtrim($rulesFormatted, "\n");
-    }
-
-    /**
-     * Create request file from stub
-     */
-    private function createRequestFile(string $stubPath, string $requestPath, string $modelName, string $rulesFormatted): void
-    {
-        $stub = File::get($stubPath);
-        $stub = str_replace(
-            ['{{ model }}', '{{ rules }}'],
-            [$modelName, $rulesFormatted],
-            $stub
-        );
-
-        // Ensure the directory exists
-        $directory = dirname($requestPath);
-        if (!File::exists($directory)) {
-            File::makeDirectory($directory, 0755, true);
-        }
-
-        File::put($requestPath, $stub);
-    }
-
-    /**
      * Generate service class
      */
     protected function generateService(string $serviceClass, string $modelName, string $modelVar): void
     {
         $serviceDir = app_path('Services');
         $path = "{$serviceDir}/{$serviceClass}.php";
-        $stubPath = $this->resolveStubPath('service');
+        $stubPath = $this->pathResolverService->resolveStubPath('service');
 
         if (!File::exists($stubPath)) {
             $this->error("Service stub not found: {$stubPath}");
@@ -960,7 +673,7 @@ PHP;
     protected function generateController(string $controllerClass, string $modelName, string $modelVar, string $pluralModel): void
     {
         $path = app_path("Http/Controllers/{$controllerClass}.php");
-        $stubPath = $this->resolveStubPath('controller');
+        $stubPath = $this->pathResolverService->resolveStubPath('controller');
 
         File::ensureDirectoryExists(app_path('Http/Controllers'));
         File::put($path, str_replace(
@@ -970,102 +683,5 @@ PHP;
         ));
 
         $this->info("🤫 Controller created: $controllerClass");
-    }
-
-    /**
-     * Generate resource collection class
-     */
-    protected function generateCollection(string $modelName, string $collectionClass, string $modelVar): void
-    {
-        $dir = app_path("Http/Resources/{$modelName}");
-        $path = "{$dir}/{$collectionClass}.php";
-        $stubPath = $this->resolveStubPath('collection');
-
-        File::ensureDirectoryExists($dir);
-        File::put($path, str_replace(
-            ['{{model}}', '{{modelVar}}'],
-            [$modelName, $modelVar],
-            File::get($stubPath)
-        ));
-
-        $this->info('🤫 Collection created.');
-    }
-
-    /**
-     * Append API route to routes file
-     */
-    //    protected function appendRoute(string $tableName, string $controllerClass): void
-    //    {
-    //        $routeLine = "Route::apiResource('{$tableName}', \\App\\Http\\Controllers\\{$controllerClass}::class);";
-    //        $apiRoutesPath = base_path('routes/api.php');
-    //
-    //        if (!Str::contains(File::get($apiRoutesPath), $routeLine)) {
-    //            File::append($apiRoutesPath, "\n{$routeLine}\n");
-    //            $this->info('🤫 API route added.');
-    //        } else {
-    //            $this->warn("⚠️ Route Already Exists: {$routeLine}");
-    //        }
-    //    }
-    protected function appendRoute(string $tableName, string $controllerClass): void
-    {
-        $routeLine = "Route::apiResource('{$tableName}', \\App\\Http\\Controllers\\{$controllerClass}::class);";
-        $apiRoutesPath = base_path('routes/api.php');
-
-        // Check if the api.php file exists, create it if it doesn't
-        if (!File::exists($apiRoutesPath)) {
-            // Create the routes directory if it doesn't exist
-            $routesDirectory = dirname($apiRoutesPath);
-            if (!File::exists($routesDirectory)) {
-                File::makeDirectory($routesDirectory, 0755, true);
-            }
-
-            // Create a basic api.php file with the standard Laravel structure
-            $defaultApiContent = "<?php\n\nuse Illuminate\Http\Request;\nuse Illuminate\Support\Facades\Route;\n\n/*\n|--------------------------------------------------------------------------\n| API Routes\n|--------------------------------------------------------------------------\n|\n| Here is where you can register API routes for your application. These\n| routes are loaded by the RouteServiceProvider and all of them will\n| be assigned to the \"api\" middleware group. Make something great!\n|\n*/\n\nRoute::get('/user', function (Request \$request) {\n    return \$request->user();\n})->middleware('auth:sanctum');\n";
-
-            File::put($apiRoutesPath, $defaultApiContent);
-            $this->info('📁 Created routes/api.php file.');
-        }
-
-        // Now check if the route already exists
-        if (!Str::contains(File::get($apiRoutesPath), $routeLine)) {
-            File::append($apiRoutesPath, "\n{$routeLine}\n");
-            $this->info('🤫 API route added.');
-        } else {
-            $this->warn("⚠️ Route Already Exists: {$routeLine}");
-        }
-    }
-
-    /**
-     * Resolve the path to a stub file
-     */
-    protected function resolveStubPath(string $stubKey): string
-    {
-        $config = config('module-generator');
-        if (!isset($config['stubs'], $config['base_path']) || !$config) {
-            throw new \RuntimeException('Module generator stubs configuration not found.');
-        }
-
-        $stubFile = $config['stubs'][$stubKey] ?? null;
-
-        if (!$stubFile) {
-            throw new \InvalidArgumentException("Stub not defined for key: {$stubKey}");
-        }
-
-        // $publishedPath = base_path("module/stubs/{$stubFile}");
-        $publishedPath = $config['base_path'] . "/stubs/{$stubFile}";
-
-        if (file_exists($publishedPath)) {
-            return $publishedPath;
-        }
-
-        $this->warn($publishedPath . ' stub path not found, using fallback path.');
-
-        $fallbackPath = __DIR__ . '/../../stubs/' . $stubFile;
-
-        if (!file_exists($fallbackPath)) {
-            throw new \RuntimeException("Stub file not found at fallback path: {$fallbackPath}");
-        }
-
-        return $fallbackPath;
     }
 }

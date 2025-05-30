@@ -76,6 +76,7 @@ class GeneratePostmanCollection extends Command
 
         if (! File::exists($yamlFile)) {
             $this->error("YAML file not found: {$yamlFile}");
+
             return self::FAILURE;
         }
 
@@ -97,6 +98,7 @@ class GeneratePostmanCollection extends Command
 
         } catch (\Exception $e) {
             $this->error('Error generating collection: '.$e->getMessage());
+
             return self::FAILURE;
         }
 
@@ -146,7 +148,7 @@ class GeneratePostmanCollection extends Command
      */
     private function shouldGenerateController(array $modelConfig): bool
     {
-        return !isset($modelConfig['generate']['controller']) || $modelConfig['generate']['controller'] !== false;
+        return ! isset($modelConfig['generate']['controller']) || $modelConfig['generate']['controller'] !== false;
     }
 
     /**
@@ -157,7 +159,7 @@ class GeneratePostmanCollection extends Command
     {
         $requestableRelations = [];
 
-        if (!isset($modelConfig['relations'])) {
+        if (! isset($modelConfig['relations'])) {
             return $requestableRelations;
         }
 
@@ -194,7 +196,7 @@ class GeneratePostmanCollection extends Command
             $nestedRelations[$relationName] = [
                 'config' => $relationConfig,
                 'model_config' => $this->fullSchema[$relatedModelName] ?? [],
-                'nested' => $this->collectNestedRequestableRelations($relatedModelName, $visited)
+                'nested' => $this->collectNestedRequestableRelations($relatedModelName, $visited),
             ];
         }
 
@@ -340,7 +342,7 @@ class GeneratePostmanCollection extends Command
     {
         $body = [];
 
-        if (!isset($modelConfig['fields'])) {
+        if (! isset($modelConfig['fields'])) {
             return $body;
         }
 
@@ -386,7 +388,7 @@ class GeneratePostmanCollection extends Command
             $relationBody = $this->generateRelationBody($modelConfig);
 
             // Handle deeper nesting recursively
-            if (!empty($nestedData)) {
+            if (! empty($nestedData)) {
                 $deeperNestedBody = $this->generateNestedRelationsBody($nestedData);
                 $relationBody = array_merge($relationBody, $deeperNestedBody);
             }
@@ -426,7 +428,7 @@ class GeneratePostmanCollection extends Command
             );
 
             // Handle deeper nesting recursively
-            if (!empty($nestedData)) {
+            if (! empty($nestedData)) {
                 $deeperNestedResponse = $this->generateNestedRelationsResponse($nestedData);
                 $relationResponse = array_merge($relationResponse, $deeperNestedResponse);
             }
@@ -561,7 +563,7 @@ class GeneratePostmanCollection extends Command
     {
         $record = ['id' => $id];
 
-        if (!isset($modelConfig['fields'])) {
+        if (! isset($modelConfig['fields'])) {
             return $record;
         }
 
@@ -579,7 +581,7 @@ class GeneratePostmanCollection extends Command
         if (isset($modelConfig['relations'])) {
             foreach ($modelConfig['relations'] as $relationName => $relationConfig) {
                 if ($relationConfig['type'] === 'belongsTo' &&
-                    (!isset($relationConfig['makeRequest']) || !$relationConfig['makeRequest'])) {
+                    (! isset($relationConfig['makeRequest']) || ! $relationConfig['makeRequest'])) {
                     $record[$relationName] = [
                         'id' => 1,
                         'name' => 'Related '.$relationConfig['model'],
