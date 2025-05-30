@@ -10,7 +10,7 @@ use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateModuleFromYaml;
 class GenerateControllerService
 {
     private GenerateModuleFromYaml $command;
-//    private Command $command;
+    //    private Command $command;
 
     private array $allModels;
 

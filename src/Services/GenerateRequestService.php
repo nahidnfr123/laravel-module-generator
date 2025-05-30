@@ -22,7 +22,6 @@ class GenerateRequestService
         $this->pathResolverService = new StubPathResolverService;
     }
 
-
     /**
      * Handle request file generation
      */
@@ -31,7 +30,7 @@ class GenerateRequestService
         if ($this->generateConfig['request']) {
             $requestPath = app_path("Http/Requests/{$modelConfig['classes']['request']}.php");
 
-            if (File::exists($requestPath) && !$force) {
+            if (File::exists($requestPath) && ! $force) {
                 $this->command->warn("⚠️ Request already exists: {$modelConfig['classes']['request']}");
 
                 return;
@@ -58,7 +57,7 @@ class GenerateRequestService
         $requestPath = app_path("Http/Requests/{$requestClass}.php");
         $stubPath = $this->pathResolverService->resolveStubPath('request');
 
-        if (!File::exists($stubPath)) {
+        if (! File::exists($stubPath)) {
             $this->command->error("Request stub not found: {$stubPath}");
 
             return;
@@ -85,7 +84,7 @@ class GenerateRequestService
 
         // Add validation rules for relations with makeRequest: true
         $relationRules = $this->getRelationValidationRules($modelName);
-        if (!empty($relationRules)) {
+        if (! empty($relationRules)) {
             $rules = array_merge($rules, $relationRules);
         }
 
@@ -101,7 +100,7 @@ class GenerateRequestService
         $relationRules = [];
 
         // Check if current model has relations defined
-        if (!isset($models[$modelName]['relations'])) {
+        if (! isset($models[$modelName]['relations'])) {
             return $relationRules;
         }
 
@@ -109,19 +108,19 @@ class GenerateRequestService
 
         foreach ($relations as $relationName => $relationConfig) {
             // Skip if makeRequest is not true
-            if (!isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
+            if (! isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
                 continue;
             }
 
             // Only process hasMany and hasOne relations (not belongsTo)
-            if (!in_array($relationConfig['type'], ['hasMany', 'hasOne'])) {
+            if (! in_array($relationConfig['type'], ['hasMany', 'hasOne'])) {
                 continue;
             }
 
             $relatedModelName = $relationConfig['model'];
 
             // Check if related model exists in YAML
-            if (!isset($models[$relatedModelName])) {
+            if (! isset($models[$relatedModelName])) {
                 $this->command->warn("⚠️ Related model '{$relatedModelName}' not found in YAML configuration");
 
                 continue;
@@ -132,8 +131,8 @@ class GenerateRequestService
             // Generate the array name based on relation type
             if ($relationConfig['type'] === 'hasMany') {
                 $arrayName = Str::snake($relationName); // Use the relation name directly
-                $currentPrefix = $prefix ? $prefix . '.' : '';
-                $fullArrayPath = $currentPrefix . $arrayName;
+                $currentPrefix = $prefix ? $prefix.'.' : '';
+                $fullArrayPath = $currentPrefix.$arrayName;
 
                 // Add validation for the array itself
                 $relationRules[$fullArrayPath] = 'nullable|array';
@@ -141,8 +140,8 @@ class GenerateRequestService
 
             } else { // hasOne
                 $objectName = Str::snake($relationName);
-                $currentPrefix = $prefix ? $prefix . '.' : '';
-                $fullObjectPath = $currentPrefix . $objectName;
+                $currentPrefix = $prefix ? $prefix.'.' : '';
+                $fullObjectPath = $currentPrefix.$objectName;
 
                 // Add validation for the object itself
                 $relationRules[$fullObjectPath] = 'nullable|array';
@@ -152,7 +151,7 @@ class GenerateRequestService
             if (isset($relatedModelData['fields'])) {
                 foreach ($relatedModelData['fields'] as $fieldName => $fieldDefinition) {
                     // Skip foreign key fields that reference the parent
-                    $parentForeignKey = Str::snake($modelName) . '_id';
+                    $parentForeignKey = Str::snake($modelName).'_id';
                     if ($fieldName === $parentForeignKey) {
                         continue;
                     }
@@ -173,7 +172,7 @@ class GenerateRequestService
                 $relationConfig['type'] === 'hasMany' ? "{$fullArrayPath}.*" : $fullObjectPath
             );
 
-            if (!empty($nestedRules)) {
+            if (! empty($nestedRules)) {
                 $relationRules = array_merge($relationRules, $nestedRules);
             }
         }
@@ -213,7 +212,7 @@ class GenerateRequestService
                 break;
             case 'foreignId':
                 $relatedTable = $parts[0] ?? Str::snake(Str::pluralStudly(Str::beforeLast($name, '_id')));
-                $ruleSet[] = 'exists:' . $relatedTable . ',id';
+                $ruleSet[] = 'exists:'.$relatedTable.',id';
                 break;
         }
 
@@ -240,7 +239,6 @@ class GenerateRequestService
         return rtrim($rulesFormatted, "\n");
     }
 
-
     /**
      * Create request file from stub
      */
@@ -255,7 +253,7 @@ class GenerateRequestService
 
         // Ensure the directory exists
         $directory = dirname($requestPath);
-        if (!File::exists($directory)) {
+        if (! File::exists($directory)) {
             File::makeDirectory($directory, 0755, true);
         }
 

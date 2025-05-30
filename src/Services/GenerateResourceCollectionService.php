@@ -3,7 +3,6 @@
 namespace NahidFerdous\LaravelModuleGenerator\Services;
 
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Str;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateModuleFromYaml;
 
 class GenerateResourceCollectionService
@@ -29,7 +28,7 @@ class GenerateResourceCollectionService
         if ($this->generateConfig['collection']) {
             $collectionPath = app_path("Http/Resources/{$modelConfig['studlyName']}/{$modelConfig['classes']['collection']}.php");
 
-            if (File::exists($collectionPath) && !$force) {
+            if (File::exists($collectionPath) && ! $force) {
                 $this->command->warn("⚠️ Collection already exists: {$modelConfig['classes']['collection']}");
 
                 return;
@@ -70,8 +69,9 @@ class GenerateResourceCollectionService
         if ($this->generateConfig['resource']) {
             $resourcePath = app_path("Http/Resources/{$modelConfig['studlyName']}/{$modelConfig['classes']['resource']}.php");
 
-            if (File::exists($resourcePath) && !$force) {
+            if (File::exists($resourcePath) && ! $force) {
                 $this->command->warn("⚠️ Resource already exists: {$modelConfig['classes']['resource']}");
+
                 return;
             }
 

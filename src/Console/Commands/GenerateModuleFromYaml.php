@@ -7,8 +7,10 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use NahidFerdous\LaravelModuleGenerator\Services\AppendRouteService;
-use NahidFerdous\LaravelModuleGenerator\Services\GenerateControllerService;
 use NahidFerdous\LaravelModuleGenerator\Services\BackupService;
+use NahidFerdous\LaravelModuleGenerator\Services\GenerateControllerService;
+use NahidFerdous\LaravelModuleGenerator\Services\GenerateMigrationService;
+use NahidFerdous\LaravelModuleGenerator\Services\GenerateModelService;
 use NahidFerdous\LaravelModuleGenerator\Services\GenerateRequestService;
 use NahidFerdous\LaravelModuleGenerator\Services\GenerateResourceCollectionService;
 use NahidFerdous\LaravelModuleGenerator\Services\StubPathResolverService;
@@ -28,8 +30,6 @@ class GenerateModuleFromYaml extends Command
 
     protected $description = 'Generate Laravel module files (model, migration, controller, etc.) from a YAML file';
 
-    private BackupService $backupService;
-
     private StubPathResolverService $pathResolverService;
 
     private ?string $currentBackupPath = null;
@@ -46,23 +46,23 @@ class GenerateModuleFromYaml extends Command
 
     public function handle()
     {
-        //        if ($this->option('force')) {
-        //            $confirmation = $this->ask('This command will replace existing module files and generate module files based on a YAML configuration. Do you want to proceed? (yes/no)', 'yes');
-        //            if (strtolower($confirmation) !== 'yes') {
-        //                $this->info('Command cancelled.');
-        //                return CommandAlias::SUCCESS;
-        //            }
-        //        }
+        if ($this->option('force')) {
+            $confirmation = $this->ask('This command will replace existing module files and generate module files based on a YAML configuration. Do you want to proceed? (yes/no)', 'yes');
+            if (strtolower($confirmation) !== 'yes') {
+                $this->info('Command cancelled.');
+                return CommandAlias::SUCCESS;
+            }
+        }
 
-        $this->backupService = new BackupService($this);
+        $backupService = new BackupService($this);
         $this->pathResolverService = new StubPathResolverService;
         $this->validateAndGetConfiguration();
         $models = $this->parseYamlFile();
 
         // Create backup unless explicitly skipped
         if (!$this->option('skip-backup')) {
-            //$this->currentBackupPath = $this->backupService->createBackup($models);
-            //$this->displayBackupInfo();
+            $this->currentBackupPath = $backupService->createBackup($models);
+            $this->displayBackupInfo();
         }
 
         foreach ($models as $modelName => $modelData) {
@@ -215,7 +215,8 @@ class GenerateModuleFromYaml extends Command
                 $this->warn("⚠️ Deleted existing model: {$modelConfig['studlyName']}");
             }
 
-            $this->generateModel($modelConfig['studlyName'], $modelConfig['fields'], $modelConfig['relations']);
+            (new GenerateModelService($this))
+                ->generateModel($modelConfig['studlyName'], $modelConfig['fields'], $modelConfig['relations']);
         }
 
         // Check if migration generation is enabled
@@ -228,7 +229,8 @@ class GenerateModuleFromYaml extends Command
                 }
             }
 
-            $this->generateMigration($modelConfig['studlyName'], $modelConfig['fields']);
+            (new GenerateMigrationService($this))
+                ->generateMigration($modelConfig['studlyName'], $modelConfig['fields']);
         }
     }
 
@@ -387,256 +389,6 @@ class GenerateModuleFromYaml extends Command
         } else {
             $this->warn('⚠️ Failed to generate DB diagram');
         }
-    }
-
-    /**
-     * Generate model file with fillable fields and relationships
-     */
-    protected function generateModel(string $modelName, array $fields, array $relations = []): void
-    {
-        Artisan::call('make:model', ['name' => $modelName, '--migration' => true]);
-
-        $modelPath = app_path("Models/{$modelName}.php");
-        if (!File::exists($modelPath)) {
-            $this->warn("⚠️ Model file not found for: {$modelName}");
-
-            return;
-        }
-
-        $fillableArray = $this->buildFillableArray($fields);
-        $relationshipMethods = $this->buildRelationshipMethods($relations);
-
-        $this->insertModelContent($modelPath, $modelName, $fillableArray, $relationshipMethods);
-
-        $this->info("🤫 Fillable fields and relationships added to {$modelName} model");
-    }
-
-    /**
-     * Build fillable array string for model
-     */
-    private function buildFillableArray(array $fields): string
-    {
-        $fillableFields = array_map(fn($field) => "        '{$field}'", array_keys($fields));
-
-        return "protected \$fillable = [\n" . implode(",\n", $fillableFields) . ",\n    ];";
-    }
-
-    /**
-     * Build relationship methods for model
-     */
-    private function buildRelationshipMethods(array $relations): string
-    {
-        if (empty($relations)) {
-            return '';
-        }
-
-        $relationshipMethods = '';
-        foreach ($relations as $relationName => $meta) {
-            $relationName = Str::camel($relationName);
-            $type = $meta['type'];
-            $relatedModel = $meta['model'];
-
-            $relationshipMethods .= <<<PHP
-
-
-    public function {$relationName}()
-    {
-        return \$this->{$type}({$relatedModel}::class);
-    }
-PHP;
-        }
-
-        return $relationshipMethods;
-    }
-
-    /**
-     * Insert fillable and relationship content into model file
-     */
-    private function insertModelContent(string $modelPath, string $modelName, string $fillableArray, string $relationshipMethods): void
-    {
-        $modelContent = File::get($modelPath);
-
-        $modelContent = preg_replace(
-            '/(class\s+' . $modelName . '\s+extends\s+Model\s*\{)/',
-            "$1\n\n    {$fillableArray}\n{$relationshipMethods}\n",
-            $modelContent
-        );
-
-        File::put($modelPath, $modelContent);
-    }
-
-    /**
-     * Generate migration file with field definitions
-     */
-    protected function generateMigration(string $modelName, array $fields, array $uniqueConstraints = []): void
-    {
-        $tableName = Str::snake(Str::pluralStudly($modelName));
-        $migrationFiles = glob(database_path('migrations/*create_' . $tableName . '_table.php'));
-
-        if (empty($migrationFiles)) {
-            $this->warn("Migration file not found for $modelName.");
-
-            return;
-        }
-
-        $migrationFile = $migrationFiles[0];
-        $fieldStub = $this->buildMigrationFields($fields, $uniqueConstraints);
-
-        $this->updateMigrationFile($migrationFile, $fieldStub);
-
-        $this->info("✅ Migration file updated for $modelName");
-    }
-
-    /**
-     * Build field definitions for migration
-     */
-    private function buildMigrationFields(array $fields, array $uniqueConstraints): string
-    {
-        $fieldStub = '';
-
-        foreach ($fields as $name => $definition) {
-            $fieldStub .= $this->buildSingleFieldDefinition($name, $definition) . ";\n            ";
-        }
-
-        $fieldStub .= $this->buildUniqueConstraints($uniqueConstraints);
-
-        return $fieldStub;
-    }
-
-    /**
-     * Build a single field definition for migration
-     */
-    private function buildSingleFieldDefinition(string $name, string $definition): string
-    {
-        $parts = explode(':', $definition);
-        $type = array_shift($parts);
-
-        if ($type === 'foreignId') {
-            return $this->buildForeignIdField($name, $parts);
-        }
-
-        return $this->buildRegularField($name, $type, $parts);
-    }
-
-    /**
-     * Build foreign ID field definition
-     */
-    private function buildForeignIdField(string $name, array $parts): string
-    {
-        $references = array_shift($parts);
-        $modifiers = $parts;
-
-        $line = "\$table->foreignId('$name')";
-
-        foreach ($modifiers as $modifier) {
-            if (str_starts_with($modifier, 'default(')) {
-                $line .= "->{$modifier}";
-            } else {
-                $line .= "->$modifier()";
-            }
-        }
-
-        return $line . "->constrained('$references')->cascadeOnDelete()";
-    }
-
-    /**
-     * Build regular field definition
-     */
-    private function buildRegularField(string $name, string $type, array $parts): string
-    {
-        $line = "\$table->$type('$name')";
-
-        foreach ($parts as $modifier) {
-            $line .= $this->processFieldModifier($modifier);
-        }
-
-        return $line;
-    }
-
-    /**
-     * Process individual field modifier
-     */
-    private function processFieldModifier(string $modifier): string
-    {
-        if (str_starts_with($modifier, 'default(')) {
-            return "->{$modifier}";
-        }
-
-        if (str_starts_with($modifier, 'default')) {
-            return $this->processDefaultModifier($modifier);
-        }
-
-        if (in_array($modifier, ['nullable', 'unique'])) {
-            return "->$modifier()";
-        }
-
-        return '';
-    }
-
-    /**
-     * Process default modifier with value
-     */
-    private function processDefaultModifier(string $modifier): string
-    {
-        $value = trim(str_replace('default', '', $modifier), ':');
-        $value = trim($value);
-
-        if (strtolower($value) === 'null') {
-            return '->default(null)';
-        }
-
-        if (in_array(strtolower($value), ['true', 'false'], true)) {
-            return '->default(' . $value . ')';
-        }
-
-        if (is_numeric($value)) {
-            return "->default($value)";
-        }
-
-        $value = trim($value, "'\"");
-
-        return "->default('$value')";
-    }
-
-    /**
-     * Build unique constraints for migration
-     */
-    private function buildUniqueConstraints(array $uniqueConstraints): string
-    {
-        $constraintStub = '';
-
-        foreach ($uniqueConstraints as $columns) {
-            if (is_array($columns)) {
-                $cols = implode("', '", $columns);
-                $constraintStub .= "\$table->unique(['$cols']);\n            ";
-            } elseif (is_string($columns)) {
-                $constraintStub .= "\$table->unique('$columns');\n            ";
-            }
-        }
-
-        return $constraintStub;
-    }
-
-    /**
-     * Update migration file with field definitions
-     */
-    private function updateMigrationFile(string $migrationFile, string $fieldStub): void
-    {
-        $migrationContent = file_get_contents($migrationFile);
-
-        $migrationContent = preg_replace_callback(
-            '/Schema::create\([^)]+function\s*\(Blueprint\s*\$table\)\s*{(.*?)(\$table->id\(\);)/s',
-            function ($matches) use ($fieldStub) {
-                return str_replace(
-                    $matches[2],
-                    $matches[2] . "\n            " . $fieldStub,
-                    $matches[0]
-                );
-            },
-            $migrationContent
-        );
-
-        file_put_contents($migrationFile, $migrationContent);
     }
 
     /**
