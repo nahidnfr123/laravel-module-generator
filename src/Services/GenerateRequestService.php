@@ -226,12 +226,20 @@ class GenerateRequestService
     private function formatValidationRules(array $rules): string
     {
         $rulesFormatted = '';
+        $first = true;
+
         foreach ($rules as $field => $rule) {
-            $rulesFormatted .= "            '{$field}' => '{$rule}',\n";
+            if ($first) {
+                $rulesFormatted .= "'{$field}' => '{$rule}',\n";
+                $first = false;
+            } else {
+                $rulesFormatted .= "            '{$field}' => '{$rule}',\n";
+            }
         }
 
         return rtrim($rulesFormatted, "\n");
     }
+
 
     /**
      * Create request file from stub
