@@ -1,6 +1,6 @@
 <?php
 
-namespace NahidFerdous\LaravelModuleGenerator\Console\Commands;
+namespace NahidFerdous\LaravelModuleGenerator\Console\Commands\backups;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
@@ -9,8 +9,12 @@ use Illuminate\Support\Str;
 use NahidFerdous\LaravelModuleGenerator\Services\BackupService;
 use Symfony\Component\Console\Command\Command as CommandAlias;
 use Symfony\Component\Yaml\Yaml;
+use function NahidFerdous\LaravelModuleGenerator\Console\Commands\app_path;
+use function NahidFerdous\LaravelModuleGenerator\Console\Commands\base_path;
+use function NahidFerdous\LaravelModuleGenerator\Console\Commands\config;
+use function NahidFerdous\LaravelModuleGenerator\Console\Commands\database_path;
 
-class GenerateModuleFromYaml extends Command
+class GenerateModuleFromYamlBackuptwo extends Command
 {
     protected $signature = 'module:generate
                            {--force : Overwrite existing files}
@@ -734,20 +738,21 @@ PHP;
 
         if (!File::exists($stubPath)) {
             $this->error("Request stub not found: {$stubPath}");
+
             return;
         }
 
-        // Get validation rules including nested relations with makeRequest: true
-        $rulesFormatted = $this->buildValidationRulesWithRelations($originalModelName, $fields);
+        // Get validation rules including parent rules if requestParent exists
+        $rulesFormatted = $this->buildValidationRulesWithParent($originalModelName, $fields);
         $this->createRequestFile($stubPath, $requestPath, $modelName, $rulesFormatted);
 
         $this->info("🤫 Form Request created with validation: {$requestClass}");
     }
 
     /**
-     * Build validation rules for request including nested relations with makeRequest: true
+     * Build validation rules for request including parent validation if requestParent exists
      */
-    private function buildValidationRulesWithRelations(string $modelName, array $fields): string
+    private function buildValidationRulesWithParent(string $modelName, array $fields): string
     {
         $rules = [];
 
@@ -756,101 +761,110 @@ PHP;
             $rules[$name] = $this->generateFieldValidationRule($name, $definition);
         }
 
-        // Add validation rules for relations with makeRequest: true
-        $relationRules = $this->getRelationValidationRules($modelName);
-        if (!empty($relationRules)) {
-            $rules = array_merge($rules, $relationRules);
+        // Add nested validation rules for child models that have this model as requestParent
+        $childRules = $this->getChildValidationRules($modelName);
+        if (!empty($childRules)) {
+            $rules = array_merge($rules, $childRules);
         }
 
         return $this->formatValidationRules($rules);
     }
 
     /**
-     * Get validation rules for relations marked with makeRequest: true
+     * Get validation rules for child models that have requestParent pointing to this model
      */
-    private function getRelationValidationRules(string $modelName, string $prefix = ''): array
+    private function getChildValidationRules(string $modelName): array
     {
         $models = $this->parseYamlFile();
-        $relationRules = [];
+        $childRules = [];
 
-        // Check if current model has relations defined
-        if (!isset($models[$modelName]['relations'])) {
-            return $relationRules;
-        }
-
-        $relations = $models[$modelName]['relations'];
-
-        foreach ($relations as $relationName => $relationConfig) {
-            // Skip if makeRequest is not true
-            if (!isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
-                continue;
-            }
-
-            // Only process hasMany and hasOne relations (not belongsTo)
-            if (!in_array($relationConfig['type'], ['hasMany', 'hasOne'])) {
-                continue;
-            }
-
-            $relatedModelName = $relationConfig['model'];
-
-            // Check if related model exists in YAML
-            if (!isset($models[$relatedModelName])) {
-                $this->warn("⚠️ Related model '{$relatedModelName}' not found in YAML configuration");
-                continue;
-            }
-
-            $relatedModelData = $models[$relatedModelName];
-
-            // Generate the array name based on relation type
-            if ($relationConfig['type'] === 'hasMany') {
-                $arrayName = Str::snake($relationName); // Use the relation name directly
-                $currentPrefix = $prefix ? $prefix . '.' : '';
-                $fullArrayPath = $currentPrefix . $arrayName;
+        foreach ($models as $childModelName => $childModelData) {
+            // Check if this child model has requestParent pointing to current model
+            if (isset($childModelData['requestParent']) && $childModelData['requestParent'] === $modelName) {
+                // Generate the array name (snake_case plural of child model)
+                $arrayName = Str::snake(Str::plural($childModelName));
 
                 // Add validation for the array itself
-                $relationRules[$fullArrayPath] = 'nullable|array';
-                $relationRules["{$fullArrayPath}.*"] = 'required|array';
+                $childRules[$arrayName] = 'nullable|array';
+                $childRules["{$arrayName}.*"] = 'required|array';
 
-            } else { // hasOne
-                $objectName = Str::snake($relationName);
-                $currentPrefix = $prefix ? $prefix . '.' : '';
-                $fullObjectPath = $currentPrefix . $objectName;
+                // Add validation for each field in the child model
+                if (isset($childModelData['fields'])) {
+                    foreach ($childModelData['fields'] as $fieldName => $fieldDefinition) {
+                        // Skip foreign key fields that reference the parent
+                        $parentForeignKey = Str::snake($modelName) . '_id';
+                        if ($fieldName === $parentForeignKey) {
+                            continue;
+                        }
 
-                // Add validation for the object itself
-                $relationRules[$fullObjectPath] = 'nullable|array';
-            }
-
-            // Add validation for each field in the related model
-            if (isset($relatedModelData['fields'])) {
-                foreach ($relatedModelData['fields'] as $fieldName => $fieldDefinition) {
-                    // Skip foreign key fields that reference the parent
-                    $parentForeignKey = Str::snake($modelName) . '_id';
-                    if ($fieldName === $parentForeignKey) {
-                        continue;
-                    }
-
-                    $validationRule = $this->generateFieldValidationRule($fieldName, $fieldDefinition);
-
-                    if ($relationConfig['type'] === 'hasMany') {
-                        $relationRules["{$fullArrayPath}.*.{$fieldName}"] = $validationRule;
-                    } else { // hasOne
-                        $relationRules["{$fullObjectPath}.{$fieldName}"] = $validationRule;
+                        $validationRule = $this->generateFieldValidationRule($fieldName, $fieldDefinition);
+                        $childRules["{$arrayName}.*.{$fieldName}"] = $validationRule;
                     }
                 }
-            }
 
-            // Recursively get validation rules for nested relations
-            $nestedRules = $this->getRelationValidationRules(
-                $relatedModelName,
-                $relationConfig['type'] === 'hasMany' ? "{$fullArrayPath}.*" : $fullObjectPath
-            );
-
-            if (!empty($nestedRules)) {
-                $relationRules = array_merge($relationRules, $nestedRules);
+                // Recursively get validation rules for grandchildren
+                $grandChildRules = $this->getChildValidationRulesForNested($childModelName, $arrayName);
+                if (!empty($grandChildRules)) {
+                    $childRules = array_merge($childRules, $grandChildRules);
+                }
             }
         }
 
-        return $relationRules;
+        return $childRules;
+    }
+
+    /**
+     * Get validation rules for nested child relationships (grandchildren)
+     */
+    private function getChildValidationRulesForNested(string $parentModelName, string $parentArrayName): array
+    {
+        $models = $this->parseYamlFile();
+        $nestedRules = [];
+
+        foreach ($models as $childModelName => $childModelData) {
+            // Check if this child model has requestParent pointing to the parent model
+            if (isset($childModelData['requestParent']) && $childModelData['requestParent'] === $parentModelName) {
+                // Generate the nested array name
+                $childArrayName = Str::snake(Str::plural($childModelName));
+                $nestedArrayPath = "{$parentArrayName}.*.{$childArrayName}";
+
+                // Add validation for the nested array itself
+                $nestedRules[$nestedArrayPath] = 'nullable|array';
+                $nestedRules["{$nestedArrayPath}.*"] = 'required|array';
+
+                // Add validation for each field in the nested child model
+                if (isset($childModelData['fields'])) {
+                    foreach ($childModelData['fields'] as $fieldName => $fieldDefinition) {
+                        // Skip foreign key fields that reference the parent
+                        $parentForeignKey = Str::snake($parentModelName) . '_id';
+                        if ($fieldName === $parentForeignKey) {
+                            continue;
+                        }
+
+                        $validationRule = $this->generateFieldValidationRule($fieldName, $fieldDefinition);
+                        $nestedRules["{$nestedArrayPath}.*.{$fieldName}"] = $validationRule;
+                    }
+                }
+
+                // Could add more levels if needed, but for now limiting to 2 levels deep
+            }
+        }
+
+        return $nestedRules;
+    }
+
+    /**
+     * Build validation rules for request (original method - keeping for backward compatibility)
+     */
+    private function buildValidationRules(array $fields): string
+    {
+        $rules = [];
+
+        foreach ($fields as $name => $definition) {
+            $rules[$name] = $this->generateFieldValidationRule($name, $definition);
+        }
+
+        return $this->formatValidationRules($rules);
     }
 
     /**
@@ -873,15 +887,10 @@ PHP;
                 $ruleSet[] = 'integer';
                 break;
             case 'decimal':
-            case 'double':
                 $ruleSet[] = 'numeric';
                 break;
             case 'boolean':
                 $ruleSet[] = 'boolean';
-                break;
-            case 'dateTime':
-            case 'timestamp':
-                $ruleSet[] = 'date';
                 break;
             case 'foreignId':
                 $relatedTable = $parts[0] ?? Str::snake(Str::pluralStudly(Str::beforeLast($name, '_id')));
