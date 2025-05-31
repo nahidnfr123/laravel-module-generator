@@ -7,9 +7,10 @@ return [
     'models_path' => base_path('module/models.yaml'),
     'stubs' => [
         'model' => 'model.stub',
+
         'controller' => 'controller.stub',
-        'controller-relation' => 'controller-relation.stub',
-        'controller-without-service.stub' => 'controller-without-service.stub',
+        'controller-relation-without-service' => 'controller-relation-without-service.stub',
+        'controller-without-service' => 'controller-without-service.stub',
 
         'service' => 'service.stub',
         'service-relation' => 'service-relation.stub',

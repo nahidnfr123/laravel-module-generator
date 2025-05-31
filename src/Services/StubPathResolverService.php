@@ -18,9 +18,9 @@ class StubPathResolverService
 
         // Map new stub keys to files
         $stubMap = [
-            'controller-relation' => 'controller-relation.stub',
+            'controller-relation-without-service' => 'controller-relation-without-service.stub',
             'service-relation' => 'service-relation.stub',
-            'controller-no-service' => 'controller-without-service.stub',
+            'controller-without-service' => 'controller-without-service.stub',
         ];
 
         $stubFile = $stubMap[$stubKey] ?? ($config['stubs'][$stubKey] ?? null);

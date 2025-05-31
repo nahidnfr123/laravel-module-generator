@@ -45,14 +45,14 @@ class GenerateModuleFromYaml extends Command
 
     public function handle()
     {
-        if ($this->option('force')) {
-            $confirmation = $this->ask('This command will replace existing module files and generate module files based on a YAML configuration. Do you want to proceed? (yes/no)', 'yes');
-            if (strtolower($confirmation) !== 'yes') {
-                $this->info('Command cancelled.');
-
-                return CommandAlias::SUCCESS;
-            }
-        }
+//        if ($this->option('force')) {
+//            $confirmation = $this->ask('This command will replace existing module files and generate module files based on a YAML configuration. Do you want to proceed? (yes/no)', 'yes');
+//            if (strtolower($confirmation) !== 'yes') {
+//                $this->info('Command cancelled.');
+//
+//                return CommandAlias::SUCCESS;
+//            }
+//        }
 
         $backupService = new BackupService($this);
         $this->pathResolverService = new StubPathResolverService;
@@ -60,7 +60,7 @@ class GenerateModuleFromYaml extends Command
         $models = $this->parseYamlFile();
 
         // Create backup unless explicitly skipped
-        if (! $this->option('skip-backup')) {
+        if (!$this->option('skip-backup')) {
             $this->currentBackupPath = $backupService->createBackup($models);
             $this->displayBackupInfo();
         }
@@ -98,7 +98,7 @@ class GenerateModuleFromYaml extends Command
         $defaultPath = config('module-generator.models_path');
         $path = $this->option('file') ?? $defaultPath;
 
-        if (! file_exists($path)) {
+        if (!file_exists($path)) {
             $this->error("YAML file not found at: $path");
             exit(CommandAlias::FAILURE);
         }
@@ -204,7 +204,7 @@ class GenerateModuleFromYaml extends Command
 
         // Check if model generation is enabled
         if ($this->generateConfig['model']) {
-            if (File::exists($modelPath) && ! $force) {
+            if (File::exists($modelPath) && !$force) {
                 $this->warn("⚠️ Model already exists: {$modelConfig['studlyName']}");
 
                 return;
@@ -222,10 +222,10 @@ class GenerateModuleFromYaml extends Command
         // Check if migration generation is enabled
         if ($this->generateConfig['migration']) {
             // Delete existing migration files if they exist
-            if (! empty($migrationFiles)) {
+            if (!empty($migrationFiles)) {
                 foreach ($migrationFiles as $file) {
                     File::delete($file);
-                    $this->warn('⚠️ Deleted existing migration: '.basename($file));
+                    $this->warn('⚠️ Deleted existing migration: ' . basename($file));
                 }
             }
 
@@ -273,7 +273,7 @@ class GenerateModuleFromYaml extends Command
     {
         if ($this->generateConfig['controller']) {
             $controllerPath = app_path("Http/Controllers/{$modelConfig['classes']['controller']}.php");
-            if (File::exists($controllerPath) && ! $force) {
+            if (File::exists($controllerPath) && !$force) {
                 $this->warn("⚠️ Controller already exists: {$modelConfig['classes']['controller']}");
 
                 return;
@@ -300,7 +300,7 @@ class GenerateModuleFromYaml extends Command
         if ($this->generateConfig['service']) {
             $servicePath = app_path("Services/{$modelConfig['classes']['service']}.php");
 
-            if (File::exists($servicePath) && ! $force) {
+            if (File::exists($servicePath) && !$force) {
                 $this->warn("⚠️ Service already exists: {$modelConfig['classes']['service']}");
 
                 return;
@@ -336,11 +336,11 @@ class GenerateModuleFromYaml extends Command
     {
         $config = $this->validateAndGetConfiguration();
 
-        if (! $config['skipPostman']) {
+        if (!$config['skipPostman']) {
             $this->generatePostmanCollection($config['path']);
         }
 
-        if (! $config['skipDbDiagram']) {
+        if (!$config['skipDbDiagram']) {
             $this->generateDbDiagram($config['path']);
         }
     }
