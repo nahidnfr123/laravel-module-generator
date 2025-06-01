@@ -10,6 +10,5 @@ class {{ model }} extends Model
         {{ fillable }}
     ];
 
-    protected $casts = [];
-    {{ relations }}
+    protected $casts = []; {{ relations }}
 }

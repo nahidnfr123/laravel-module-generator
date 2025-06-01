@@ -3,32 +3,67 @@
 namespace App\Services;
 
 use App\Models\{{ model }};
+{{ relationImports }}
 
 class {{ model }}Service
 {
+    /**
+     * Get all {{ model }} records
+     */
     public function getAll()
     {
-        return {{ model }}::paginate();
+        $with = [{{ with }}];
+
+        return {{ model }}::when(!empty($with), function ($query) use ($with) {
+            return $query->with($with);
+        })->get();
     }
 
-    public function store($request): {{ model }}
+    /**
+     * Get {{ model }} by ID
+     */
+    public function getById($id)
     {
-        ${{ variable }} = new {{ model }};
-        ${{ variable }}->fill($request);
-        ${{ variable }}->save();
-        return ${{ variable }};
+        $with = [{{ with }}];
+
+        return {{ model }}::when(!empty($with), function ($query) use ($with) {
+            return $query->with($with);
+        })->findOrFail($id);
     }
 
-    public function update($request, {{ model }} ${{ variable }}): {{ model }}
+    /**
+     * Create a new {{ model }}
+     */
+    public function create(array $data)
     {
-        ${{ variable }}->fill($request);
-        ${{ variable }}->save();
-        return ${{ variable }};
+        ${{ variable }} = {{ model }}::create($data);
+{{ relationStore }}
+
+        return $this->getById(${{ variable }}->id);
     }
 
-    public function delete({{ model }} ${{ variable }}): {{ model }}
+    /**
+     * Update {{ model }}
+     */
+    public function update($id, array $data)
     {
-        ${{ variable }}->delete();
-        return ${{ variable }};
+        ${{ variable }} = {{ model }}::findOrFail($id);
+
+        // Handle nested relations update
+        $validatedData = $data;
+{{ relationUpdate }}
+
+        ${{ variable }}->update($validatedData);
+
+        return $this->getById(${{ variable }}->id);
+    }
+
+    /**
+     * Delete {{ model }}
+     */
+    public function delete($id)
+    {
+        ${{ variable }} = {{ model }}::findOrFail($id);
+        return ${{ variable }}->delete();
     }
 }

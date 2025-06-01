@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use NahidFerdous\LaravelModuleGenerator\Services\AppendRouteService;
 use NahidFerdous\LaravelModuleGenerator\Services\BackupService;
 use NahidFerdous\LaravelModuleGenerator\Services\GenerateControllerService;
+use NahidFerdous\LaravelModuleGenerator\Services\GenerateControllerServiceBackup2;
 use NahidFerdous\LaravelModuleGenerator\Services\GenerateMigrationService;
 use NahidFerdous\LaravelModuleGenerator\Services\GenerateModelService;
 use NahidFerdous\LaravelModuleGenerator\Services\GenerateRequestService;
@@ -23,17 +24,18 @@ class GenerateModuleFromYaml extends Command
                            {--file= : Path to a YAML file}
                            {--skip-postman : Skip Postman collection generation}
                            {--skip-dbdiagram : Skip DB diagram generation}
-                            {--skip-backup : Skip backup creation}
+                           {--skip-backup : Skip backup creation}
                            {--postman-base-url={{base-url}} : Base URL for Postman collection}
                            {--postman-prefix=api/v1 : API prefix for Postman collection}';
 
     protected $description = 'Generate Laravel module files (model, migration, controller, etc.) from a YAML file';
 
     private StubPathResolverService $pathResolverService;
-
     private ?string $currentBackupPath = null;
+    private array $parsedYamlData = [];
+    private array $config = [];
 
-    public array $generateConfig = [
+    private const DEFAULT_GENERATE_CONFIG = [
         'model' => true,
         'migration' => true,
         'controller' => true,
@@ -43,38 +45,62 @@ class GenerateModuleFromYaml extends Command
         'collection' => true,
     ];
 
-    public function handle()
+    public function handle(): int
     {
-//        if ($this->option('force')) {
-//            $confirmation = $this->ask('This command will replace existing module files and generate module files based on a YAML configuration. Do you want to proceed? (yes/no)', 'yes');
-//            if (strtolower($confirmation) !== 'yes') {
-//                $this->info('Command cancelled.');
-//
-//                return CommandAlias::SUCCESS;
-//            }
-//        }
+        if ($this->option('force')) {
+            $confirmation = $this->ask('This command will replace existing module files and generate module files based on a YAML configuration. Do you want to proceed? (yes/no)', 'yes');
+            if (strtolower($confirmation) !== 'yes') {
+                $this->info('Command cancelled.');
 
-        $backupService = new BackupService($this);
-        $this->pathResolverService = new StubPathResolverService;
-        $this->validateAndGetConfiguration();
-        $models = $this->parseYamlFile();
+                return CommandAlias::SUCCESS;
+            }
+        }
+        try {
+            $this->init();
+            $this->createBackupIfNeeded();
+            $this->processModules();
+            $this->generateAdditionalFiles();
 
-        // Create backup unless explicitly skipped
+            $this->displaySuccessMessage();
+            return CommandAlias::SUCCESS;
+
+        } catch (\Exception $e) {
+            $this->error("Error: {$e->getMessage()}");
+            return CommandAlias::FAILURE;
+        }
+    }
+
+    /**
+     * Initialize the command with configuration and validation
+     */
+    private function init(): void
+    {
+        $this->pathResolverService = new StubPathResolverService();
+        $this->config = $this->validateAndGetConfiguration();
+        $this->parsedYamlData = $this->parseYamlFile();
+    }
+
+    /**
+     * Create backup if not skipped
+     */
+    private function createBackupIfNeeded(): void
+    {
         if (!$this->option('skip-backup')) {
-            $this->currentBackupPath = $backupService->createBackup($models);
+            $backupService = new BackupService($this);
+            $this->currentBackupPath = $backupService->createBackup($this->parsedYamlData);
             $this->displayBackupInfo();
         }
+    }
 
-        foreach ($models as $modelName => $modelData) {
-            $this->processModel($modelName, $modelData);
+    /**
+     * Process all models from YAML configuration
+     * @throws \Exception
+     */
+    private function processModules(): void
+    {
+        foreach ($this->parsedYamlData as $modelName => $modelData) {
+            $this->processModule($modelName, $modelData);
         }
-
-        $this->generateAdditionalFiles();
-
-        $this->newLine();
-        $this->info('🎉 All modules generated successfully!');
-
-        return CommandAlias::SUCCESS;
     }
 
     /**
@@ -91,6 +117,19 @@ class GenerateModuleFromYaml extends Command
     }
 
     /**
+     * Display final success message
+     */
+    private function displaySuccessMessage(): void
+    {
+        $this->newLine();
+        $this->info('🎉 All modules generated successfully!');
+
+        if ($this->currentBackupPath) {
+            $this->comment("💾 Backup available at: {$this->currentBackupPath}");
+        }
+    }
+
+    /**
      * Validate options and get configuration
      */
     private function validateAndGetConfiguration(): array
@@ -98,9 +137,16 @@ class GenerateModuleFromYaml extends Command
         $defaultPath = config('module-generator.models_path');
         $path = $this->option('file') ?? $defaultPath;
 
+        if (!$path) {
+            throw new \InvalidArgumentException('YAML file path is required. Use --file option or set module-generator.models_path config.');
+        }
+
         if (!file_exists($path)) {
-            $this->error("YAML file not found at: $path");
-            exit(CommandAlias::FAILURE);
+            throw new \InvalidArgumentException("YAML file not found at: $path");
+        }
+
+        if (!is_readable($path)) {
+            throw new \InvalidArgumentException("YAML file is not readable: $path");
         }
 
         return [
@@ -116,29 +162,50 @@ class GenerateModuleFromYaml extends Command
      */
     private function parseYamlFile(): array
     {
-        $config = $this->validateAndGetConfiguration();
+        try {
+            $data = Yaml::parseFile($this->config['path']);
 
-        return Yaml::parseFile($config['path']);
+            if (!is_array($data) || empty($data)) {
+                throw new \InvalidArgumentException('YAML file must contain valid model configurations');
+            }
+
+            return $data;
+        } catch (\Exception $e) {
+            throw new \InvalidArgumentException("Failed to parse YAML file: {$e->getMessage()}");
+        }
     }
 
     /**
      * Process a single model from the YAML configuration
+     * @throws \Exception
      */
-    private function processModel(string $modelName, array $modelData): void
+    private function processModule(string $modelName, array $modelData): void
     {
         $this->info("Generating files for: $modelName");
 
-        $modelConfig = $this->buildModelConfiguration($modelName, $modelData);
-        //        $generateConfig = $this->normalizeGenerateConfiguration($modelData['generate'] ?? true);
-        $this->generateConfig = $this->normalizeGenerateConfiguration($modelData['generate'] ?? true);
+        try {
+            $modelConfig = $this->buildModelConfiguration($modelName, $modelData);
+            $generateConfig = $this->normalizeGenerateConfiguration($modelData['generate'] ?? true);
 
-        $this->generateModelAndMigration($modelConfig);
-        $this->generateOptionalFiles($modelConfig);
+            $this->generateModelFiles($modelConfig, $generateConfig);
 
-        $this->newLine();
-        $this->info("🎉 Module generated for $modelName");
-        $this->newLine();
-        sleep(1);
+            $this->newLine();
+            $this->info("✅ Module generated for $modelName");
+            $this->newLine();
+
+        } catch (\Exception $e) {
+            $this->error("Failed to generate module for $modelName: {$e->getMessage()}");
+            throw $e;
+        }
+    }
+
+    /**
+     * Generate all files for a model
+     */
+    private function generateModelFiles(array $modelConfig, array $generateConfig): void
+    {
+        $this->generateModelAndMigration($modelConfig, $generateConfig);
+        $this->generateOptionalFiles($modelConfig, $generateConfig);
     }
 
     /**
@@ -147,6 +214,14 @@ class GenerateModuleFromYaml extends Command
     private function buildModelConfiguration(string $modelName, array $modelData): array
     {
         $studlyModelName = Str::studly($modelName);
+
+        // Validate generate configuration
+        if (isset($modelData['generate']) && is_array($modelData['generate'])) {
+            $unknownKeys = array_diff(array_keys($modelData['generate']), array_keys(self::DEFAULT_GENERATE_CONFIG));
+            if (!empty($unknownKeys)) {
+                throw new \InvalidArgumentException("Unknown generate keys for $modelName: " . implode(', ', $unknownKeys));
+            }
+        }
 
         return [
             'originalName' => $modelName,
@@ -162,7 +237,7 @@ class GenerateModuleFromYaml extends Command
                 'collection' => "{$studlyModelName}Collection",
                 'resource' => "{$studlyModelName}Resource",
                 'request' => "{$studlyModelName}Request",
-            ],
+            ]
         ];
     }
 
@@ -171,83 +246,121 @@ class GenerateModuleFromYaml extends Command
      */
     private function normalizeGenerateConfiguration($generate): array
     {
-        $defaultGenerate = [
-            'model' => true,
-            'migration' => true,
-            'controller' => true,
-            'service' => true,
-            'request' => true,
-            'resource' => true,
-            'collection' => true,
-        ];
-
         if ($generate === false) {
-            return array_fill_keys(array_keys($defaultGenerate), false);
+            return array_fill_keys(array_keys(self::DEFAULT_GENERATE_CONFIG), false);
         }
 
-        if ($generate === true) {
-            return $defaultGenerate;
+        if ($generate === true || $generate === null) {
+            return self::DEFAULT_GENERATE_CONFIG;
         }
 
-        return array_merge($defaultGenerate, $generate);
+        if (is_array($generate)) {
+            return array_merge(self::DEFAULT_GENERATE_CONFIG, $generate);
+        }
+
+        throw new \InvalidArgumentException('Generate configuration must be boolean or array');
     }
 
     /**
      * Generate model and migration files
      */
-    private function generateModelAndMigration(array $modelConfig): void
+    private function generateModelAndMigration(array $modelConfig, array $generateConfig): void
+    {
+        $force = $this->config['force'];
+
+        if ($generateConfig['model']) {
+            $this->generateModelFile($modelConfig, $force);
+        }
+
+        if ($generateConfig['migration']) {
+            $this->generateMigrationFile($modelConfig, $force);
+        }
+    }
+
+    /**
+     * Generate model file
+     */
+    private function generateModelFile(array $modelConfig, bool $force): void
     {
         $modelPath = app_path("Models/{$modelConfig['studlyName']}.php");
+
+        if (File::exists($modelPath) && !$force) {
+            $this->warn("⚠️ Model already exists: {$modelConfig['studlyName']}");
+            return;
+        }
+
+        if (File::exists($modelPath)) {
+            File::delete($modelPath);
+            $this->warn("⚠️ Deleted existing model: {$modelConfig['studlyName']}");
+        }
+
+        (new GenerateModelService($this))
+            ->generateModel($modelConfig['studlyName'], $modelConfig['fields'], $modelConfig['relations']);
+    }
+
+    /**
+     * Generate migration file
+     */
+    private function generateMigrationFile(array $modelConfig, bool $force): void
+    {
         $migrationPattern = database_path("migrations/*create_{$modelConfig['tableName']}_table.php");
         $migrationFiles = glob($migrationPattern);
-        $force = $this->option('force');
 
-        // Check if model generation is enabled
-        if ($this->generateConfig['model']) {
-            if (File::exists($modelPath) && !$force) {
-                $this->warn("⚠️ Model already exists: {$modelConfig['studlyName']}");
-
-                return;
+        // Delete existing migration files if they exist
+        if (!empty($migrationFiles)) {
+            foreach ($migrationFiles as $file) {
+                File::delete($file);
+                $this->warn('⚠️ Deleted existing migration: ' . basename($file));
             }
-
-            if (File::exists($modelPath)) {
-                File::delete($modelPath);
-                $this->warn("⚠️ Deleted existing model: {$modelConfig['studlyName']}");
-            }
-
-            (new GenerateModelService($this))
-                ->generateModel($modelConfig['studlyName'], $modelConfig['fields'], $modelConfig['relations']);
         }
 
-        // Check if migration generation is enabled
-        if ($this->generateConfig['migration']) {
-            // Delete existing migration files if they exist
-            if (!empty($migrationFiles)) {
-                foreach ($migrationFiles as $file) {
-                    File::delete($file);
-                    $this->warn('⚠️ Deleted existing migration: ' . basename($file));
-                }
-            }
-
-            (new GenerateMigrationService($this))
-                ->generateMigration($modelConfig['studlyName'], $modelConfig['fields']);
-        }
+        (new GenerateMigrationService($this))
+            ->generateMigration($modelConfig['studlyName'], $modelConfig['fields']);
     }
 
     /**
      * Generate optional files based on configuration
      */
-    private function generateOptionalFiles(array $modelConfig): void
+    private function generateOptionalFiles(array $modelConfig, array $generateConfig): void
     {
-        $generateConfig = $this->generateConfig;
-        $force = $this->option('force');
+        $force = $this->config['force'];
 
         if ($generateConfig['request']) {
-            (new GenerateRequestService($this, $this->parseYamlFile(), $this->generateConfig))
-                ->handleRequestGeneration($modelConfig, $force);
+            $this->generateRequestFile($modelConfig, $force);
         }
 
+        if ($generateConfig['collection'] || $generateConfig['resource']) {
+            $this->generateResourceFiles($modelConfig, $generateConfig, $force);
+        }
+
+
+        if ($generateConfig['service'] || $generateConfig['controller']) {
+            $modelData = $this->getCurrentModelData($modelConfig['originalName']);
+            $controllerService = new GenerateControllerService($this, $this->parsedYamlData);
+            $controllerService->generateControllerAndService($modelConfig, $modelData, $force);
+        }
+
+        if ($generateConfig['controller']) {
+            $this->appendRoute($modelConfig);
+        }
+    }
+
+    /**
+     * Generate request file
+     */
+    private function generateRequestFile(array $modelConfig, bool $force): void
+    {
+        (new GenerateRequestService($this, $this->parsedYamlData, self::DEFAULT_GENERATE_CONFIG))
+            ->handleRequestGeneration($modelConfig, $force);
+    }
+
+    /**
+     * Generate resource files
+     */
+    private function generateResourceFiles(array $modelConfig, array $generateConfig, bool $force): void
+    {
         $resourceCollectionService = new GenerateResourceCollectionService($this, $generateConfig);
+
         if ($generateConfig['collection']) {
             $resourceCollectionService->handleCollectionGeneration($modelConfig, $force);
         }
@@ -255,68 +368,15 @@ class GenerateModuleFromYaml extends Command
         if ($generateConfig['resource']) {
             $resourceCollectionService->handleResourceGeneration($modelConfig, $force);
         }
-
-        if ($generateConfig['service']) {
-            $this->handleServiceGeneration($modelConfig, $force);
-        }
-
-        if ($generateConfig['controller']) {
-            $this->handleControllerGeneration($modelConfig, $force);
-            (new AppendRouteService($this))->appendRoute($modelConfig['tableName'], $modelConfig['classes']['controller']);
-        }
     }
 
     /**
-     * Handle controller file generation (Updated)
+     * Append route for controller
      */
-    private function handleControllerGeneration(array $modelConfig, bool $force): void
+    private function appendRoute(array $modelConfig): void
     {
-        if ($this->generateConfig['controller']) {
-            $controllerPath = app_path("Http/Controllers/{$modelConfig['classes']['controller']}.php");
-            if (File::exists($controllerPath) && !$force) {
-                $this->warn("⚠️ Controller already exists: {$modelConfig['classes']['controller']}");
-
-                return;
-            }
-
-            if (File::exists($controllerPath)) {
-                File::delete($controllerPath);
-                $this->warn("⚠️ Deleted existing controller: {$modelConfig['classes']['controller']}");
-            }
-
-            // Use the new service for controller generation
-            $controllerService = new GenerateControllerService($this, $this->parseYamlFile());
-            $modelData = $this->getCurrentModelData($modelConfig['originalName']);
-
-            $controllerService->generateController($modelConfig, $modelData);
-        }
-    }
-
-    /**
-     * Handle service file generation (Updated)
-     */
-    private function handleServiceGeneration(array $modelConfig, bool $force): void
-    {
-        if ($this->generateConfig['service']) {
-            $servicePath = app_path("Services/{$modelConfig['classes']['service']}.php");
-
-            if (File::exists($servicePath) && !$force) {
-                $this->warn("⚠️ Service already exists: {$modelConfig['classes']['service']}");
-
-                return;
-            }
-
-            if (File::exists($servicePath)) {
-                File::delete($servicePath);
-                $this->warn("⚠️ Deleted existing service: {$modelConfig['classes']['service']}");
-            }
-
-            // Use the new service for service generation
-            $controllerService = new GenerateControllerService($this, $this->parseYamlFile());
-            $modelData = $this->getCurrentModelData($modelConfig['originalName']);
-
-            $controllerService->generateService($modelConfig, $modelData);
-        }
+        (new AppendRouteService($this))
+            ->appendRoute($modelConfig['tableName'], $modelConfig['classes']['controller']);
     }
 
     /**
@@ -324,9 +384,7 @@ class GenerateModuleFromYaml extends Command
      */
     private function getCurrentModelData(string $modelName): array
     {
-        $models = $this->parseYamlFile();
-
-        return $models[$modelName] ?? [];
+        return $this->parsedYamlData[$modelName] ?? [];
     }
 
     /**
@@ -334,60 +392,61 @@ class GenerateModuleFromYaml extends Command
      */
     private function generateAdditionalFiles(): void
     {
-        $config = $this->validateAndGetConfiguration();
-
-        if (!$config['skipPostman']) {
-            $this->generatePostmanCollection($config['path']);
+        if (!$this->config['skipPostman']) {
+            $this->generatePostmanCollection();
         }
 
-        if (!$config['skipDbDiagram']) {
-            $this->generateDbDiagram($config['path']);
+        if (!$this->config['skipDbDiagram']) {
+            $this->generateDbDiagram();
         }
     }
 
     /**
      * Generate Postman collection
      */
-    private function generatePostmanCollection(string $path): void
+    private function generatePostmanCollection(): void
     {
         $this->newLine();
         $this->info('🚀 Generating Postman collection...');
 
-        $baseUrl = $this->option('postman-base-url');
-        $prefix = $this->option('postman-prefix');
+        try {
+            $result = $this->call('postman:generate', [
+                '--file' => $this->config['path'],
+                '--base-url' => $this->option('postman-base-url'),
+                '--prefix' => $this->option('postman-prefix'),
+            ]);
 
-        $result = $this->call('postman:generate', [
-            '--file' => $path,
-            '--base-url' => $baseUrl,
-            '--prefix' => $prefix,
-        ]);
-
-        if ($result === CommandAlias::SUCCESS) {
-            $this->newLine();
-            // $this->info('🥵 Postman collection generated successfully!');
-        } else {
-            $this->warn('⚠️ Failed to generate Postman collection');
+            if ($result === CommandAlias::SUCCESS) {
+                $this->info('✅ Postman collection generated successfully!');
+            } else {
+                $this->warn('⚠️ Failed to generate Postman collection');
+            }
+        } catch (\Exception $e) {
+            $this->warn("⚠️ Failed to generate Postman collection: {$e->getMessage()}");
         }
     }
 
     /**
      * Generate database diagram
      */
-    private function generateDbDiagram(string $path): void
+    private function generateDbDiagram(): void
     {
         $this->newLine();
         $this->info('🚀 Generating DB diagram...');
 
-        $result = $this->call('dbdiagram:generate', [
-            '--file' => $path,
-            '--output' => 'module/dbdiagram.dbml',
-        ]);
+        try {
+            $result = $this->call('dbdiagram:generate', [
+                '--file' => $this->config['path'],
+                '--output' => 'module/dbdiagram.dbml',
+            ]);
 
-        if ($result === CommandAlias::SUCCESS) {
-            $this->newLine();
-            // $this->info('🤧 DB diagram generated successfully at module/dbdiagram.dbml');
-        } else {
-            $this->warn('⚠️ Failed to generate DB diagram');
+            if ($result === CommandAlias::SUCCESS) {
+                $this->info('✅ DB diagram generated successfully at module/dbdiagram.dbml');
+            } else {
+                $this->warn('⚠️ Failed to generate DB diagram');
+            }
+        } catch (\Exception $e) {
+            $this->warn("⚠️ Failed to generate DB diagram: {$e->getMessage()}");
         }
     }
 }

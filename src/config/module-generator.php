@@ -1,4 +1,5 @@
 <?php
+// module-generator.php
 
 $randomNumber = rand(100, 999);
 
@@ -9,11 +10,7 @@ return [
         'model' => 'model.stub',
 
         'controller' => 'controller.stub',
-        'controller-relation-without-service' => 'controller-relation-without-service.stub',
-        'controller-without-service' => 'controller-without-service.stub',
-
         'service' => 'service.stub',
-        'service-relation' => 'service-relation.stub',
 
         'repository' => 'repository.stub',
         'migration' => 'migration.stub',
