@@ -10,6 +10,7 @@ use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateModuleFromYaml;
 class GenerateModelService
 {
     private GenerateModuleFromYaml $command;
+
     private StubPathResolverService $stubPathResolver;
 
     public function __construct(GenerateModuleFromYaml $command)
@@ -28,6 +29,7 @@ class GenerateModelService
         $modelPath = app_path("Models/{$modelName}.php");
         if (! File::exists($modelPath)) {
             $this->command->warn("⚠️ Model file not found for: {$modelName}");
+
             return;
         }
 
@@ -45,6 +47,7 @@ class GenerateModelService
     private function buildFillableArray(array $fields): string
     {
         $fillableFields = array_map(fn ($field) => "'$field'", array_keys($fields));
+
         return implode(",\n        ", $fillableFields);
     }
 
@@ -88,16 +91,16 @@ PHP;
             $modelContent = str_replace([
                 '{{ model }}',
                 '{{ fillable }}',
-                '{{ relations }}'
+                '{{ relations }}',
             ], [
                 $modelName,
                 $fillableArray,
-                $relationshipMethods
+                $relationshipMethods,
             ], $stubContent);
 
             File::put($modelPath, $modelContent);
         } catch (\Exception $e) {
-            $this->command->error("Failed to generate model using stub: " . $e->getMessage());
+            $this->command->error('Failed to generate model using stub: '.$e->getMessage());
 
             // Fallback to the original method if stub fails
             $this->insertModelContentFallback($modelPath, $modelName, $fillableArray, $relationshipMethods);

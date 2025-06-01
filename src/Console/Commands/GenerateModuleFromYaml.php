@@ -8,7 +8,6 @@ use Illuminate\Support\Str;
 use NahidFerdous\LaravelModuleGenerator\Services\AppendRouteService;
 use NahidFerdous\LaravelModuleGenerator\Services\BackupService;
 use NahidFerdous\LaravelModuleGenerator\Services\GenerateControllerService;
-use NahidFerdous\LaravelModuleGenerator\Services\GenerateControllerServiceBackup2;
 use NahidFerdous\LaravelModuleGenerator\Services\GenerateMigrationService;
 use NahidFerdous\LaravelModuleGenerator\Services\GenerateModelService;
 use NahidFerdous\LaravelModuleGenerator\Services\GenerateRequestService;
@@ -31,8 +30,11 @@ class GenerateModuleFromYaml extends Command
     protected $description = 'Generate Laravel module files (model, migration, controller, etc.) from a YAML file';
 
     private StubPathResolverService $pathResolverService;
+
     private ?string $currentBackupPath = null;
+
     private array $parsedYamlData = [];
+
     private array $config = [];
 
     private const DEFAULT_GENERATE_CONFIG = [
@@ -62,10 +64,12 @@ class GenerateModuleFromYaml extends Command
             $this->generateAdditionalFiles();
 
             $this->displaySuccessMessage();
+
             return CommandAlias::SUCCESS;
 
         } catch (\Exception $e) {
             $this->error("Error: {$e->getMessage()}");
+
             return CommandAlias::FAILURE;
         }
     }
@@ -75,7 +79,7 @@ class GenerateModuleFromYaml extends Command
      */
     private function init(): void
     {
-        $this->pathResolverService = new StubPathResolverService();
+        $this->pathResolverService = new StubPathResolverService;
         $this->config = $this->validateAndGetConfiguration();
         $this->parsedYamlData = $this->parseYamlFile();
     }
@@ -85,7 +89,7 @@ class GenerateModuleFromYaml extends Command
      */
     private function createBackupIfNeeded(): void
     {
-        if (!$this->option('skip-backup')) {
+        if (! $this->option('skip-backup')) {
             $backupService = new BackupService($this);
             $this->currentBackupPath = $backupService->createBackup($this->parsedYamlData);
             $this->displayBackupInfo();
@@ -94,6 +98,7 @@ class GenerateModuleFromYaml extends Command
 
     /**
      * Process all models from YAML configuration
+     *
      * @throws \Exception
      */
     private function processModules(): void
@@ -137,15 +142,15 @@ class GenerateModuleFromYaml extends Command
         $defaultPath = config('module-generator.models_path');
         $path = $this->option('file') ?? $defaultPath;
 
-        if (!$path) {
+        if (! $path) {
             throw new \InvalidArgumentException('YAML file path is required. Use --file option or set module-generator.models_path config.');
         }
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             throw new \InvalidArgumentException("YAML file not found at: $path");
         }
 
-        if (!is_readable($path)) {
+        if (! is_readable($path)) {
             throw new \InvalidArgumentException("YAML file is not readable: $path");
         }
 
@@ -165,7 +170,7 @@ class GenerateModuleFromYaml extends Command
         try {
             $data = Yaml::parseFile($this->config['path']);
 
-            if (!is_array($data) || empty($data)) {
+            if (! is_array($data) || empty($data)) {
                 throw new \InvalidArgumentException('YAML file must contain valid model configurations');
             }
 
@@ -177,6 +182,7 @@ class GenerateModuleFromYaml extends Command
 
     /**
      * Process a single model from the YAML configuration
+     *
      * @throws \Exception
      */
     private function processModule(string $modelName, array $modelData): void
@@ -218,8 +224,8 @@ class GenerateModuleFromYaml extends Command
         // Validate generate configuration
         if (isset($modelData['generate']) && is_array($modelData['generate'])) {
             $unknownKeys = array_diff(array_keys($modelData['generate']), array_keys(self::DEFAULT_GENERATE_CONFIG));
-            if (!empty($unknownKeys)) {
-                throw new \InvalidArgumentException("Unknown generate keys for $modelName: " . implode(', ', $unknownKeys));
+            if (! empty($unknownKeys)) {
+                throw new \InvalidArgumentException("Unknown generate keys for $modelName: ".implode(', ', $unknownKeys));
             }
         }
 
@@ -237,7 +243,7 @@ class GenerateModuleFromYaml extends Command
                 'collection' => "{$studlyModelName}Collection",
                 'resource' => "{$studlyModelName}Resource",
                 'request' => "{$studlyModelName}Request",
-            ]
+            ],
         ];
     }
 
@@ -284,8 +290,9 @@ class GenerateModuleFromYaml extends Command
     {
         $modelPath = app_path("Models/{$modelConfig['studlyName']}.php");
 
-        if (File::exists($modelPath) && !$force) {
+        if (File::exists($modelPath) && ! $force) {
             $this->warn("⚠️ Model already exists: {$modelConfig['studlyName']}");
+
             return;
         }
 
@@ -307,10 +314,10 @@ class GenerateModuleFromYaml extends Command
         $migrationFiles = glob($migrationPattern);
 
         // Delete existing migration files if they exist
-        if (!empty($migrationFiles)) {
+        if (! empty($migrationFiles)) {
             foreach ($migrationFiles as $file) {
                 File::delete($file);
-                $this->warn('⚠️ Deleted existing migration: ' . basename($file));
+                $this->warn('⚠️ Deleted existing migration: '.basename($file));
             }
         }
 
@@ -332,7 +339,6 @@ class GenerateModuleFromYaml extends Command
         if ($generateConfig['collection'] || $generateConfig['resource']) {
             $this->generateResourceFiles($modelConfig, $generateConfig, $force);
         }
-
 
         if ($generateConfig['service'] || $generateConfig['controller']) {
             $modelData = $this->getCurrentModelData($modelConfig['originalName']);
@@ -392,11 +398,11 @@ class GenerateModuleFromYaml extends Command
      */
     private function generateAdditionalFiles(): void
     {
-        if (!$this->config['skipPostman']) {
+        if (! $this->config['skipPostman']) {
             $this->generatePostmanCollection();
         }
 
-        if (!$this->config['skipDbDiagram']) {
+        if (! $this->config['skipDbDiagram']) {
             $this->generateDbDiagram();
         }
     }

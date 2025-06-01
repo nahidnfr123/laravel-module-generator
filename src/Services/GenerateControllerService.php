@@ -2,22 +2,33 @@
 
 namespace NahidFerdous\LaravelModuleGenerator\Services;
 
-use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateModuleFromYaml;
 
 class GenerateControllerService
 {
+    private const DEFAULT_GENERATE_CONFIG = [
+        'model' => true,
+        'migration' => true,
+        'controller' => true,
+        'service' => true,
+        'request' => true,
+        'resource' => true,
+        'collection' => true,
+    ];
+
     private GenerateModuleFromYaml $command;
+
     private array $allModels;
+
     private StubPathResolverService $stubPathResolver;
 
     public function __construct(GenerateModuleFromYaml $command, array $allModels)
     {
         $this->command = $command;
         $this->allModels = $allModels;
-        $this->stubPathResolver = new StubPathResolverService();
+        $this->stubPathResolver = new StubPathResolverService;
     }
 
     /**
@@ -33,8 +44,9 @@ class GenerateControllerService
         if ($hasService) {
             $servicePath = app_path("Services/{$modelConfig['classes']['service']}.php");
 
-            if (File::exists($servicePath) && !$force) {
+            if (File::exists($servicePath) && ! $force) {
                 $this->command->warn("⚠️ Service already exists: {$modelConfig['classes']['service']}");
+
                 return;
             }
 
@@ -48,8 +60,9 @@ class GenerateControllerService
         if ($hasController) {
             $controllerPath = app_path("Http/Controllers/{$modelConfig['classes']['controller']}.php");
 
-            if (File::exists($controllerPath) && !$force) {
+            if (File::exists($controllerPath) && ! $force) {
                 $this->command->warn("⚠️ Controller already exists: {$modelConfig['classes']['controller']}");
+
                 return;
             }
 
@@ -66,7 +79,7 @@ class GenerateControllerService
      */
     private function hasRelationRequest(array $modelData): bool
     {
-        if (!isset($modelData['relations']) || !is_array($modelData['relations'])) {
+        if (! isset($modelData['relations']) || ! is_array($modelData['relations'])) {
             return false;
         }
 
@@ -90,6 +103,7 @@ class GenerateControllerService
 
         if (File::exists($path)) {
             $this->command->warn("Service {$serviceClass} already exists. Skipping generation.");
+
             return;
         }
 
@@ -117,6 +131,7 @@ class GenerateControllerService
 
         if (File::exists($path)) {
             $this->command->warn("Controller {$controllerClass} already exists. Skipping generation.");
+
             return;
         }
 
@@ -125,7 +140,7 @@ class GenerateControllerService
         if ($hasRelations) {
             // Generate controller with relations (custom code)
             $content = $this->generateControllerWithRelations($modelConfig, $modelData, $hasService);
-        } else if ($hasService) {
+        } elseif ($hasService) {
             // Generate controller from default stub with service
             $content = $this->generateControllerFromStub($modelConfig, $modelData, true);
         } else {
@@ -212,7 +227,7 @@ class {$modelName}Service
         \${$variable} = {$modelName}::create(\$data);
 {$relationStoreCode}
 
-        return \$this->getById(\${$variable}->id);
+        return $variable;
     }
 
     /**
@@ -226,7 +241,7 @@ class {$modelName}Service
 
         \${$variable}->update(\$validatedData);
 
-        return \$this->getById(\${$variable}->id);
+        return \$variable;
     }
 
     /**
@@ -303,7 +318,7 @@ class {$controllerClass} extends Controller implements HasMiddleware
 
     public function index(): \Illuminate\Http\JsonResponse
     {
-        \$data = {$modelName}::all();
+        \$data = {$modelName}::paginate();
 
         return \$this->success('{$modelPlural} retrieved successfully', {$modelName}Collection::make(\$data));
     }
@@ -467,7 +482,7 @@ class {$controllerClass} extends Controller implements HasMiddleware
      */
     private function generateRelationImports(array $modelData): string
     {
-        if (!isset($modelData['relations'])) {
+        if (! isset($modelData['relations'])) {
             return '';
         }
 
@@ -487,7 +502,7 @@ class {$controllerClass} extends Controller implements HasMiddleware
      */
     private function generateWithRelations(array $modelData): string
     {
-        if (!isset($modelData['relations'])) {
+        if (! isset($modelData['relations'])) {
             return '';
         }
 
@@ -504,13 +519,13 @@ class {$controllerClass} extends Controller implements HasMiddleware
      */
     private function generateRelationStoreCode(array $modelData, string $modelVariable): string
     {
-        if (!isset($modelData['relations'])) {
+        if (! isset($modelData['relations'])) {
             return '';
         }
 
         $code = '';
         foreach ($modelData['relations'] as $relationName => $relationConfig) {
-            if (!isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
+            if (! isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
                 continue;
             }
 
@@ -521,15 +536,46 @@ class {$controllerClass} extends Controller implements HasMiddleware
                 case 'hasMany':
                     $code .= "\n        // Handle {$relationName} relation";
                     $code .= "\n        if (isset(\$data['{$relationKey}']) && is_array(\$data['{$relationKey}'])) {";
-                    $code .= "\n            \${$modelVariable}->{$relationName}()->createMany(\$data['{$relationKey}']);";
+
+                    // Check if this relation has nested relations
+                    $nestedRelations = $this->getNestedRelations($relationConfig, $modelData);
+
+                    if (! empty($nestedRelations)) {
+                        $code .= "\n            foreach (\$data['{$relationKey}'] as \$relationData) {";
+                        $code .= "\n                \${$relationName}Record = \${$modelVariable}->{$relationName}()->create(\$relationData);";
+
+                        foreach ($nestedRelations as $nestedRelationName => $nestedRelationConfig) {
+                            $nestedRelationKey = Str::snake($nestedRelationName);
+                            $nestedRelationType = $nestedRelationConfig['type'];
+
+                            if ($nestedRelationType === 'hasMany') {
+                                $code .= "\n                // Handle nested {$nestedRelationName} relation";
+                                $code .= "\n                if (isset(\$relationData['{$nestedRelationKey}']) && is_array(\$relationData['{$nestedRelationKey}'])) {";
+                                $code .= "\n                    \${$relationName}Record->{$nestedRelationName}()->createMany(\$relationData['{$nestedRelationKey}']);";
+                                $code .= "\n                }";
+                            } elseif ($nestedRelationType === 'hasOne') {
+                                $code .= "\n                // Handle nested {$nestedRelationName} relation";
+                                $code .= "\n                if (isset(\$relationData['{$nestedRelationKey}'])) {";
+                                $code .= "\n                    \${$relationName}Record->{$nestedRelationName}()->create(\$relationData['{$nestedRelationKey}']);";
+                                $code .= "\n                }";
+                            }
+                        }
+
+                        $code .= "\n            }";
+                    } else {
+                        $code .= "\n            \${$modelVariable}->{$relationName}()->createMany(\$data['{$relationKey}']);";
+                    }
+
                     $code .= "\n        }";
                     break;
+
                 case 'hasOne':
                     $code .= "\n        // Handle {$relationName} relation";
                     $code .= "\n        if (isset(\$data['{$relationKey}'])) {";
                     $code .= "\n            \${$modelVariable}->{$relationName}()->create(\$data['{$relationKey}']);";
                     $code .= "\n        }";
                     break;
+
                 case 'belongsToMany':
                     $code .= "\n        // Handle {$relationName} relation";
                     $code .= "\n        if (isset(\$data['{$relationKey}']) && is_array(\$data['{$relationKey}'])) {";
@@ -547,13 +593,13 @@ class {$controllerClass} extends Controller implements HasMiddleware
      */
     private function generateRelationUpdateCode(array $modelData, string $modelVariable): string
     {
-        if (!isset($modelData['relations'])) {
+        if (! isset($modelData['relations'])) {
             return '';
         }
 
         $code = '';
         foreach ($modelData['relations'] as $relationName => $relationConfig) {
-            if (!isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
+            if (! isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
                 continue;
             }
 
@@ -564,11 +610,53 @@ class {$controllerClass} extends Controller implements HasMiddleware
                 case 'hasMany':
                     $code .= "\n        // Handle {$relationName} relation update";
                     $code .= "\n        if (isset(\$validatedData['{$relationKey}']) && is_array(\$validatedData['{$relationKey}'])) {";
-                    $code .= "\n            \${$modelVariable}->{$relationName}()->delete();";
-                    $code .= "\n            \${$modelVariable}->{$relationName}()->createMany(\$validatedData['{$relationKey}']);";
+
+                    // Check if this relation has nested relations
+                    $nestedRelations = $this->getNestedRelations($relationConfig, $modelData);
+
+                    if (! empty($nestedRelations)) {
+                        // For nested relations, we need to handle them more carefully
+                        $code .= "\n            // Delete existing {$relationName} and their nested relations";
+                        $code .= "\n            \${$modelVariable}->{$relationName}()->each(function (\$record) {";
+
+                        foreach ($nestedRelations as $nestedRelationName => $nestedRelationConfig) {
+                            $code .= "\n                \$record->{$nestedRelationName}()->delete();";
+                        }
+
+                        $code .= "\n            });";
+                        $code .= "\n            \${$modelVariable}->{$relationName}()->delete();";
+                        $code .= "\n";
+                        $code .= "\n            // Create new {$relationName} with nested relations";
+                        $code .= "\n            foreach (\$validatedData['{$relationKey}'] as \$relationData) {";
+                        $code .= "\n                \${$relationName}Record = \${$modelVariable}->{$relationName}()->create(\$relationData);";
+
+                        foreach ($nestedRelations as $nestedRelationName => $nestedRelationConfig) {
+                            $nestedRelationKey = Str::snake($nestedRelationName);
+                            $nestedRelationType = $nestedRelationConfig['type'];
+
+                            if ($nestedRelationType === 'hasMany') {
+                                $code .= "\n                // Handle nested {$nestedRelationName} relation";
+                                $code .= "\n                if (isset(\$relationData['{$nestedRelationKey}']) && is_array(\$relationData['{$nestedRelationKey}'])) {";
+                                $code .= "\n                    \${$relationName}Record->{$nestedRelationName}()->createMany(\$relationData['{$nestedRelationKey}']);";
+                                $code .= "\n                }";
+                            } elseif ($nestedRelationType === 'hasOne') {
+                                $code .= "\n                // Handle nested {$nestedRelationName} relation";
+                                $code .= "\n                if (isset(\$relationData['{$nestedRelationKey}'])) {";
+                                $code .= "\n                    \${$relationName}Record->{$nestedRelationName}()->create(\$relationData['{$nestedRelationKey}']);";
+                                $code .= "\n                }";
+                            }
+                        }
+
+                        $code .= "\n            }";
+                    } else {
+                        $code .= "\n            \${$modelVariable}->{$relationName}()->delete();";
+                        $code .= "\n            \${$modelVariable}->{$relationName}()->createMany(\$validatedData['{$relationKey}']);";
+                    }
+
                     $code .= "\n            unset(\$validatedData['{$relationKey}']);";
                     $code .= "\n        }";
                     break;
+
                 case 'hasOne':
                     $code .= "\n        // Handle {$relationName} relation update";
                     $code .= "\n        if (isset(\$validatedData['{$relationKey}'])) {";
@@ -577,6 +665,7 @@ class {$controllerClass} extends Controller implements HasMiddleware
                     $code .= "\n            unset(\$validatedData['{$relationKey}']);";
                     $code .= "\n        }";
                     break;
+
                 case 'belongsToMany':
                     $code .= "\n        // Handle {$relationName} relation update";
                     $code .= "\n        if (isset(\$validatedData['{$relationKey}']) && is_array(\$validatedData['{$relationKey}'])) {";
@@ -588,6 +677,37 @@ class {$controllerClass} extends Controller implements HasMiddleware
         }
 
         return $code;
+    }
+
+    /**
+     * Get nested relations for a given relation
+     */
+    private function getNestedRelations(array $relationConfig, array $modelData): array
+    {
+        $nestedRelations = [];
+
+        if (! isset($relationConfig['model'])) {
+            return $nestedRelations;
+        }
+
+        $relatedModelName = $relationConfig['model'];
+
+        // Find the related model in allModels to get its relations
+        foreach ($this->allModels as $modelName => $modelD) {
+            $modelConfig = $this->buildModelConfiguration($modelName, $modelD);
+            if ($modelConfig['studlyName'] === $relatedModelName) {
+                if (isset($modelConfig['relations'])) {
+                    foreach ($modelConfig['relations'] as $nestedRelationName => $nestedRelationConfig) {
+                        if (isset($nestedRelationConfig['makeRequest']) && $nestedRelationConfig['makeRequest'] === true) {
+                            $nestedRelations[$nestedRelationName] = $nestedRelationConfig;
+                        }
+                    }
+                }
+                break;
+            }
+        }
+
+        return $nestedRelations;
     }
 
     /**
@@ -611,10 +731,40 @@ class {$controllerClass} extends Controller implements HasMiddleware
     {
         $variable = $modelConfig['camelName'];
 
-        $code = "\$validatedData = \$request->validated();";
+        $code = '$validatedData = $request->validated();';
         $code .= $this->generateRelationUpdateCode($modelData, $variable);
         $code .= "\n        \${$variable}->update(\$validatedData);";
 
         return $code;
+    }
+
+    private function buildModelConfiguration(string $modelName, array $modelData): array
+    {
+        $studlyModelName = Str::studly($modelName);
+
+        // Validate generate configuration
+        if (isset($modelData['generate']) && is_array($modelData['generate'])) {
+            $unknownKeys = array_diff(array_keys($modelData['generate']), array_keys(self::DEFAULT_GENERATE_CONFIG));
+            if (! empty($unknownKeys)) {
+                throw new \InvalidArgumentException("Unknown generate keys for $modelName: ".implode(', ', $unknownKeys));
+            }
+        }
+
+        return [
+            'originalName' => $modelName,
+            'studlyName' => $studlyModelName,
+            'camelName' => Str::camel($studlyModelName),
+            'pluralStudlyName' => Str::pluralStudly($studlyModelName),
+            'tableName' => Str::snake(Str::plural($studlyModelName)),
+            'fields' => $modelData['fields'] ?? [],
+            'relations' => $modelData['relations'] ?? [],
+            'classes' => [
+                'controller' => "{$studlyModelName}Controller",
+                'service' => "{$studlyModelName}Service",
+                'collection' => "{$studlyModelName}Collection",
+                'resource' => "{$studlyModelName}Resource",
+                'request' => "{$studlyModelName}Request",
+            ],
+        ];
     }
 }
