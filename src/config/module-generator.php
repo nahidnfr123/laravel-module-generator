@@ -1,5 +1,7 @@
 <?php
 
+// module-generator.php
+
 $randomNumber = rand(100, 999);
 
 return [
@@ -7,10 +9,13 @@ return [
     'models_path' => base_path('module/models.yaml'),
     'stubs' => [
         'model' => 'model.stub',
-        'migration' => 'migration.stub',
-        'request' => 'request.stub',
+
         'controller' => 'controller.stub',
         'service' => 'service.stub',
+
+        'repository' => 'repository.stub',
+        'migration' => 'migration.stub',
+        'request' => 'request.stub',
         'collection' => 'collection.stub',
         'resource' => 'resource.stub',
     ],

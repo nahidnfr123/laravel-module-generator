@@ -92,9 +92,6 @@ Category:
     parent:
       type: belongsTo
       model: Category
-    products:
-      type: hasMany
-      model: Product
 #    creator:
 #      type: belongsTo
 #      model: User
@@ -112,9 +109,6 @@ Brand:
     created_by: foreignId:users:nullable
     updated_by: foreignId:users:nullable
   relations:
-    products:
-      type: hasMany
-      model: Product
 #    creator:
 #      type: belongsTo
 #      model: User
@@ -129,10 +123,6 @@ Supplier:
     email: string:nullable
     phone: string:nullable
     address: string:nullable
-  relations:
-    productUnits:
-      type: hasMany
-      model: ProductUnit
 
 Product:
   fields:
@@ -146,10 +136,6 @@ Product:
     created_by: foreignId:users:nullable
     updated_by: foreignId:users:nullable
   relations:
-    productUnit:
-      type: hasMany
-      model: ProductUnit
-      makeRequest: true
 #    creator:
 #      type: belongsTo
 #      model: User
@@ -158,6 +144,8 @@ Product:
 #      model: User
 
 ProductUnit:
+  # and nested validation rule and Postman request body
+  requestParent: Product
   fields:
     product_id: foreignId:products
     unit_price: double:default 0
@@ -180,24 +168,6 @@ ProductUnit:
     supplier:
       type: belongsTo
       model: Supplier
-    productImages:
-      type: hasMany
-      model: ProductImages
-      makeRequest: true
-
-ProductImages:
-  generate:
-    controller: false
-    service: false
-    request: false
-  fields:
-    product_unit_id: foreignId:product_units
-    image: string
-    is_default: boolean:default false
-  relations:
-    productUnit:
-      type: belongsTo
-      model: ProductUnit
 
 Recipe:
   fields:
@@ -208,10 +178,6 @@ Recipe:
     created_by: foreignId:users:nullable
     updated_by: foreignId:users:nullable
   relations:
-    recipeIngredients:
-      type: hasMany
-      model: RecipeIngredient
-      makeRequest: true
 #    creator:
 #      type: belongsTo
 #      model: User
@@ -221,6 +187,7 @@ Recipe:
 
 RecipeIngredient:
   # and nested validation rule and Postman request body
+  requestParent: Recipe
   generate:
     controller: false
     service: false
@@ -269,6 +236,8 @@ Purchase:
       model: Supplier
 
 PurchaseItem:
+  # and nested validation rule and Postman request body
+  requestParent: Purchase
   generate:
     controller: false
     service: false
