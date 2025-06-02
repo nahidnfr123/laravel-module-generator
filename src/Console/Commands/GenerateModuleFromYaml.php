@@ -48,14 +48,14 @@ class GenerateModuleFromYaml extends Command
 
     public function handle()
     {
-//        if ($this->option('force')) {
-//            $confirmation = $this->ask('This command will replace existing module files and generate module files based on a YAML configuration. Do you want to proceed? (yes/no)', 'yes');
-//            if (strtolower($confirmation) !== 'yes') {
-//                $this->info('Command cancelled.');
-//
-//                return CommandAlias::SUCCESS;
-//            }
-//        }
+        if ($this->option('force')) {
+            $confirmation = $this->ask('This command will replace existing module files and generate module files based on a YAML configuration. Do you want to proceed? (yes/no)', 'yes');
+            if (strtolower($confirmation) !== 'yes') {
+                $this->info('Command cancelled.');
+
+                return CommandAlias::SUCCESS;
+            }
+        }
 
         $backupService = new BackupService($this);
         $this->pathResolverService = new StubPathResolverService;
