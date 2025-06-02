@@ -74,7 +74,7 @@ ProductUnit:
       type: belongsTo
       model: Supplier
     productImages:
-      type: hasOne
+      type: hasMany
       model: ProductImages
       makeRequest: true
 
