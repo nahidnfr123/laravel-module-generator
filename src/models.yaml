@@ -1,3 +1,40 @@
+ModelName:
+#  generate:
+#    model: false
+#    migration: false
+#    controller: true
+#    service: true
+#    request: true
+#    resource: true
+#    collection: true
+#  fields:
+#    name: string
+#    username: string:nullable
+#    email: string:unique
+#    email_verified_at: dateTime:nullable
+#    password: string
+#    avatar: string:nullable
+#    status: boolean:default true
+#    created_by: foreignId:users:nullable
+#    updated_by: foreignId:users:nullable
+#    timezone: string:nullable
+#    last_login_at: timestamp:nullable
+#  relations:
+#    relationName1:
+#      type: belongsTo
+#      model: User
+#    relationName2:
+#      type: belongsToMany
+#      model: User
+#    relationName3:
+#      type: hasMany
+#      model: RelatedModelName
+#      makeRequest: true
+#    relationName4:
+#      type: hasOne
+#      model: RelatedModelName
+#      makeRequest: true
+
 User:
   # all the generatable modules are false,
   # so the user model only generates the Postman collection and dbdiagram files
