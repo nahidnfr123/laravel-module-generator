@@ -71,6 +71,7 @@ class GenerateResourceCollectionService
 
             if (File::exists($resourcePath) && ! $force) {
                 $this->command->warn("⚠️ Resource already exists: {$modelConfig['classes']['resource']}");
+
                 return;
             }
 
@@ -81,7 +82,7 @@ class GenerateResourceCollectionService
 
             // Ensure the directory exists before creating the file
             $resourceDir = dirname($resourcePath);
-            if (!File::exists($resourceDir)) {
+            if (! File::exists($resourceDir)) {
                 File::makeDirectory($resourceDir, 0755, true);
             }
 
