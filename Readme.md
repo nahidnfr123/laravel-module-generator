@@ -131,6 +131,7 @@ php artisan module:generate --force                                    # Overwri
 php artisan module:generate --file=custom/path/models.yaml            # Use custom YAML file
 php artisan module:generate --skip-postman                            # Skip Postman collection generation
 php artisan module:generate --skip-dbdiagram                          # Skip DB diagram generation
+php artisan module:generate --skip-backup                             # Skip Code Backup generation
 php artisan module:generate --postman-base-url=https://api.myapp.com  # Custom API base URL
 php artisan module:generate --postman-prefix=api/v2                   # Custom API prefix
 ```
