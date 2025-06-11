@@ -1,4 +1,4 @@
-ModelName:
+#ModelName:
 #  generate:
 #    model: false
 #    migration: false
