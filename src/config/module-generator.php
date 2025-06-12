@@ -5,7 +5,7 @@
 $randomNumber = rand(100, 999);
 
 return [
-    'api' => false,
+    'api' => true,
     'base_path' => base_path('module'),
     'models_path' => base_path('module/models.yaml'),
     'stubs' => [
