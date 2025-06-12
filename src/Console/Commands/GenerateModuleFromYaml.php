@@ -63,7 +63,7 @@ class GenerateModuleFromYaml extends Command
         $models = $this->parseYamlFile();
 
         // Create backup unless explicitly skipped
-        if (!$this->option('skip-backup')) {
+        if (! $this->option('skip-backup')) {
             $this->currentBackupPath = $backupService->createBackup($models);
             $this->displayBackupInfo();
         }
@@ -101,7 +101,7 @@ class GenerateModuleFromYaml extends Command
         $defaultPath = config('module-generator.models_path');
         $path = $this->option('file') ?? $defaultPath;
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             $this->error("YAML file not found at: $path");
             exit(CommandAlias::FAILURE);
         }
@@ -132,7 +132,7 @@ class GenerateModuleFromYaml extends Command
         $this->info("Generating files for: $modelName");
 
         $modelConfig = $this->buildModelConfiguration($modelName, $modelData);
-        //        $generateConfig = $this->normalizeGenerateConfiguration($modelData['generate'] ?? true);
+        // $generateConfig = $this->normalizeGenerateConfiguration($modelData['generate'] ?? true);
         $this->generateConfig = $this->normalizeGenerateConfiguration($modelData['generate'] ?? true);
 
         $this->generateModelAndMigration($modelConfig);
@@ -165,8 +165,8 @@ class GenerateModuleFromYaml extends Command
 
         // Detect unknown keys
         $unknownKeys = array_diff(array_keys($userGenerate), array_keys($defaultGenerate));
-        if (!empty($unknownKeys)) {
-            throw new \InvalidArgumentException('Unknown generate keys: ' . implode(', ', $unknownKeys));
+        if (! empty($unknownKeys)) {
+            throw new \InvalidArgumentException('Unknown generate keys: '.implode(', ', $unknownKeys));
         }
 
         // Merge defaults with valid user-provided values
@@ -222,14 +222,15 @@ class GenerateModuleFromYaml extends Command
      */
     private function generateModelAndMigration(array $modelConfig): void
     {
-        $modelPath = app_path("Models/{$modelConfig['studlyName']}.php");
-        $migrationPattern = database_path("migrations/*create_{$modelConfig['tableName']}_table.php");
-        $migrationFiles = glob($migrationPattern);
         $force = $this->option('force');
 
+        // Use the model-specific generate config instead of the global one
+        $generateConfig = $modelConfig['generate'];
+
         // Check if model generation is enabled
-        if ($this->generateConfig['model']) {
-            if (File::exists($modelPath) && !$force) {
+        if ($generateConfig['model']) {
+            $modelPath = app_path("Models/{$modelConfig['studlyName']}.php");
+            if (File::exists($modelPath) && ! $force) {
                 $this->warn("⚠️ Model already exists: {$modelConfig['studlyName']}");
 
                 return;
@@ -241,16 +242,18 @@ class GenerateModuleFromYaml extends Command
             }
 
             (new GenerateModelService($this))
-                ->generateModel($modelConfig['studlyName'], $modelConfig['fields'], $modelConfig['relations']);
+                ->generateModel($modelConfig['studlyName'], $modelConfig['fields'], $modelConfig['relations'], $generateConfig);
         }
 
         // Check if migration generation is enabled
-        if ($this->generateConfig['migration']) {
+        if ($generateConfig['migration']) {
+            $migrationPattern = database_path("migrations/*create_{$modelConfig['tableName']}_table.php");
+            $migrationFiles = glob($migrationPattern);
             // Delete existing migration files if they exist
-            if (!empty($migrationFiles)) {
+            if (! empty($migrationFiles)) {
                 foreach ($migrationFiles as $file) {
                     File::delete($file);
-                    $this->warn('⚠️ Deleted existing migration: ' . basename($file));
+                    $this->warn('⚠️ Deleted existing migration: '.basename($file));
                 }
             }
 
@@ -264,11 +267,12 @@ class GenerateModuleFromYaml extends Command
      */
     private function generateOptionalFiles(array $modelConfig): void
     {
-        $generateConfig = $this->generateConfig;
+        // Use the model-specific generate config instead of the global one
+        $generateConfig = $modelConfig['generate'];
         $force = $this->option('force');
 
         if ($generateConfig['request']) {
-            (new GenerateRequestService($this, $this->parseYamlFile(), $this->generateConfig))
+            (new GenerateRequestService($this, $this->parseYamlFile(), $generateConfig))
                 ->handleRequestGeneration($modelConfig, $force);
         }
 
@@ -308,11 +312,11 @@ class GenerateModuleFromYaml extends Command
     {
         $config = $this->validateAndGetConfiguration();
 
-        if (!$config['skipPostman']) {
+        if (! $config['skipPostman']) {
             $this->generatePostmanCollection($config['path']);
         }
 
-        if (!$config['skipDbDiagram']) {
+        if (! $config['skipDbDiagram']) {
             $this->generateDbDiagram($config['path']);
         }
     }

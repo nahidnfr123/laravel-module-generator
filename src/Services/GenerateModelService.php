@@ -22,9 +22,13 @@ class GenerateModelService
     /**
      * Generate model file with fillable fields and relationships
      */
-    public function generateModel(string $modelName, array $fields, array $relations = []): void
+    public function generateModel(string $modelName, array $fields, array $relations = [], $generateConfig = []): void
     {
-        Artisan::call('make:model', ['name' => $modelName, '--migration' => true]);
+        if ($generateConfig['migration']) {
+            Artisan::call('make:model', ['name' => $modelName, '--migration' => true]);
+        } else {
+            Artisan::call('make:model', ['name' => $modelName]);
+        }
 
         $modelPath = app_path("Models/{$modelName}.php");
         if (! File::exists($modelPath)) {
