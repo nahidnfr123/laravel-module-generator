@@ -71,7 +71,7 @@ class ModuleRollback extends Command
      */
     private function cleanupBackups(): int
     {
-        $keepCount = (int) $this->ask('How many recent backups to keep?', '2');
+        $keepCount = (int)$this->ask('How many recent backups to keep?', '2');
 
         if ($keepCount < 0) {
             $this->error('Must keep at least 0 backup.');
@@ -97,17 +97,17 @@ class ModuleRollback extends Command
     {
         $backupPath = $this->option('backup');
 
-        if (! $backupPath) {
+        if (!$backupPath) {
             $backupPath = $this->backupService->getLatestBackupPath();
 
-            if (! $backupPath) {
+            if (!$backupPath) {
                 $this->error('No backups found. Cannot rollback.');
 
                 return CommandAlias::FAILURE;
             }
 
             $timestamp = basename($backupPath);
-            if (! $this->confirm("Rollback to latest backup ({$timestamp})?")) {
+            if (!$this->confirm("Rollback to latest backup ({$timestamp})?")) {
                 $this->info('Rollback cancelled.');
 
                 return CommandAlias::SUCCESS;
@@ -116,7 +116,7 @@ class ModuleRollback extends Command
 
         $manifest = $this->backupService->loadBackupManifest($backupPath);
 
-        if (! $manifest) {
+        if (!$manifest) {
             $this->error('Invalid backup or missing manifest file.');
 
             return CommandAlias::FAILURE;
@@ -154,20 +154,26 @@ class ModuleRollback extends Command
                         $restoredCount++;
 
                     } catch (\Exception $e) {
-                        $this->warn("⚠️ Failed to restore {$fileType} for {$modelName}: ".$e->getMessage());
+                        $this->warn("⚠️ Failed to restore {$fileType} for {$modelName}: " . $e->getMessage());
                     }
                 }
             }
         }
 
+        $isApi = config('module-generator.api');
         // Restore routes file
         if ($manifest['routes_backup']) {
             try {
-                File::copy($manifest['routes_backup'], base_path('routes/api.php'));
-                $this->info('📦 Restored routes/api.php');
+                if ($isApi) {
+                    File::copy($manifest['routes_backup'], base_path('routes/api.php'));
+                    $this->info('📦 Restored routes/api.php');
+                } else {
+                    File::copy($manifest['routes_backup'], base_path('routes/web.php'));
+                    $this->info('📦 Restored routes/web.php');
+                }
                 $restoredCount++;
             } catch (\Exception $e) {
-                $this->warn('⚠️ Failed to restore routes: '.$e->getMessage());
+                $this->warn('⚠️ Failed to restore routes: ' . $e->getMessage());
             }
         }
 
@@ -184,13 +190,13 @@ class ModuleRollback extends Command
         foreach ($manifest['models'] as $modelName => $modelFiles) {
             foreach ($modelFiles as $fileType => $fileInfo) {
                 // If file exists now but wasn't backed up, it was generated
-                if (! $fileInfo['backed_up'] && $fileInfo['original_path'] && File::exists($fileInfo['original_path'])) {
+                if (!$fileInfo['backed_up'] && $fileInfo['original_path'] && File::exists($fileInfo['original_path'])) {
                     try {
                         File::delete($fileInfo['original_path']);
                         $this->info("🗑️ Removed generated {$fileType}: {$modelName}");
                         $deletedCount++;
                     } catch (\Exception $e) {
-                        $this->warn("⚠️ Failed to remove {$fileType} for {$modelName}: ".$e->getMessage());
+                        $this->warn("⚠️ Failed to remove {$fileType} for {$modelName}: " . $e->getMessage());
                     }
                 }
             }
