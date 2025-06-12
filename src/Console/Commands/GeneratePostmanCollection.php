@@ -81,7 +81,7 @@ class GeneratePostmanCollection extends Command
         }
 
         $this->info("Parsing YAML schema from: {$yamlFile}");
-        $this->info("Base URL: {$this->baseUrl}");
+        $this->info("Base URL: $this->baseUrl");
         $this->info("API Prefix: {$this->apiPrefix}");
 
         try {
