@@ -12,11 +12,7 @@ class {{ model }}Service
      */
     public function getAll()
     {
-        $with = [{{ with }}];
-
-        return {{ model }}::when(!empty($with), function ($query) use ($with) {
-            return $query->with($with);
-        })->get();
+        return {{ model }}::get();
     }
 
     /**
@@ -24,11 +20,7 @@ class {{ model }}Service
      */
     public function getById($id)
     {
-        $with = [{{ with }}];
-
-        return {{ model }}::when(!empty($with), function ($query) use ($with) {
-            return $query->with($with);
-        })->findOrFail($id);
+        return {{ model }}::findOrFail($id);
     }
 
     /**
