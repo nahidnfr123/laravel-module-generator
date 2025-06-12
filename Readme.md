@@ -33,6 +33,11 @@ Install the package via Composer:
 composer require nahid-ferdous/laravel-module-generator --dev
 ```
 
+### 📦 Service Provider
+```bash
+php artisan module-generator:install
+```
+
 ## 📂 Optional: Publish Config & Stubs
 
 You may publish the configuration and stub files to customize them. If you don't publish them, the package will use its built-in defaults automatically.
