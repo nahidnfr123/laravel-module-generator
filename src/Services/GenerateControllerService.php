@@ -227,7 +227,7 @@ class {$modelName}Service
         \${$variable} = {$modelName}::create(\$data);
 {$relationStoreCode}
 
-        return $variable;
+        return \${$variable};
     }
 
     /**
@@ -241,7 +241,7 @@ class {$modelName}Service
 
         \${$variable}->update(\$validatedData);
 
-        return \$variable;
+        return \${$variable};
     }
 
     /**
