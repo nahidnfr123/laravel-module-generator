@@ -165,8 +165,6 @@ class GenerateControllerService
             '{{ variable }}' => $modelConfig['camelName'],
             '{{ relationImports }}' => '',
             '{{ with }}' => '',
-            '{{ relationStore }}' => '',
-            '{{ relationUpdate }}' => '',
             '{{ repositoryUsage }}' => 'model',
         ];
 

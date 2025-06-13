@@ -26,21 +26,28 @@ class {{ model }}Service
     /**
      * Create a new {{ model }}
      */
-    public function store(array $data)
+    public function create(array $data)
     {
         ${{ variable }} = {{ model }}::create($data);
+{{ relationStore }}
 
-        return ${{ variable }};
+        return $this->getById(${{ variable }}->id);
     }
 
     /**
      * Update {{ model }}
      */
-    public function update(${{ variable }}, array $data)
+    public function update($id, array $data)
     {
-        ${{ variable }}->update($data);
+        ${{ variable }} = {{ model }}::findOrFail($id);
 
-        return ${{ variable }};
+        // Handle nested relations update
+        $validatedData = $data;
+{{ relationUpdate }}
+
+        ${{ variable }}->update($validatedData);
+
+        return $this->getById(${{ variable }}->id);
     }
 
     /**
