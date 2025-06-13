@@ -206,6 +206,7 @@ class GenerateRequestService
             case 'boolean':
                 $ruleSet[] = 'boolean';
                 break;
+            case 'date':
             case 'dateTime':
             case 'timestamp':
                 $ruleSet[] = 'date';
