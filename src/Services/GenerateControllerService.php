@@ -184,7 +184,7 @@ class GenerateControllerService
         $relationStoreCode = $this->generateRelationStoreCode($modelData, $variable);
         $relationUpdateCode = $this->generateRelationUpdateCode($modelData, $variable);
 
-        $getAllQuery = "{$modelName}::get()";
+        $getAllQuery = "{$modelName}::all()";
         $getByIdQuery = "{$modelName}::findOrFail(\$id)";
         if ($withRelations) {
             $getAllQuery = "{$modelName}::with([{$withRelations}])->get()";
