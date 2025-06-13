@@ -20,7 +20,7 @@ class {{ model }}Service
      */
     public function store(array $data)
     {
-        return = {{ model }}::create($data);
+        return {{ model }}::create($data);
     }
 
     /**
