@@ -16,21 +16,11 @@ class {{ model }}Service
     }
 
     /**
-     * Get {{ model }} by ID
-     */
-    public function getById($id)
-    {
-        return {{ model }}::findOrFail($id);
-    }
-
-    /**
      * Create a new {{ model }}
      */
     public function store(array $data)
     {
-        ${{ variable }} = {{ model }}::create($data);
-
-        return ${{ variable }};
+        return = {{ model }}::create($data);
     }
 
     /**
