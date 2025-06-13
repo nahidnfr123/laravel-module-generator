@@ -26,7 +26,7 @@ class {{ model }}Service
     /**
      * Create a new {{ model }}
      */
-    public function create(array $data)
+    public function store(array $data)
     {
         ${{ variable }} = {{ model }}::create($data);
 {{ relationStore }}
@@ -37,11 +37,8 @@ class {{ model }}Service
     /**
      * Update {{ model }}
      */
-    public function update($id, array $data)
+    public function update(${{ variable }}, array $data)
     {
-        ${{ variable }} = {{ model }}::findOrFail($id);
-
-        // Handle nested relations update
         $validatedData = $data;
 {{ relationUpdate }}
 
