@@ -29,7 +29,6 @@ class {{ model }}Service
     public function update(${{ variable }}, array $data)
     {
         ${{ variable }}->update($data);
-
         return ${{ variable }};
     }
 
@@ -38,7 +37,6 @@ class {{ model }}Service
      */
     public function delete($id)
     {
-        ${{ variable }} = {{ model }}::findOrFail($id);
-        return ${{ variable }}->delete();
+        return {{ model }}::findOrFail($id)->delete();
     }
 }
