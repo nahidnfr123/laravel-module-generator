@@ -387,7 +387,7 @@ class {$controllerClass} extends Controller implements HasMiddleware
             : $this->generateDirectStoreCode($modelConfig, $modelData);
 
         $updateMethod = $hasService
-            ? "\$this->{$variable}Service->update(\${$variable}, \$request->validated());"
+            ? "\$this->{$variable}Service->update(\$request->validated(), \${$variable});"
             : $this->generateDirectUpdateCode($modelConfig, $modelData);
 
         $deleteMethod = $hasService

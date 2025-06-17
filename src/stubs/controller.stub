@@ -59,7 +59,7 @@ class {{ class }} extends Controller implements HasMiddleware
     public function update({{ model }}Request $request, {{ model }} ${{ variable }}): \Illuminate\Http\JsonResponse
     {
         try {
-            $this->{{ variable }}Service->update(${{ variable }}, $request->validated());
+            $this->{{ variable }}Service->update($request->validated(), ${{ variable }});
 
             return $this->success('{{ model }} updated successfully', new {{ model }}Resource(${{ variable }}));
         } catch (\Exception $e) {
