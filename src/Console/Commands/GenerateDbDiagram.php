@@ -167,7 +167,8 @@ class GenerateDbDiagram extends Command
             'updater' => 'updated_by',
         ];
 
-        $foreignKey = $columnOverrides[$relationName] ?? ($relationName.'_id');
+        // camelCase to snake_case conversion for foreign key
+        $foreignKey = $columnOverrides[$relationName] ?? (Str::snake($relationName).'_id');
         $fromTableName = Str::snake(Str::pluralStudly($fromTable));
 
         if ($relation['type'] === 'belongsTo') {
