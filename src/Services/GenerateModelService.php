@@ -24,6 +24,8 @@ class GenerateModelService
      */
     public function generateModel(string $modelName, array $fields, array $relations = [], $generateConfig = []): void
     {
+        $modelName = Str::studly($modelName);
+        $this->command->info('DB:  ' . $generateConfig['migration']);
         if ($generateConfig['migration']) {
             Artisan::call('make:model', ['name' => $modelName, '--migration' => true]);
         } else {
