@@ -26,7 +26,6 @@ class GenerateModelService
     {
         if ($generateConfig['migration']) {
             $modelName = Str::studly($modelName);
-            $this->command->info('DB:  ' . $generateConfig['migration']);
             Artisan::call('make:model', ['name' => $modelName, '--migration' => true]);
         } else {
             Artisan::call('make:model', ['name' => $modelName]);
