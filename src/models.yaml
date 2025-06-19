@@ -40,7 +40,7 @@ User:
   # so the user model only generates the Postman collection and dbdiagram files
   generate:
     model: false
-    migration: false
+    migration: custom # custom migration file for user table, migration can be custom, true or false. false means delete the migration file if it exists,
     controller: true
     service: true
     request: true
