@@ -45,10 +45,7 @@ class GenerateMigrationService
         return !empty($migrationFiles) ? $migrationFiles[0] : null;
     }
 
-    /**
-     * Create a new migration file using the stub
-     */
-    private function createNewMigration(string $modelName, string $tableName, array $fields, array $uniqueConstraints): void
+    public function findStubContent(): string
     {
         try {
             // Use stub from StubPathResolverService
@@ -60,6 +57,15 @@ class GenerateMigrationService
             $this->command->warn("Using fallback migration stub: " . $e->getMessage());
         }
 
+        return $stubContent;
+    }
+
+    /**
+     * Create a new migration file using the stub
+     */
+    private function createNewMigration(string $modelName, string $tableName, array $fields, array $uniqueConstraints): void
+    {
+        $stubContent = $this->findStubContent();
         $migrationContent = $this->replaceMigrationPlaceholders($stubContent, $tableName, $fields, $uniqueConstraints);
 
         // Generate migration filename with timestamp
@@ -75,16 +81,7 @@ class GenerateMigrationService
      */
     private function updateExistingMigration(string $migrationPath, string $tableName, array $fields, array $uniqueConstraints): void
     {
-        try {
-            // Use stub from StubPathResolverService
-            $stubPath = $this->stubPathResolver->resolveStubPath('migration');
-            $stubContent = File::get($stubPath);
-        } catch (\Exception $e) {
-            // Fallback to inline stub if resolver fails
-            $stubContent = $this->getDefaultMigrationStub();
-            $this->command->warn("Using fallback migration stub: " . $e->getMessage());
-        }
-
+        $stubContent = $this->findStubContent();
         $migrationContent = $this->replaceMigrationPlaceholders($stubContent, $tableName, $fields, $uniqueConstraints);
 
         File::put($migrationPath, $migrationContent);
