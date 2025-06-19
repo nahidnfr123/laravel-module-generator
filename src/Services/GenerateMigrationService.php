@@ -18,124 +18,129 @@ class GenerateMigrationService
     }
 
     /**
-     * Generate migration file with field definitions
+     * Generate or update migration file with field definitions
      */
     public function generateMigration(string $modelName, array $fields, array $uniqueConstraints = []): void
     {
         $tableName = Str::snake(Str::pluralStudly($modelName));
-        $migrationFiles = glob(database_path('migrations/*create_'.$tableName.'_table.php'));
+        $migrationPath = $this->getMigrationPath($tableName);
 
-        if (empty($migrationFiles)) {
-            // Create new migration file if it doesn't exist
-            $this->createMigrationFile($modelName, $tableName, $fields, $uniqueConstraints);
+        // Check if migration file exists
+        if ($migrationPath && File::exists($migrationPath)) {
+            $this->updateExistingMigration($migrationPath, $tableName, $fields, $uniqueConstraints);
+            $this->command->info("✅ Migration file updated for $modelName");
         } else {
-            // Replace existing migration file completely to avoid duplicates
-            $migrationFile = $migrationFiles[0];
-            $this->replaceMigrationFile($migrationFile, $tableName, $fields, $uniqueConstraints);
+            $this->createNewMigration($modelName, $tableName, $fields, $uniqueConstraints);
+            $this->command->info("✅ Migration file created for $modelName");
         }
-
-        $this->command->info("✅ Migration file processed for $modelName");
     }
 
     /**
-     * Create new migration file using stub
+     * Get migration file path if it exists
      */
-    private function createMigrationFile(string $modelName, string $tableName, array $fields, array $uniqueConstraints): void
+    private function getMigrationPath(string $tableName): ?string
+    {
+        $migrationFiles = glob(database_path("migrations/*create_{$tableName}_table.php"));
+
+        return !empty($migrationFiles) ? $migrationFiles[0] : null;
+    }
+
+    /**
+     * Create a new migration file using the stub
+     */
+    private function createNewMigration(string $modelName, string $tableName, array $fields, array $uniqueConstraints): void
     {
         try {
+            // Use stub from StubPathResolverService
             $stubPath = $this->stubPathResolver->resolveStubPath('migration');
             $stubContent = File::get($stubPath);
-
-            $fieldStub = $this->buildMigrationFields($fields, $uniqueConstraints);
-
-            // Remove trailing whitespace and semicolon from fieldStub for cleaner output
-            $fieldStub = rtrim($fieldStub);
-
-            $migrationContent = str_replace([
-                '{{ table }}',
-                '{{ columns }}',
-            ], [
-                $tableName,
-                $fieldStub,
-            ], $stubContent);
-
-            // Generate migration filename with timestamp
-            $timestamp = date('Y_m_d_His');
-            $migrationFileName = "{$timestamp}_create_{$tableName}_table.php";
-            $migrationPath = database_path("migrations/{$migrationFileName}");
-
-            // Create migrations directory if it doesn't exist
-            $migrationsDir = database_path('migrations');
-            if (!File::exists($migrationsDir)) {
-                File::makeDirectory($migrationsDir, 0755, true);
-            }
-
-            File::put($migrationPath, $migrationContent);
-
-            $this->command->info("🆕 Created new migration file: {$migrationFileName}");
-
         } catch (\Exception $e) {
-            $this->command->error('Failed to create migration using stub: ' . $e->getMessage());
-
-            // Fallback to Laravel's artisan command
-            $this->createMigrationFallback($tableName);
+            // Fallback to inline stub if resolver fails
+            $stubContent = $this->getDefaultMigrationStub();
+            $this->command->warn("Using fallback migration stub: " . $e->getMessage());
         }
+
+        $migrationContent = $this->replaceMigrationPlaceholders($stubContent, $tableName, $fields, $uniqueConstraints);
+
+        // Generate migration filename with timestamp
+        $timestamp = date('Y_m_d_His');
+        $migrationFileName = "{$timestamp}_create_{$tableName}_table.php";
+        $migrationPath = database_path("migrations/{$migrationFileName}");
+
+        File::put($migrationPath, $migrationContent);
     }
 
     /**
-     * Fallback method to create migration using Laravel's artisan command
+     * Update existing migration file
      */
-    private function createMigrationFallback(string $tableName): void
+    private function updateExistingMigration(string $migrationPath, string $tableName, array $fields, array $uniqueConstraints): void
     {
-        $migrationName = "create_{$tableName}_table";
-
         try {
-            \Illuminate\Support\Facades\Artisan::call('make:migration', [
-                'name' => $migrationName,
-                '--create' => $tableName
-            ]);
-
-            $this->command->info("🔄 Created migration using fallback method: {$migrationName}");
+            // Use stub from StubPathResolverService
+            $stubPath = $this->stubPathResolver->resolveStubPath('migration');
+            $stubContent = File::get($stubPath);
         } catch (\Exception $e) {
-            $this->command->error("Failed to create migration: " . $e->getMessage());
+            // Fallback to inline stub if resolver fails
+            $stubContent = $this->getDefaultMigrationStub();
+            $this->command->warn("Using fallback migration stub: " . $e->getMessage());
         }
+
+        $migrationContent = $this->replaceMigrationPlaceholders($stubContent, $tableName, $fields, $uniqueConstraints);
+
+        File::put($migrationPath, $migrationContent);
     }
 
     /**
-     * Build field definitions for migration
+     * Replace placeholders in migration stub
      */
-    private function buildMigrationFields(array $fields, array $uniqueConstraints): string
+    private function replaceMigrationPlaceholders(string $stubContent, string $tableName, array $fields, array $uniqueConstraints): string
     {
-        $fieldStub = '';
+        $columnsStub = $this->buildMigrationColumns($fields, $uniqueConstraints);
+
+        return str_replace([
+            '{{ table }}',
+            '{{ columns }}',
+        ], [
+            $tableName,
+            $columnsStub,
+        ], $stubContent);
+    }
+
+    /**
+     * Build column definitions for migration
+     */
+    private function buildMigrationColumns(array $fields, array $uniqueConstraints): string
+    {
+        $columnsStub = '';
 
         foreach ($fields as $name => $definition) {
-            $fieldStub .= $this->buildSingleFieldDefinition($name, $definition).";\n            ";
+            $columnsStub .= $this->buildSingleColumnDefinition($name, $definition);
         }
 
-        $fieldStub .= $this->buildUniqueConstraints($uniqueConstraints);
+        $columnsStub .= $this->buildUniqueConstraints($uniqueConstraints);
 
-        return rtrim($fieldStub);
+        return rtrim($columnsStub);
     }
 
     /**
-     * Build a single field definition for migration
+     * Build a single column definition for migration
      */
-    private function buildSingleFieldDefinition(string $name, string $definition): string
+    private function buildSingleColumnDefinition(string $name, string $definition): string
     {
         $parts = explode(':', $definition);
         $type = array_shift($parts);
 
         if ($type === 'foreignId') {
-            return $this->buildForeignIdField($name, $parts);
+            return $this->buildForeignIdColumn($name, $parts);
         }
 
-        return $this->buildRegularField($name, $type, $parts);
+        return $this->buildRegularColumn($name, $type, $parts);
     }
 
     /**
-     * Build foreign ID field definition
+     * Build foreign ID column definition
      */
-    private function buildForeignIdField(string $name, array $parts): string
+    private function buildForeignIdColumn(string $name, array $parts): string
     {
         $references = array_shift($parts);
         $modifiers = $parts;
@@ -143,34 +148,32 @@ class GenerateMigrationService
         $line = "\$table->foreignId('$name')";
 
         foreach ($modifiers as $modifier) {
-            if (str_starts_with($modifier, 'default(')) {
-                $line .= "->{$modifier}";
-            } else {
-                $line .= "->$modifier()";
-            }
+            $line .= $this->processColumnModifier($modifier);
         }
 
-        return $line."->constrained('$references')->cascadeOnDelete()";
+        $line .= "->constrained('$references')->cascadeOnDelete()";
+
+        return "            {$line};\n";
     }
 
     /**
-     * Build regular field definition
+     * Build regular column definition
      */
-    private function buildRegularField(string $name, string $type, array $parts): string
+    private function buildRegularColumn(string $name, string $type, array $parts): string
     {
         $line = "\$table->$type('$name')";
 
         foreach ($parts as $modifier) {
-            $line .= $this->processFieldModifier($modifier);
+            $line .= $this->processColumnModifier($modifier);
         }
 
-        return $line;
+        return "            {$line};\n";
     }
 
     /**
-     * Process individual field modifier
+     * Process individual column modifier
      */
-    private function processFieldModifier(string $modifier): string
+    private function processColumnModifier(string $modifier): string
     {
         if (str_starts_with($modifier, 'default(')) {
             return "->{$modifier}";
@@ -200,7 +203,7 @@ class GenerateMigrationService
         }
 
         if (in_array(strtolower($value), ['true', 'false'], true)) {
-            return '->default('.$value.')';
+            return '->default(' . $value . ')';
         }
 
         if (is_numeric($value)) {
@@ -217,14 +220,18 @@ class GenerateMigrationService
      */
     private function buildUniqueConstraints(array $uniqueConstraints): string
     {
+        if (empty($uniqueConstraints)) {
+            return '';
+        }
+
         $constraintStub = '';
 
         foreach ($uniqueConstraints as $columns) {
             if (is_array($columns)) {
                 $cols = implode("', '", $columns);
-                $constraintStub .= "\$table->unique(['$cols']);\n            ";
+                $constraintStub .= "            \$table->unique(['$cols']);\n";
             } elseif (is_string($columns)) {
-                $constraintStub .= "\$table->unique('$columns');\n            ";
+                $constraintStub .= "            \$table->unique('$columns');\n";
             }
         }
 
@@ -232,37 +239,31 @@ class GenerateMigrationService
     }
 
     /**
-     * Replace existing migration file completely using stub
+     * Get default migration stub as fallback
      */
-    private function replaceMigrationFile(string $migrationFile, string $tableName, array $fields, array $uniqueConstraints): void
+    private function getDefaultMigrationStub(): string
     {
-        try {
-            $stubPath = $this->stubPathResolver->resolveStubPath('migration');
-            $stubContent = File::get($stubPath);
+        return '<?php
 
-            $fieldStub = $this->buildMigrationFields($fields, $uniqueConstraints);
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
-            // Remove trailing whitespace and semicolon from fieldStub for cleaner output
-            $fieldStub = rtrim($fieldStub);
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create(\'{{ table }}\', function (Blueprint $table) {
+            $table->id();
+{{ columns }}
+            $table->timestamps();
+        });
+    }
 
-            $migrationContent = str_replace([
-                '{{ table }}',
-                '{{ columns }}',
-            ], [
-                $tableName,
-                $fieldStub,
-            ], $stubContent);
-
-            File::put($migrationFile, $migrationContent);
-
-            $this->command->info("🔄 Replaced existing migration file with updated content");
-
-        } catch (\Exception $e) {
-            $this->command->error('Failed to replace migration using stub: ' . $e->getMessage());
-
-            // Fallback to the original update method
-            $fieldStub = $this->buildMigrationFields($fields, $uniqueConstraints);
-            $this->updateMigrationFile($migrationFile, $fieldStub);
-        }
+    public function down(): void
+    {
+        Schema::dropIfExists(\'{{ table }}\');
+    }
+};';
     }
 }

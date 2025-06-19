@@ -49,7 +49,7 @@ class GenerateModuleFromYaml extends Command
     {
         if ($this->option('force')) {
             $confirmation = $this->ask('This command will replace existing module files and generate module files based on a YAML configuration. Do you want to proceed? (yes/no)', 'no');
-            if (strtolower($confirmation) !== 'yes') {
+            if (strtolower($confirmation) !== 'yes' && strtolower($confirmation) !== 'y' && strtolower($confirmation) !== 'Y') {
                 $this->info('Command cancelled.');
 
                 return CommandAlias::SUCCESS;
@@ -132,7 +132,6 @@ class GenerateModuleFromYaml extends Command
         $this->info("Generating files for: $modelName");
 
         $modelConfig = $this->buildModelConfiguration($modelName, $modelData);
-        // $generateConfig = $this->normalizeGenerateConfiguration($modelData['generate'] ?? true);
         $this->generateConfig = $this->normalizeGenerateConfiguration($modelData['generate'] ?? true);
 
         $this->generateModelAndMigration($modelConfig);
@@ -214,6 +213,11 @@ class GenerateModuleFromYaml extends Command
             return $defaultGenerate;
         }
 
+        // Handle migration: custom case
+        if (isset($generate['migration']) && $generate['migration'] === 'custom') {
+            $generate['migration'] = 'custom';
+        }
+
         return array_merge($defaultGenerate, $generate);
     }
 
@@ -223,44 +227,70 @@ class GenerateModuleFromYaml extends Command
     private function generateModelAndMigration(array $modelConfig): void
     {
         $force = $this->option('force');
-
-        // Use the model-specific generate config instead of the global one
         $generateConfig = $modelConfig['generate'];
 
-        // Check if model generation is enabled
+        // Handle model generation
         if ($generateConfig['model']) {
-            $modelPath = app_path("Models/{$modelConfig['studlyName']}.php");
-            if (File::exists($modelPath) && !$force) {
-                $this->warn("⚠️ Model already exists: {$modelConfig['studlyName']}");
-
-                return;
-            }
-
-            if (File::exists($modelPath)) {
-                File::delete($modelPath);
-                $this->warn("⚠️ Deleted existing model: {$modelConfig['studlyName']}");
-            }
-
-            (new GenerateModelService($this))
-                ->generateModel($modelConfig['studlyName'], $modelConfig['fields'], $modelConfig['relations'], $generateConfig);
+            $this->handleModelGeneration($modelConfig, $generateConfig, $force);
         }
 
-        // Check if migration generation is enabled
-        if (!$generateConfig['migration']) {
-            $migrationPattern = database_path("migrations/*create_{$modelConfig['tableName']}_table.php");
-            $migrationFiles = glob($migrationPattern);
-            // Delete existing migration files if they exist
-            if (!empty($migrationFiles)) {
-                foreach ($migrationFiles as $file) {
-                    File::delete($file);
-                    $this->warn('⚠️ Deleted existing migration: ' . basename($file));
-                }
-            }
+        // Handle migration generation
+        $this->handleMigrationGeneration($modelConfig, $generateConfig);
+    }
+
+    /**
+     * Handle model generation logic
+     */
+    private function handleModelGeneration(array $modelConfig, array $generateConfig, bool $force): void
+    {
+        $modelPath = app_path("Models/{$modelConfig['studlyName']}.php");
+
+        if (File::exists($modelPath) && !$force) {
+            $this->warn("⚠️ Model already exists: {$modelConfig['studlyName']}");
+            return;
         }
 
-        if ($generateConfig['migration'] === true) {
+        if (File::exists($modelPath)) {
+            File::delete($modelPath);
+            $this->warn("⚠️ Deleted existing model: {$modelConfig['studlyName']}");
+        }
+
+        (new GenerateModelService($this))
+            ->generateModel($modelConfig['studlyName'], $modelConfig['fields'], $modelConfig['relations'], $generateConfig);
+    }
+
+    /**
+     * Handle migration generation logic
+     */
+    private function handleMigrationGeneration(array $modelConfig, array $generateConfig): void
+    {
+        $migrationSetting = $generateConfig['migration'];
+        $tableName = $modelConfig['tableName'];
+
+        // Handle different migration settings
+        if ($migrationSetting === false) {
+            $this->deleteMigrationIfExists($tableName);
+        } elseif ($migrationSetting === 'custom') {
+            $this->info("ℹ️ Migration set to 'custom' for {$modelConfig['studlyName']} - skipping generation");
+        } elseif ($migrationSetting === true) {
             (new GenerateMigrationService($this))
                 ->generateMigration($modelConfig['studlyName'], $modelConfig['fields']);
+        }
+    }
+
+    /**
+     * Delete migration file if it exists
+     */
+    private function deleteMigrationIfExists(string $tableName): void
+    {
+        $migrationPattern = database_path("migrations/*create_{$tableName}_table.php");
+        $migrationFiles = glob($migrationPattern);
+
+        if (!empty($migrationFiles)) {
+            foreach ($migrationFiles as $file) {
+                File::delete($file);
+                $this->warn('⚠️ Deleted existing migration: ' . basename($file));
+            }
         }
     }
 
@@ -269,7 +299,6 @@ class GenerateModuleFromYaml extends Command
      */
     private function generateOptionalFiles(array $modelConfig): void
     {
-        // Use the model-specific generate config instead of the global one
         $generateConfig = $modelConfig['generate'];
         $force = $this->option('force');
 
@@ -342,7 +371,6 @@ class GenerateModuleFromYaml extends Command
 
         if ($result === CommandAlias::SUCCESS) {
             $this->newLine();
-            // $this->info('🥵 Postman collection generated successfully!');
         } else {
             $this->warn('⚠️ Failed to generate Postman collection');
         }
@@ -363,7 +391,6 @@ class GenerateModuleFromYaml extends Command
 
         if ($result === CommandAlias::SUCCESS) {
             $this->newLine();
-            // $this->info('🤧 DB diagram generated successfully at module/dbdiagram.dbml');
         } else {
             $this->warn('⚠️ Failed to generate DB diagram');
         }
