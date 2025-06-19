@@ -29,10 +29,9 @@ class GenerateMigrationService
             // Create new migration file if it doesn't exist
             $this->createMigrationFile($modelName, $tableName, $fields, $uniqueConstraints);
         } else {
-            // Update existing migration file
+            // Replace existing migration file completely to avoid duplicates
             $migrationFile = $migrationFiles[0];
-            $fieldStub = $this->buildMigrationFields($fields, $uniqueConstraints);
-            $this->updateMigrationFile($migrationFile, $fieldStub);
+            $this->replaceMigrationFile($migrationFile, $tableName, $fields, $uniqueConstraints);
         }
 
         $this->command->info("✅ Migration file processed for $modelName");
@@ -233,26 +232,37 @@ class GenerateMigrationService
     }
 
     /**
-     * Update migration file with field definitions
+     * Replace existing migration file completely using stub
      */
-    private function updateMigrationFile(string $migrationFile, string $fieldStub): void
+    private function replaceMigrationFile(string $migrationFile, string $tableName, array $fields, array $uniqueConstraints): void
     {
-        $migrationContent = file_get_contents($migrationFile);
+        try {
+            $stubPath = $this->stubPathResolver->resolveStubPath('migration');
+            $stubContent = File::get($stubPath);
 
-        $migrationContent = preg_replace_callback(
-            '/Schema::create\([^)]+function\s*\(Blueprint\s*\$table\)\s*{(.*?)(\$table->id\(\);)/s',
-            function ($matches) use ($fieldStub) {
-                return str_replace(
-                    $matches[2],
-                    $matches[2]."\n            ".$fieldStub,
-                    $matches[0]
-                );
-            },
-            $migrationContent
-        );
+            $fieldStub = $this->buildMigrationFields($fields, $uniqueConstraints);
 
-        file_put_contents($migrationFile, $migrationContent);
+            // Remove trailing whitespace and semicolon from fieldStub for cleaner output
+            $fieldStub = rtrim($fieldStub);
 
-        $this->command->info("📝 Updated existing migration file");
+            $migrationContent = str_replace([
+                '{{ table }}',
+                '{{ columns }}',
+            ], [
+                $tableName,
+                $fieldStub,
+            ], $stubContent);
+
+            File::put($migrationFile, $migrationContent);
+
+            $this->command->info("🔄 Replaced existing migration file with updated content");
+
+        } catch (\Exception $e) {
+            $this->command->error('Failed to replace migration using stub: ' . $e->getMessage());
+
+            // Fallback to the original update method
+            $fieldStub = $this->buildMigrationFields($fields, $uniqueConstraints);
+            $this->updateMigrationFile($migrationFile, $fieldStub);
+        }
     }
 }
