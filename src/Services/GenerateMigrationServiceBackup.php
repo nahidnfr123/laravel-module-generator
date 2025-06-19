@@ -6,15 +6,13 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateModuleFromYaml;
 
-class GenerateMigrationService
+class GenerateMigrationServiceBackup
 {
     private GenerateModuleFromYaml $command;
-    private StubPathResolverService $stubPathResolver;
 
     public function __construct(GenerateModuleFromYaml $command)
     {
         $this->command = $command;
-        $this->stubPathResolver = new StubPathResolverService;
     }
 
     /**
@@ -26,80 +24,17 @@ class GenerateMigrationService
         $migrationFiles = glob(database_path('migrations/*create_'.$tableName.'_table.php'));
 
         if (empty($migrationFiles)) {
-            // Create new migration file if it doesn't exist
-            $this->createMigrationFile($modelName, $tableName, $fields, $uniqueConstraints);
-        } else {
-            // Update existing migration file
-            $migrationFile = $migrationFiles[0];
-            $fieldStub = $this->buildMigrationFields($fields, $uniqueConstraints);
-            $this->updateMigrationFile($migrationFile, $fieldStub);
+            $this->command->warn("Migration file not found for $modelName.");
+
+            return;
         }
 
-        $this->command->info("✅ Migration file processed for $modelName");
-    }
+        $migrationFile = $migrationFiles[0];
+        $fieldStub = $this->buildMigrationFields($fields, $uniqueConstraints);
 
-    /**
-     * Create new migration file using stub
-     */
-    private function createMigrationFile(string $modelName, string $tableName, array $fields, array $uniqueConstraints): void
-    {
-        try {
-            $stubPath = $this->stubPathResolver->resolveStubPath('migration');
-            $stubContent = File::get($stubPath);
+        $this->updateMigrationFile($migrationFile, $fieldStub);
 
-            $fieldStub = $this->buildMigrationFields($fields, $uniqueConstraints);
-
-            // Remove trailing whitespace and semicolon from fieldStub for cleaner output
-            $fieldStub = rtrim($fieldStub);
-
-            $migrationContent = str_replace([
-                '{{ table }}',
-                '{{ columns }}',
-            ], [
-                $tableName,
-                $fieldStub,
-            ], $stubContent);
-
-            // Generate migration filename with timestamp
-            $timestamp = date('Y_m_d_His');
-            $migrationFileName = "{$timestamp}_create_{$tableName}_table.php";
-            $migrationPath = database_path("migrations/{$migrationFileName}");
-
-            // Create migrations directory if it doesn't exist
-            $migrationsDir = database_path('migrations');
-            if (!File::exists($migrationsDir)) {
-                File::makeDirectory($migrationsDir, 0755, true);
-            }
-
-            File::put($migrationPath, $migrationContent);
-
-            $this->command->info("🆕 Created new migration file: {$migrationFileName}");
-
-        } catch (\Exception $e) {
-            $this->command->error('Failed to create migration using stub: ' . $e->getMessage());
-
-            // Fallback to Laravel's artisan command
-            $this->createMigrationFallback($tableName);
-        }
-    }
-
-    /**
-     * Fallback method to create migration using Laravel's artisan command
-     */
-    private function createMigrationFallback(string $tableName): void
-    {
-        $migrationName = "create_{$tableName}_table";
-
-        try {
-            \Illuminate\Support\Facades\Artisan::call('make:migration', [
-                'name' => $migrationName,
-                '--create' => $tableName
-            ]);
-
-            $this->command->info("🔄 Created migration using fallback method: {$migrationName}");
-        } catch (\Exception $e) {
-            $this->command->error("Failed to create migration: " . $e->getMessage());
-        }
+        $this->command->info("✅ Migration file updated for $modelName");
     }
 
     /**
@@ -115,7 +50,7 @@ class GenerateMigrationService
 
         $fieldStub .= $this->buildUniqueConstraints($uniqueConstraints);
 
-        return rtrim($fieldStub);
+        return $fieldStub;
     }
 
     /**
@@ -252,7 +187,5 @@ class GenerateMigrationService
         );
 
         file_put_contents($migrationFile, $migrationContent);
-
-        $this->command->info("📝 Updated existing migration file");
     }
 }
