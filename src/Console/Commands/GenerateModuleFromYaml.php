@@ -258,7 +258,7 @@ class GenerateModuleFromYaml extends Command
             }
         }
 
-        if ($generateConfig['migration']) {
+        if ($generateConfig['migration'] === true) {
             (new GenerateMigrationService($this))
                 ->generateMigration($modelConfig['studlyName'], $modelConfig['fields']);
         }
