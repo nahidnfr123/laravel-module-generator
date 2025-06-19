@@ -15,6 +15,7 @@ use NahidFerdous\LaravelModuleGenerator\Services\GenerateResourceCollectionServi
 use NahidFerdous\LaravelModuleGenerator\Services\StubPathResolverService;
 use Symfony\Component\Console\Command\Command as CommandAlias;
 use Symfony\Component\Yaml\Yaml;
+use Symfony\Component\Process\Process;
 
 class GenerateModuleFromYaml extends Command
 {
@@ -77,6 +78,9 @@ class GenerateModuleFromYaml extends Command
         $this->newLine();
         $this->info('🎉 All modules generated successfully!');
 
+        // Run Laravel Pint to format the generated code
+        $this->runPint();
+        $this->newLine();
         return CommandAlias::SUCCESS;
     }
 
@@ -370,6 +374,26 @@ class GenerateModuleFromYaml extends Command
             // $this->info('🤧 DB diagram generated successfully at module/dbdiagram.dbml');
         } else {
             $this->warn('⚠️ Failed to generate DB diagram');
+        }
+    }
+
+    private function runPint(): void
+    {
+        $this->newLine();
+        $this->info('🎨 Running Laravel Pint to format generated code...');
+
+        try {
+            $process = new Process(['./vendor/bin/pint', '--quiet']);
+            $process->run();
+
+            if ($process->isSuccessful()) {
+                $this->info('✨ Code formatting completed successfully!');
+            } else {
+                $this->warn('⚠️ Code formatting completed with some issues');
+                $this->warn($process->getErrorOutput());
+            }
+        } catch (\Exception $e) {
+            $this->warn('⚠️ Failed to run Laravel Pint: ' . $e->getMessage());
         }
     }
 }
