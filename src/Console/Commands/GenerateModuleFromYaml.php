@@ -246,17 +246,17 @@ class GenerateModuleFromYaml extends Command
         }
 
         // Check if migration generation is enabled
-        if (!$generateConfig['migration']) {
-            $migrationPattern = database_path("migrations/*create_{$modelConfig['tableName']}_table.php");
-            $migrationFiles = glob($migrationPattern);
-            // Delete existing migration files if they exist
-            if (!empty($migrationFiles)) {
-                foreach ($migrationFiles as $file) {
-                    File::delete($file);
-                    $this->warn('⚠️ Deleted existing migration: ' . basename($file));
-                }
-            }
-        }
+//        if (!$generateConfig['migration']) {
+//            $migrationPattern = database_path("migrations/*create_{$modelConfig['tableName']}_table.php");
+//            $migrationFiles = glob($migrationPattern);
+//            // Delete existing migration files if they exist
+//            if (!empty($migrationFiles)) {
+//                foreach ($migrationFiles as $file) {
+//                    File::delete($file);
+//                    $this->warn('⚠️ Deleted existing migration: ' . basename($file));
+//                }
+//            }
+//        }
 
         if ($generateConfig['migration']) {
             (new GenerateMigrationService($this))
