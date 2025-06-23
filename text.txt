@@ -3,8 +3,8 @@ git add . && git commit -m "_ _" && git push && git tag v1.0.7 && git push origi
 
 git tag v1.0.7 && git push origin v1.0.7
 
-work with enum fields
-
+## work with enum fields
+## module:generate empty file error...
 
 "repositories": [
         {
