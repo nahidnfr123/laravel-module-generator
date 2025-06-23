@@ -17,7 +17,7 @@ class {{ class }} extends Controller implements HasMiddleware
 {
     use ApiResponseTrait;
 
-    public function __construct(protected {{ model }}Service ${{ variable }}Service){}
+    public function __construct(protected {{ model }}Service ${{ variable }}Service) {}
 
     public static function middleware(): array
     {
@@ -67,10 +67,10 @@ class {{ class }} extends Controller implements HasMiddleware
         }
     }
 
-     public function destroy({{ model }} ${{ variable }}): \Illuminate\Http\JsonResponse
+    public function destroy({{ model }} ${{ variable }}): \Illuminate\Http\JsonResponse
     {
         try {
-             $this->{{ variable }}Service->delete(${{ variable }});
+            $this->{{ variable }}Service->delete(${{ variable }});
 
             return $this->success('{{ model }} deleted successfully');
         } catch (\Exception $e) {

@@ -15,6 +15,7 @@ use NahidFerdous\LaravelModuleGenerator\Services\GenerateResourceCollectionServi
 use NahidFerdous\LaravelModuleGenerator\Services\StubPathResolverService;
 use Symfony\Component\Console\Command\Command as CommandAlias;
 use Symfony\Component\Yaml\Yaml;
+use Symfony\Component\Process\Process;
 
 class GenerateModuleFromYaml extends Command
 {
@@ -49,7 +50,7 @@ class GenerateModuleFromYaml extends Command
     {
         if ($this->option('force')) {
             $confirmation = $this->ask('This command will replace existing module files and generate module files based on a YAML configuration. Do you want to proceed? (yes/no)', 'no');
-            if (strtolower($confirmation) !== 'yes') {
+            if (strtolower($confirmation) !== 'yes' && strtolower($confirmation) !== 'y' && strtolower($confirmation) !== 'Y') {
                 $this->info('Command cancelled.');
 
                 return CommandAlias::SUCCESS;
@@ -77,6 +78,9 @@ class GenerateModuleFromYaml extends Command
         $this->newLine();
         $this->info('🎉 All modules generated successfully!');
 
+        // Run Laravel Pint to format the generated code
+        $this->runPint();
+        $this->newLine();
         return CommandAlias::SUCCESS;
     }
 
@@ -246,21 +250,25 @@ class GenerateModuleFromYaml extends Command
         }
 
         // Check if migration generation is enabled
-        if (!$generateConfig['migration']) {
-            $migrationPattern = database_path("migrations/*create_{$modelConfig['tableName']}_table.php");
-            $migrationFiles = glob($migrationPattern);
-            // Delete existing migration files if they exist
-            if (!empty($migrationFiles)) {
-                foreach ($migrationFiles as $file) {
-                    File::delete($file);
-                    $this->warn('⚠️ Deleted existing migration: ' . basename($file));
-                }
-            }
+        if ($generateConfig['migration'] === true || $generateConfig['migration'] === false) {
+            $this->deleteMigrationFile($modelConfig);
         }
-
-        if ($generateConfig['migration']) {
+        if ($generateConfig['migration'] === true) {
             (new GenerateMigrationService($this))
                 ->generateMigration($modelConfig['studlyName'], $modelConfig['fields']);
+        }
+    }
+
+    protected function deleteMigrationFile($modelConfig)
+    {
+        $migrationPattern = database_path("migrations/*create_{$modelConfig['tableName']}_table.php");
+        $migrationFiles = glob($migrationPattern);
+        // Delete existing migration files if they exist
+        if (!empty($migrationFiles)) {
+            foreach ($migrationFiles as $file) {
+                File::delete($file);
+                $this->warn('⚠️ Deleted existing migration: ' . basename($file));
+            }
         }
     }
 
@@ -366,6 +374,26 @@ class GenerateModuleFromYaml extends Command
             // $this->info('🤧 DB diagram generated successfully at module/dbdiagram.dbml');
         } else {
             $this->warn('⚠️ Failed to generate DB diagram');
+        }
+    }
+
+    private function runPint(): void
+    {
+        $this->newLine();
+        $this->info('🎨 Running Laravel Pint to format generated code...');
+
+        try {
+            $process = new Process(['./vendor/bin/pint', '--quiet']);
+            $process->run();
+
+            if ($process->isSuccessful()) {
+                $this->info('✨ Code formatting completed successfully!');
+            } else {
+                $this->warn('⚠️ Code formatting completed with some issues');
+                $this->warn($process->getErrorOutput());
+            }
+        } catch (\Exception $e) {
+            $this->warn('⚠️ Failed to run Laravel Pint: ' . $e->getMessage());
         }
     }
 }
