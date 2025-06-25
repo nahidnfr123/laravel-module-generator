@@ -184,10 +184,10 @@ class GenerateControllerService
         $relationStoreCode = $this->generateRelationStoreCode($modelData, $variable);
         $relationUpdateCode = $this->generateRelationUpdateCode($modelData, $variable);
 
-        $getAllQuery = "{$modelName}::all()";
+        $getAllQuery = "{$modelName}::paginate()";
         $getByIdQuery = "{$modelName}::findOrFail(\$id)";
         if ($withRelations) {
-            $getAllQuery = "{$modelName}::with([{$withRelations}])->get()";
+            $getAllQuery = "{$modelName}::with([{$withRelations}])->paginate()";
             $getByIdQuery = "{$modelName}::with([{$withRelations}])->findOrFail(\$id)";
         }
 
@@ -380,7 +380,7 @@ class {$controllerClass} extends Controller implements HasMiddleware
 
         $indexMethod = $hasService
             ? "\$data = \$this->{$variable}Service->getAll();"
-            : "\$data = {$modelName}::with([{$this->generateWithRelations($modelData)}])->get();";
+            : "\$data = {$modelName}::with([{$this->generateWithRelations($modelData)}])->paginate();";
 
         $storeMethod = $hasService
             ? "\${$variable} = \$this->{$variable}Service->store(\$request->validated());"

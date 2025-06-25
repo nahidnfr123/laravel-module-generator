@@ -12,7 +12,7 @@ class {{ model }}Service
      */
     public function getAll()
     {
-        return {{ model }}::all();
+        return {{ model }}::paginate();
     }
 
     /**
