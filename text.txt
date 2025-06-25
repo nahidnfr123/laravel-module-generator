@@ -1,11 +1,10 @@
 git add . && git commit -m "_ _" && git push && git tag v1.0.7 && git push origin v1.0.7
 
 
-git tag v1.0.7 && git push origin v1.0.7
+git tag v1.1.41 && git push origin v1.1.41
 
 ## work with enum fields
 ## module:generate empty file error...
-## if data not paginated, then dont use the collection ...
 
 
 "repositories": [
