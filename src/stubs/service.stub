@@ -35,8 +35,9 @@ class {{ model }}Service
     /**
      * Delete {{ model }}
      */
-    public function delete($id)
+    public function delete(${{ variable }})
     {
-        return {{ model }}::findOrFail($id)->delete();
+        return ${{ variable }}->delete();
+        //return {{ model }}::findOrFail($id)->delete();
     }
 }
