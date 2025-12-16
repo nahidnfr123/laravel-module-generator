@@ -314,7 +314,6 @@ class GenerateAuthModule extends Command
 
         // Add Spatie middleware imports if roles are enabled
         if ($includeRoles && ! str_contains($content, 'use Spatie\Permission\Middleware')) {
-            // Find the last use statement and add after it
             $lastUsePos = strrpos($content, 'use ');
             if ($lastUsePos !== false) {
                 $endOfLine = strpos($content, ';', $lastUsePos);
@@ -328,14 +327,14 @@ class GenerateAuthModule extends Command
             }
         }
 
-        // Add ExceptionHandler import if not exists
-        if (! str_contains($content, 'use App\Exceptions\ExceptionHandler as ShieldExceptionHandler;')) {
+        // Add ExceptionHandler import if not exists (without alias)
+        if (! str_contains($content, 'use App\Exceptions\ExceptionHandler')) {
             $lastUsePos = strrpos($content, 'use ');
             if ($lastUsePos !== false) {
                 $endOfLine = strpos($content, ';', $lastUsePos);
                 $content = substr_replace(
                     $content,
-                    ";\nuse App\Exceptions\ExceptionHandler as ShieldExceptionHandler;",
+                    ";\nuse App\Exceptions\ExceptionHandler;",
                     $endOfLine,
                     1
                 );
@@ -343,52 +342,93 @@ class GenerateAuthModule extends Command
             }
         }
 
-        // Add middleware aliases
-        if (preg_match('/\$middleware->alias\(\[(.*?)\]\);/s', $content, $matches)) {
-            $aliasContent = $matches[1];
+        // Handle withMiddleware section
+        if (preg_match('/->withMiddleware\(function\s*\(Middleware\s+\$middleware\)\s*:\s*void\s*\{(.*?)\}\)/s', $content, $matches)) {
+            $middlewareContent = $matches[1];
+            $updatedMiddlewareContent = $middlewareContent;
 
-            // Add cors middleware if not exists
-            if (! str_contains($aliasContent, "'cors'")) {
-                $corsAlias = "\n        'cors' => Cors::class,";
-                $aliasContent = $aliasContent . $corsAlias;
+            // Add statefulApi if not exists
+            if (! str_contains($middlewareContent, '$middleware->statefulApi()')) {
+                $updatedMiddlewareContent = "\n        \$middleware->statefulApi();";
                 $modified = true;
-                $this->line('✅ Added CORS middleware alias');
+                $this->line('✅ Added statefulApi middleware');
             }
 
-            // Add Spatie middleware aliases if roles are enabled
-            if ($includeRoles) {
-                $spatieAliases = [
-                    "'role' => RoleMiddleware::class," => "'role'",
-                    "'permission' => PermissionMiddleware::class," => "'permission'",
-                    "'role_or_permission' => RoleOrPermissionMiddleware::class," => "'role_or_permission'",
-                ];
+            // Check if alias method exists
+            if (! str_contains($middlewareContent, '$middleware->alias(')) {
+                // Build the alias array
+                $aliases = "\n        \$middleware->alias([\n";
+                $aliases .= "            'cors' => Cors::class,\n";
 
-                foreach ($spatieAliases as $alias => $check) {
-                    if (! str_contains($aliasContent, $check)) {
-                        $aliasContent = $aliasContent . "\n        " . $alias;
+                if ($includeRoles) {
+                    $aliases .= "\n            // spatie permission middleware\n";
+                    $aliases .= "            'role' => \\Spatie\\Permission\\Middleware\\RoleMiddleware::class,\n";
+                    $aliases .= "            'permission' => \\Spatie\\Permission\\Middleware\\PermissionMiddleware::class,\n";
+                    $aliases .= "            'role_or_permission' => \\Spatie\\Permission\\Middleware\\RoleOrPermissionMiddleware::class,\n";
+                }
+
+                $aliases .= "        ]);";
+                $updatedMiddlewareContent .= $aliases;
+                $modified = true;
+                $this->line('✅ Added middleware aliases');
+            } else {
+                // Alias exists, check and add missing ones
+                if (! str_contains($middlewareContent, "'cors'")) {
+                    $updatedMiddlewareContent = preg_replace(
+                        '/(\$middleware->alias\(\[)/s',
+                        "$1\n            'cors' => Cors::class,",
+                        $updatedMiddlewareContent
+                    );
+                    $modified = true;
+                }
+
+                if ($includeRoles) {
+                    if (! str_contains($middlewareContent, "'role'")) {
+                        $updatedMiddlewareContent = preg_replace(
+                            '/(\$middleware->alias\(\[[^\]]*)/s',
+                            "$1\n            'role' => \\Spatie\\Permission\\Middleware\\RoleMiddleware::class,",
+                            $updatedMiddlewareContent
+                        );
+                        $modified = true;
+                    }
+                    if (! str_contains($middlewareContent, "'permission'")) {
+                        $updatedMiddlewareContent = preg_replace(
+                            '/(\$middleware->alias\(\[[^\]]*)/s',
+                            "$1\n            'permission' => \\Spatie\\Permission\\Middleware\\PermissionMiddleware::class,",
+                            $updatedMiddlewareContent
+                        );
+                        $modified = true;
+                    }
+                    if (! str_contains($middlewareContent, "'role_or_permission'")) {
+                        $updatedMiddlewareContent = preg_replace(
+                            '/(\$middleware->alias\(\[[^\]]*)/s',
+                            "$1\n            'role_or_permission' => \\Spatie\\Permission\\Middleware\\RoleOrPermissionMiddleware::class,",
+                            $updatedMiddlewareContent
+                        );
                         $modified = true;
                     }
                 }
-
-                if ($modified) {
-                    $this->line('✅ Added Spatie permission middleware aliases');
-                }
             }
 
-            // Replace the old alias content with the new one
+            // Replace the middleware content
             $content = preg_replace(
-                '/\$middleware->alias\(\[(.*?)\]\);/s',
-                '$middleware->alias([' . $aliasContent . "\n    ]);",
+                '/->withMiddleware\(function\s*\(Middleware\s+\$middleware\)\s*:\s*void\s*\{.*?\}\)/s',
+                "->withMiddleware(function (Middleware \$middleware): void {{$updatedMiddlewareContent}\n    })",
                 $content
             );
         }
 
-        // Add exception handler
-        if (preg_match('/->withExceptions\(function\s*\(\$exceptions\)\s*\{/s', $content)) {
-            if (! str_contains($content, 'ShieldExceptionHandler::handle')) {
+        // Handle withExceptions section
+        if (preg_match('/->withExceptions\(function\s*\(Exceptions\s+\$exceptions\)\s*:\s*void\s*\{(.*?)\}\)/s', $content, $matches)) {
+            $exceptionsContent = $matches[1];
+
+            // Check if exception handler already exists
+            if (! str_contains($exceptionsContent, 'ExceptionHandler::handle')) {
+                $updatedExceptionsContent = "\n        ExceptionHandler::handle(\$exceptions);";
+
                 $content = preg_replace(
-                    '/(->withExceptions\(function\s*\(\$exceptions\)\s*\{)/s',
-                    "$1\n        ShieldExceptionHandler::handle(\$exceptions);",
+                    '/->withExceptions\(function\s*\(Exceptions\s+\$exceptions\)\s*:\s*void\s*\{.*?\}\)/s',
+                    "->withExceptions(function (Exceptions \$exceptions): void {{$updatedExceptionsContent}\n    })",
                     $content
                 );
                 $modified = true;
