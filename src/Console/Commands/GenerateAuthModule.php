@@ -65,6 +65,9 @@ class GenerateAuthModule extends Command
         // Update User model
         $this->updateUserModel($includeRoles, $includeEmailVerification);
 
+        // Update bootstrap/app.php
+        $this->updateBootstrapApp($includeRoles);
+
         $this->newLine();
         $this->info('✅ Authentication system generated successfully!');
         $this->newLine();
@@ -281,6 +284,123 @@ class GenerateAuthModule extends Command
             $this->info('✅ User model updated successfully');
         } else {
             $this->line('ℹ️  User model already up to date');
+        }
+    }
+
+    protected function updateBootstrapApp(bool $includeRoles): void
+    {
+        $bootstrapPath = base_path('bootstrap/app.php');
+
+        if (! File::exists($bootstrapPath)) {
+            $this->warn('⚠️  bootstrap/app.php not found');
+            return;
+        }
+
+        $this->info('📝 Updating bootstrap/app.php...');
+
+        $content = File::get($bootstrapPath);
+        $modified = false;
+
+        // Add Cors middleware import if not exists
+        if (! str_contains($content, 'use App\Http\Middleware\Cors;')) {
+            $content = preg_replace(
+                '/<\?php/',
+                "<?php\n\nuse App\Http\Middleware\Cors;",
+                $content,
+                1
+            );
+            $modified = true;
+        }
+
+        // Add Spatie middleware imports if roles are enabled
+        if ($includeRoles && ! str_contains($content, 'use Spatie\Permission\Middleware')) {
+            // Find the last use statement and add after it
+            $lastUsePos = strrpos($content, 'use ');
+            if ($lastUsePos !== false) {
+                $endOfLine = strpos($content, ';', $lastUsePos);
+                $content = substr_replace(
+                    $content,
+                    ";\nuse Spatie\Permission\Middleware\RoleMiddleware;\nuse Spatie\Permission\Middleware\PermissionMiddleware;\nuse Spatie\Permission\Middleware\RoleOrPermissionMiddleware;",
+                    $endOfLine,
+                    1
+                );
+                $modified = true;
+            }
+        }
+
+        // Add ExceptionHandler import if not exists
+        if (! str_contains($content, 'use App\Exceptions\ExceptionHandler as ShieldExceptionHandler;')) {
+            $lastUsePos = strrpos($content, 'use ');
+            if ($lastUsePos !== false) {
+                $endOfLine = strpos($content, ';', $lastUsePos);
+                $content = substr_replace(
+                    $content,
+                    ";\nuse App\Exceptions\ExceptionHandler as ShieldExceptionHandler;",
+                    $endOfLine,
+                    1
+                );
+                $modified = true;
+            }
+        }
+
+        // Add middleware aliases
+        if (preg_match('/\$middleware->alias\(\[(.*?)\]\);/s', $content, $matches)) {
+            $aliasContent = $matches[1];
+
+            // Add cors middleware if not exists
+            if (! str_contains($aliasContent, "'cors'")) {
+                $corsAlias = "\n        'cors' => Cors::class,";
+                $aliasContent = $aliasContent . $corsAlias;
+                $modified = true;
+                $this->line('✅ Added CORS middleware alias');
+            }
+
+            // Add Spatie middleware aliases if roles are enabled
+            if ($includeRoles) {
+                $spatieAliases = [
+                    "'role' => RoleMiddleware::class," => "'role'",
+                    "'permission' => PermissionMiddleware::class," => "'permission'",
+                    "'role_or_permission' => RoleOrPermissionMiddleware::class," => "'role_or_permission'",
+                ];
+
+                foreach ($spatieAliases as $alias => $check) {
+                    if (! str_contains($aliasContent, $check)) {
+                        $aliasContent = $aliasContent . "\n        " . $alias;
+                        $modified = true;
+                    }
+                }
+
+                if ($modified) {
+                    $this->line('✅ Added Spatie permission middleware aliases');
+                }
+            }
+
+            // Replace the old alias content with the new one
+            $content = preg_replace(
+                '/\$middleware->alias\(\[(.*?)\]\);/s',
+                '$middleware->alias([' . $aliasContent . "\n    ]);",
+                $content
+            );
+        }
+
+        // Add exception handler
+        if (preg_match('/->withExceptions\(function\s*\(\$exceptions\)\s*\{/s', $content)) {
+            if (! str_contains($content, 'ShieldExceptionHandler::handle')) {
+                $content = preg_replace(
+                    '/(->withExceptions\(function\s*\(\$exceptions\)\s*\{)/s',
+                    "$1\n        ShieldExceptionHandler::handle(\$exceptions);",
+                    $content
+                );
+                $modified = true;
+                $this->line('✅ Added exception handler');
+            }
+        }
+
+        if ($modified) {
+            File::put($bootstrapPath, $content);
+            $this->info('✅ bootstrap/app.php updated successfully');
+        } else {
+            $this->line('ℹ️  bootstrap/app.php already up to date');
         }
     }
 
