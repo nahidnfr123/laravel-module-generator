@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreRoleRequest;
-use App\Http\Requests\UpdateRoleRequest;
+use App\Http\Requests\UpsertRoleRequest;
+use App\Http\Resources\RoleCollection;
 use App\Http\Resources\RoleResource;
 use App\Http\Resources\UserResource;
 use App\Models\Role;
 use App\Services\RoleService;
 use App\Traits\ApiResponseTrait;
+use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
-class RoleController extends Controller
+class RoleController extends Controller implements HasMiddleware
 {
     use ApiResponseTrait;
 
@@ -35,7 +36,7 @@ class RoleController extends Controller
     {
         $roles = $this->roleService->getAll();
 
-        return $this->success('Success.', RoleResource::collection($roles));
+        return $this->success('Success.', RoleCollection::make($roles));
     }
 
     public function show(Role $role): \Illuminate\Http\JsonResponse
@@ -46,14 +47,14 @@ class RoleController extends Controller
         ]);
     }
 
-    public function store(StoreRoleRequest $request): \Illuminate\Http\JsonResponse
+    public function store(UpsertRoleRequest $request): \Illuminate\Http\JsonResponse
     {
         $role = $this->roleService->store($request);
 
         return $this->success('Role created successfully.', new RoleResource($role));
     }
 
-    public function update(UpdateRoleRequest $request, Role $role): \Illuminate\Http\JsonResponse
+    public function update(UpsertRoleRequest $request, Role $role): \Illuminate\Http\JsonResponse
     {
         $this->roleService->update($request, $role);
 
@@ -68,7 +69,7 @@ class RoleController extends Controller
             return $this->failure('Role not found.', 404);
         }
 
-        if (in_array($role->slug, ['developer', 'super-admin'], true)) {
+        if (in_array($role->name, ['super-admin', 'admin'], true)) {
             return $this->failure('You cannot delete this role.', 403);
         }
 

@@ -16,7 +16,7 @@ class RoleResource extends JsonResource
     {
         $canAssignPermission = false;
 
-        if ($this->slug !== 'developer') {
+        if ($this->name !== 'developer') {
             $user = auth()->user();
 
             if ($user) {
@@ -30,7 +30,6 @@ class RoleResource extends JsonResource
 
         return [
             'id' => $this->id,
-            'slug' => $this->slug,
             'name' => $this->name,
             'guard_name' => $this->guard_name,
             'permission_count' => $this->permissions_count,

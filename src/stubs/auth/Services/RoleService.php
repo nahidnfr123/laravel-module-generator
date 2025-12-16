@@ -8,12 +8,10 @@ class RoleService
 {
     public function getAll()
     {
-        return Role::whereNotIn('slug', ['developer', 'customer'])
-            ->latest()
-            ->withCount('permissions')
+        return Role::withCount('permissions')
             ->withCount('users')
             ->orderBy(request('order_by', 'name'), request('order', 'ASC'))
-            ->get();
+            ->paginate(request('per_page', 10));
     }
 
     public function store($request): \Spatie\Permission\Contracts\Role|\Spatie\Permission\Models\Role

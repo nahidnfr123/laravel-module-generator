@@ -7,6 +7,7 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Requests\ResetPasswordRequest;
 use App\Services\Auth\AuthServiceFactory;
+use App\Services\Auth\VerificationService;
 use App\Services\AuthService;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
@@ -50,21 +51,32 @@ class AuthController extends Controller
         return $this->success('Successfully logged out.');
     }
 
-    public function me(Request $request): \Illuminate\Http\JsonResponse
+    public function userProfile(Request $request): \Illuminate\Http\JsonResponse
     {
         return $this->success('User details', $request->user());
     }
 
-    public function verifyEmail(string $token): \Illuminate\Http\JsonResponse
+    public function verifyEmail(Request $request, int $id, string $hash, VerificationService $service): \Illuminate\Http\JsonResponse
     {
-        $verified = AuthServiceFactory::verification()->verifyEmail($token);
+        if (! $request->hasValidSignature()) {
+            return $this->failure('Invalid or expired verification link.', 403);
+        }
 
-        return $verified
-            ? $this->success('Email verified successfully')
-            : $this->failure('Invalid or expired verification token', 400);
+        if (! $service->verify($id, $hash)) {
+            return $this->failure('Verification failed.', 400);
+        }
+
+        return $this->success('Email verified successfully.');
     }
 
-    public function resendEmailVerificationLink(Request $request): \Illuminate\Http\JsonResponse {}
+    public function resendEmailVerificationLink(Request $request, VerificationService $service): \Illuminate\Http\JsonResponse
+    {
+        $service->resend($request->user());
+
+        return response()->json([
+            'message' => 'Verification link sent.',
+        ]);
+    }
 
     public function forgotPassword(ForgotPasswordRequest $request): \Illuminate\Http\JsonResponse
     {

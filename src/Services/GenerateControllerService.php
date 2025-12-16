@@ -281,35 +281,7 @@ class {$modelName}Service
         $tableName = $modelConfig['tableName'];
         $modelPlural = $modelConfig['pluralStudlyName'];
 
-        return "<?php
-
-namespace App\Http\Controllers;
-
-use App\Http\Controllers\Controller;
-use App\Http\Requests\\{$modelName}Request;
-use App\Http\Resources\\{$modelName}\\{$modelName}Collection;
-use App\Http\Resources\\{$modelName}\\{$modelName}Resource;
-use App\Models\\{$modelName};
-use App\Traits\ApiResponseTrait;
-use Illuminate\Http\Request;
-use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
-
-class {$controllerClass} extends Controller implements HasMiddleware
-{
-    use ApiResponseTrait;
-
-    public static function middleware(): array
-    {
-        \$model = '{$tableName}';
-
-        return [
-            'auth',
-            new Middleware([\"permission:view_\$model\"], only: ['index']),
-            new Middleware([\"permission:show_\$model\"], only: ['show']),
-            new Middleware([\"permission:create_\$model\"], only: ['store']),
-            new Middleware([\"permission:update_\$model\"], only: ['update']),
-            new Middleware([\"permission:delete_\$model\"], only: ['destroy']),
+        return "], only: ['destroy']),
         ];
     }
 
@@ -392,38 +364,7 @@ class {$controllerClass} extends Controller implements HasMiddleware
             ? "\$this->{$variable}Service->delete(\${$variable});"
             : "\${$variable}->delete();";
 
-        return "<?php
-
-namespace App\Http\Controllers;
-
-use App\Http\Controllers\Controller;
-use App\Http\Requests\\{$modelName}Request;
-use App\Http\Resources\\{$modelName}\\{$modelName}Collection;
-use App\Http\Resources\\{$modelName}\\{$modelName}Resource;
-use App\Models\\{$modelName};
-{$serviceImport}
-use App\Traits\ApiResponseTrait;
-use Illuminate\Http\Request;
-use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
-
-class {$controllerClass} extends Controller implements HasMiddleware
-{
-    use ApiResponseTrait;
-
-    {$constructorCode}
-
-    public static function middleware(): array
-    {
-        \$model = '{$tableName}';
-
-        return [
-            'auth',
-            new Middleware([\"permission:view_\$model\"], only: ['index']),
-            new Middleware([\"permission:show_\$model\"], only: ['show']),
-            new Middleware([\"permission:create_\$model\"], only: ['store']),
-            new Middleware([\"permission:update_\$model\"], only: ['update']),
-            new Middleware([\"permission:delete_\$model\"], only: ['destroy']),
+        return "], only: ['destroy']),
         ];
     }
 

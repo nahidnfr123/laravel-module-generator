@@ -3,6 +3,7 @@
 namespace NahidFerdous\LaravelModuleGenerator\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateAuthModule;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateDbDiagram;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateModuleFromModelName;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateModuleFromYaml;
@@ -22,6 +23,7 @@ class LaravelModuleGeneratorServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 Install::class,
+                GenerateAuthModule::class,
                 GenerateModuleFromModelName::class,
                 GenerateModuleFromYaml::class,
                 GeneratePostmanCollection::class,
