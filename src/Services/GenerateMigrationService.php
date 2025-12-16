@@ -9,6 +9,7 @@ use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateModuleFromYaml;
 class GenerateMigrationService
 {
     private GenerateModuleFromYaml $command;
+
     private StubPathResolverService $stubPathResolver;
 
     public function __construct(GenerateModuleFromYaml $command)
@@ -42,7 +43,7 @@ class GenerateMigrationService
     {
         $migrationFiles = glob(database_path("migrations/*create_{$tableName}_table.php"));
 
-        return !empty($migrationFiles) ? $migrationFiles[0] : null;
+        return ! empty($migrationFiles) ? $migrationFiles[0] : null;
     }
 
     public function findStubContent(): string
@@ -54,7 +55,7 @@ class GenerateMigrationService
         } catch (\Exception $e) {
             // Fallback to inline stub if resolver fails
             $stubContent = $this->getDefaultMigrationStub();
-            $this->command->warn("Using fallback migration stub: " . $e->getMessage());
+            $this->command->warn('Using fallback migration stub: '.$e->getMessage());
         }
 
         return $stubContent;
@@ -200,7 +201,7 @@ class GenerateMigrationService
         }
 
         if (in_array(strtolower($value), ['true', 'false'], true)) {
-            return '->default(' . $value . ')';
+            return '->default('.$value.')';
         }
 
         if (is_numeric($value)) {

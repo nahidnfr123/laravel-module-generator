@@ -44,7 +44,7 @@ class GenerateControllerService
         if ($hasService) {
             $servicePath = app_path("Services/{$modelConfig['classes']['service']}.php");
 
-            if (File::exists($servicePath) && !$force) {
+            if (File::exists($servicePath) && ! $force) {
                 $this->command->warn("⚠️ Service already exists: {$modelConfig['classes']['service']}");
 
                 return;
@@ -60,7 +60,7 @@ class GenerateControllerService
         if ($hasController) {
             $controllerPath = app_path("Http/Controllers/{$modelConfig['classes']['controller']}.php");
 
-            if (File::exists($controllerPath) && !$force) {
+            if (File::exists($controllerPath) && ! $force) {
                 $this->command->warn("⚠️ Controller already exists: {$modelConfig['classes']['controller']}");
 
                 return;
@@ -79,7 +79,7 @@ class GenerateControllerService
      */
     private function hasRelationRequest(array $modelData): bool
     {
-        if (!isset($modelData['relations']) || !is_array($modelData['relations'])) {
+        if (! isset($modelData['relations']) || ! is_array($modelData['relations'])) {
             return false;
         }
 
@@ -190,8 +190,6 @@ class GenerateControllerService
             $getAllQuery = "{$modelName}::with([{$withRelations}])->paginate()";
             $getByIdQuery = "{$modelName}::with([{$withRelations}])->findOrFail(\$id)";
         }
-
-
 
         return "<?php
 
@@ -481,7 +479,7 @@ class {$controllerClass} extends Controller implements HasMiddleware
      */
     private function generateRelationImports(array $modelData): string
     {
-        if (!isset($modelData['relations'])) {
+        if (! isset($modelData['relations'])) {
             return '';
         }
 
@@ -501,7 +499,7 @@ class {$controllerClass} extends Controller implements HasMiddleware
      */
     private function generateWithRelations(array $modelData): string
     {
-        if (!isset($modelData['relations'])) {
+        if (! isset($modelData['relations'])) {
             return '';
         }
 
@@ -518,13 +516,13 @@ class {$controllerClass} extends Controller implements HasMiddleware
      */
     private function generateRelationStoreCode(array $modelData, string $modelVariable): string
     {
-        if (!isset($modelData['relations'])) {
+        if (! isset($modelData['relations'])) {
             return '';
         }
 
         $code = '';
         foreach ($modelData['relations'] as $relationName => $relationConfig) {
-            if (!isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
+            if (! isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
                 continue;
             }
 
@@ -539,7 +537,7 @@ class {$controllerClass} extends Controller implements HasMiddleware
                     // Check if this relation has nested relations
                     $nestedRelations = $this->getNestedRelations($relationConfig, $modelData);
 
-                    if (!empty($nestedRelations)) {
+                    if (! empty($nestedRelations)) {
                         $code .= "\n            foreach (\$data['{$relationKey}'] as \$relationData) {";
                         $code .= "\n                \${$relationName}Record = \${$modelVariable}->{$relationName}()->create(\$relationData);";
 
@@ -592,13 +590,13 @@ class {$controllerClass} extends Controller implements HasMiddleware
      */
     private function generateRelationUpdateCode(array $modelData, string $modelVariable): string
     {
-        if (!isset($modelData['relations'])) {
+        if (! isset($modelData['relations'])) {
             return '';
         }
 
         $code = '';
         foreach ($modelData['relations'] as $relationName => $relationConfig) {
-            if (!isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
+            if (! isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
                 continue;
             }
 
@@ -613,7 +611,7 @@ class {$controllerClass} extends Controller implements HasMiddleware
                     // Check if this relation has nested relations
                     $nestedRelations = $this->getNestedRelations($relationConfig, $modelData);
 
-                    if (!empty($nestedRelations)) {
+                    if (! empty($nestedRelations)) {
                         // For nested relations, we need to handle them more carefully
                         $code .= "\n            // Delete existing {$relationName} and their nested relations";
                         $code .= "\n            \${$modelVariable}->{$relationName}()->each(function (\$record) {";
@@ -685,7 +683,7 @@ class {$controllerClass} extends Controller implements HasMiddleware
     {
         $nestedRelations = [];
 
-        if (!isset($relationConfig['model'])) {
+        if (! isset($relationConfig['model'])) {
             return $nestedRelations;
         }
 
@@ -744,8 +742,8 @@ class {$controllerClass} extends Controller implements HasMiddleware
         // Validate generate configuration
         if (isset($modelData['generate']) && is_array($modelData['generate'])) {
             $unknownKeys = array_diff(array_keys($modelData['generate']), array_keys(self::DEFAULT_GENERATE_CONFIG));
-            if (!empty($unknownKeys)) {
-                throw new \InvalidArgumentException("Unknown generate keys for $modelName: " . implode(', ', $unknownKeys));
+            if (! empty($unknownKeys)) {
+                throw new \InvalidArgumentException("Unknown generate keys for $modelName: ".implode(', ', $unknownKeys));
             }
         }
 

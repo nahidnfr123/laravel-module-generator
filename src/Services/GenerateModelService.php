@@ -32,7 +32,7 @@ class GenerateModelService
         }
 
         $modelPath = app_path("Models/{$modelName}.php");
-        if (!File::exists($modelPath)) {
+        if (! File::exists($modelPath)) {
             $this->command->warn("⚠️ Model file not found for: {$modelName}");
 
             return;
@@ -51,7 +51,7 @@ class GenerateModelService
      */
     private function buildFillableArray(array $fields): string
     {
-        $fillableFields = array_map(fn($field) => "'$field'", array_keys($fields));
+        $fillableFields = array_map(fn ($field) => "'$field'", array_keys($fields));
 
         return implode(",\n        ", $fillableFields);
     }
@@ -105,7 +105,7 @@ PHP;
 
             File::put($modelPath, $modelContent);
         } catch (\Exception $e) {
-            $this->command->error('Failed to generate model using stub: ' . $e->getMessage());
+            $this->command->error('Failed to generate model using stub: '.$e->getMessage());
 
             // Fallback to the original method if stub fails
             $this->insertModelContentFallback($modelPath, $modelName, $fillableArray, $relationshipMethods);
@@ -122,7 +122,7 @@ PHP;
         $fillableArray = "protected \$fillable = [\n        {$fillableFields},\n    ];";
 
         $modelContent = preg_replace(
-            '/(class\s+' . $modelName . '\s+extends\s+Model\s*\{)/',
+            '/(class\s+'.$modelName.'\s+extends\s+Model\s*\{)/',
             "$1\n\n    {$fillableArray}\n{$relationshipMethods}\n",
             $modelContent
         );

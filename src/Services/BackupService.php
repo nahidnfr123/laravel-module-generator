@@ -38,7 +38,7 @@ class BackupService
         foreach ($models as $modelName => $modelData) {
             $modelBackupInfo = $this->backupModelFiles($modelName);
             $backupManifest['models'][$modelName] = $modelBackupInfo;
-            $totalBackedUp += count(array_filter($modelBackupInfo, fn($file) => $file['backed_up']));
+            $totalBackedUp += count(array_filter($modelBackupInfo, fn ($file) => $file['backed_up']));
         }
 
         // Backup routes/api.php
@@ -107,7 +107,7 @@ class BackupService
     {
         $migrationFiles = File::glob(database_path("migrations/*_create_{$tableName}_table.php"));
 
-        return !empty($migrationFiles) ? $migrationFiles[0] : null;
+        return ! empty($migrationFiles) ? $migrationFiles[0] : null;
     }
 
     /**
@@ -123,7 +123,7 @@ class BackupService
             'error' => null,
         ];
 
-        if (!$filePath || !File::exists($filePath)) {
+        if (! $filePath || ! File::exists($filePath)) {
             return $backupInfo;
         }
 
@@ -137,11 +137,11 @@ class BackupService
             $backupInfo['backup_path'] = $backupPath;
             $backupInfo['backed_up'] = true;
 
-            $this->command->info("📦 Backed up {$fileType}: {$modelName} → " . basename($backupPath));
+            $this->command->info("📦 Backed up {$fileType}: {$modelName} → ".basename($backupPath));
 
         } catch (\Exception $e) {
             $backupInfo['error'] = $e->getMessage();
-            $this->command->warn("⚠️ Failed to backup {$fileType} for {$modelName}: " . $e->getMessage());
+            $this->command->warn("⚠️ Failed to backup {$fileType} for {$modelName}: ".$e->getMessage());
         }
 
         return $backupInfo;
@@ -158,7 +158,7 @@ class BackupService
             default => "{$this->currentSessionPath}/{$fileType}"
         };
 
-        return "{$backupDir}/" . basename($originalPath);
+        return "{$backupDir}/".basename($originalPath);
     }
 
     /**
@@ -170,7 +170,7 @@ class BackupService
         $routesPath = $isApi ? base_path('routes/api.php') : base_path('routes/web.php');
         $routeFileName = $isApi ? 'api.php' : 'web.php';
 
-        if (!File::exists($routesPath)) {
+        if (! File::exists($routesPath)) {
             return null;
         }
 
@@ -197,7 +197,7 @@ class BackupService
      */
     public function getLatestBackupPath(): ?string
     {
-        if (!File::exists($this->backupPath)) {
+        if (! File::exists($this->backupPath)) {
             return null;
         }
 
@@ -208,7 +208,7 @@ class BackupService
         }
 
         // Sort by timestamp (latest first)
-        usort($directories, fn($a, $b) => basename($b) <=> basename($a));
+        usort($directories, fn ($a, $b) => basename($b) <=> basename($a));
 
         return $directories[0];
     }
@@ -220,20 +220,20 @@ class BackupService
     {
         $backupPath = $backupPath ?? $this->getLatestBackupPath();
 
-        if (!$backupPath) {
+        if (! $backupPath) {
             return null;
         }
 
         $manifestPath = "{$backupPath}/backup_manifest.json";
 
-        if (!File::exists($manifestPath)) {
+        if (! File::exists($manifestPath)) {
             return null;
         }
 
         try {
             return json_decode(File::get($manifestPath), true);
         } catch (\Exception $e) {
-            $this->command->warn('⚠️ Failed to load backup manifest: ' . $e->getMessage());
+            $this->command->warn('⚠️ Failed to load backup manifest: '.$e->getMessage());
 
             return null;
         }
@@ -244,7 +244,7 @@ class BackupService
      */
     public function listBackups(): array
     {
-        if (!File::exists($this->backupPath)) {
+        if (! File::exists($this->backupPath)) {
             return [];
         }
 
@@ -272,7 +272,7 @@ class BackupService
         }
 
         // Sort by timestamp (latest first)
-        usort($backups, fn($a, $b) => $b['timestamp'] <=> $a['timestamp']);
+        usort($backups, fn ($a, $b) => $b['timestamp'] <=> $a['timestamp']);
 
         return $backups;
     }
@@ -335,7 +335,7 @@ class BackupService
                 $deletedCount++;
                 $this->command->info("🗑️ Deleted old backup: {$backup['timestamp']}");
             } catch (\Exception $e) {
-                $this->command->warn("⚠️ Failed to delete backup {$backup['timestamp']}: " . $e->getMessage());
+                $this->command->warn("⚠️ Failed to delete backup {$backup['timestamp']}: ".$e->getMessage());
             }
         }
 

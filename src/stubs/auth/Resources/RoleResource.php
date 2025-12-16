@@ -1,0 +1,44 @@
+<?php
+
+namespace App\Http\Resources;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class RoleResource extends JsonResource
+{
+    /**
+     * Transform the resource into an array.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(Request $request): array
+    {
+        $canAssignPermission = false;
+
+        if ($this->slug !== 'developer') {
+            $user = auth()->user();
+
+            if ($user) {
+                if ($user->hasRole('developer')) {
+                    $canAssignPermission = true;
+                } elseif (! $user->hasRole($this->name) && $user->can('assign-permission')) {
+                    $canAssignPermission = true;
+                }
+            }
+        }
+
+        return [
+            'id' => $this->id,
+            'slug' => $this->slug,
+            'name' => $this->name,
+            'guard_name' => $this->guard_name,
+            'permission_count' => $this->permissions_count,
+            'user_count' => $this->users_count,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+            'deletable' => ! in_array($this->name, ['super-admin', 'admin']) && ! $this->users_count,
+            'can_assign_permission' => $canAssignPermission,
+        ];
+    }
+}

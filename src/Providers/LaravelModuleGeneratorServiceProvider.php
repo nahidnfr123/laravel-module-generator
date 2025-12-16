@@ -14,7 +14,7 @@ class LaravelModuleGeneratorServiceProvider extends ServiceProvider
 {
     public function register()
     {
-        $this->mergeConfigFrom(__DIR__ . '/../config/module-generator.php', 'module-generator');
+        $this->mergeConfigFrom(__DIR__.'/../config/module-generator.php', 'module-generator');
     }
 
     public function boot()
@@ -31,18 +31,18 @@ class LaravelModuleGeneratorServiceProvider extends ServiceProvider
 
             // Publish stubs separately
             $this->publishes([
-                __DIR__ . '/../stubs' => base_path('module/stubs'),
+                __DIR__.'/../stubs' => base_path('module/stubs'),
             ], 'module-generator-stubs');
 
             // Publish config separately
             $this->publishes([
-                __DIR__ . '/../config/module-generator.php' => config_path('module-generator.php'),
+                __DIR__.'/../config/module-generator.php' => config_path('module-generator.php'),
             ], 'module-generator-config');
 
             // Publish both together with general tag
             $this->publishes([
-                __DIR__ . '/../stubs' => base_path('module/stubs'),
-                __DIR__ . '/../config/module-generator.php' => config_path('module-generator.php'),
+                __DIR__.'/../stubs' => base_path('module/stubs'),
+                __DIR__.'/../config/module-generator.php' => config_path('module-generator.php'),
             ], 'module-generator');
         }
     }

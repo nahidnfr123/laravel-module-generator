@@ -3,24 +3,23 @@
 namespace NahidFerdous\LaravelModuleGenerator\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Str;
-use Symfony\Component\Yaml\Yaml;
 
 class GenerateAuthModule extends Command
-{{
-    protected $signature = 'auth:generate 
+{
+    protected $signature = 'auth:generate
                             {--force : Overwrite existing files without confirmation}
                             {--skip-roles : Skip roles and permissions setup}';
 
     protected $description = 'Generate authentication, user management, and optionally roles & permissions';
 
     protected $basePath;
+
     protected $packageStubPath;
 
     public function __construct()
     {
         parent::__construct();
-        $this->packageStubPath = __DIR__ . '/../../stubs/auth';
+        $this->packageStubPath = __DIR__.'/../../stubs/auth';
     }
 
     public function handle()
@@ -31,7 +30,7 @@ class GenerateAuthModule extends Command
         $this->newLine();
 
         // Ask about roles and permissions
-        $includeRoles = !$this->option('skip-roles') &&
+        $includeRoles = ! $this->option('skip-roles') &&
             $this->confirm('Do you want to add roles and permissions management?', true);
 
         // Copy Authentication files
@@ -144,26 +143,28 @@ class GenerateAuthModule extends Command
     protected function copyFiles(array $files, string $component)
     {
         foreach ($files as $source => $destination) {
-            $sourcePath = $this->packageStubPath . '/' . $source;
-            $destinationPath = $this->basePath . '/' . $destination;
+            $sourcePath = $this->packageStubPath.'/'.$source;
+            $destinationPath = $this->basePath.'/'.$destination;
 
             // Check if source exists in package
-            if (!File::exists($sourcePath)) {
+            if (! File::exists($sourcePath)) {
                 $this->warn("⚠️  Source file not found: {$source}");
+
                 continue;
             }
 
             // Check if destination already exists
-            if (File::exists($destinationPath) && !$this->option('force')) {
-                if (!$this->confirm("File already exists: {$destination}. Do you want to replace it?", false)) {
+            if (File::exists($destinationPath) && ! $this->option('force')) {
+                if (! $this->confirm("File already exists: {$destination}. Do you want to replace it?", false)) {
                     $this->line("⏭️  Skipped: {$destination}");
+
                     continue;
                 }
             }
 
             // Create directory if it doesn't exist
             $directory = dirname($destinationPath);
-            if (!File::isDirectory($directory)) {
+            if (! File::isDirectory($directory)) {
                 File::makeDirectory($directory, 0755, true);
             }
 
@@ -183,6 +184,7 @@ class GenerateAuthModule extends Command
         // Check if package is already installed
         if (isset($composerJson['require']['spatie/laravel-permission'])) {
             $this->line('✅ Spatie Laravel Permission already installed');
+
             return;
         }
 
@@ -197,7 +199,7 @@ class GenerateAuthModule extends Command
             // Publish config and migrations
             $this->info('Publishing Spatie configuration and migrations...');
             Artisan::call('vendor:publish', [
-                '--provider' => 'Spatie\Permission\PermissionServiceProvider'
+                '--provider' => 'Spatie\Permission\PermissionServiceProvider',
             ]);
             $this->line('✅ Spatie files published');
 
