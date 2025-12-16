@@ -80,6 +80,7 @@ class GenerateAuthModule extends Command
 
         $files = [
             'Middleware/Cors.php' => 'app/Http/Middleware/Cors.php',
+            'Exceptions/ExceptionHandler.php' => 'app/Exceptions/ExceptionHandler.php',
             'Traits/ApiResponseTrait.php' => 'app/Traits/ApiResponseTrait.php',
             'Traits/HandlesPagination.php' => 'app/Traits/HandlesPagination.php',
             'Traits/HasSlugModelBinding.php' => 'app/Traits/HasSlugModelBinding.php',

@@ -1,0 +1,111 @@
+<?php
+
+namespace App\Exceptions;
+
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\UnauthorizedException;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Throwable;
+
+class ExceptionHandler
+{
+    /**
+     * Register Shield exception handlers
+     */
+    public static function handle(Exceptions $exceptions): void
+    {
+        // 404 - Not Found (Route)
+        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return self::failureResponse('Resource not found', 404);
+            }
+
+            return response()->view('errors.error', ['error' => $e], 404);
+        });
+
+        // 404 - Model Not Found
+        $exceptions->render(function (ModelNotFoundException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return self::failureResponse('Resource not found', 404);
+            }
+
+            return response()->view('errors.error', ['error' => $e], 404);
+        });
+
+        // 401 - Unauthenticated
+        $exceptions->render(function (AuthenticationException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return self::failureResponse('Unauthenticated', 401);
+            }
+
+            return response()->view('errors.error', ['error' => $e], 401);
+        });
+
+        // 403 - Access Denied (Abilities/Scopes)
+        $exceptions->render(function (AccessDeniedHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return self::failureResponse(
+                    'Unauthorized action. You do not have the required permissions.',
+                    403
+                );
+            }
+
+            return response()->view('errors.error', ['error' => $e], 403);
+        });
+
+        // 403 - Unauthorized
+        $exceptions->render(function (UnauthorizedException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return self::failureResponse('Unauthorized action.', 403);
+            }
+
+            return response()->view('errors.error', ['error' => $e], 403);
+        });
+
+        // 422 - Validation Errors
+        $exceptions->render(function (ValidationException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $e->errors(),
+                    'message' => $e->getMessage(),
+                    'status' => 422,
+                ], 422);
+            }
+
+            return redirect()->back()->withErrors($e->errors());
+        });
+
+        // Log all exceptions with full context
+        $exceptions->reportable(function (Throwable $e) {
+            if (! function_exists('request') || app()->runningInConsole()) {
+                return;
+            }
+            $request = request();
+            Log::error("Uncaught exception: {$e->getMessage()}", [
+                'exception' => $e,
+                'method' => $request->method(),
+                'url' => $request->fullUrl(),
+                'path' => $request->path(),
+            ]);
+        });
+    }
+
+    /**
+     * Helper method for consistent failure responses
+     */
+    protected static function failureResponse(string $message, int $status = 400): \Illuminate\Http\JsonResponse
+    {
+        return response()->json([
+            'success' => false,
+            'message' => $message,
+            'status' => $status,
+        ], $status);
+    }
+}
