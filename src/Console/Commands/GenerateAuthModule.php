@@ -269,10 +269,21 @@ class GenerateAuthModule extends Command
 
         // Publish config + migrations
         $this->info('Publishing Spatie config and migrations...');
-        Artisan::call('vendor:publish', [
-            '--provider' => 'Spatie\Permission\PermissionServiceProvider',
-            '--force' => true,
-        ], $this->getOutput());
+
+        exec(
+            'php artisan vendor:publish --provider="Spatie\Permission\PermissionServiceProvider" --force 2>&1',
+            $output,
+            $exitCode
+        );
+
+        if ($exitCode !== 0) {
+            $this->error('❌ Failed to publish Spatie resources');
+            $this->line(implode("\n", $output));
+            return;
+        }
+
+        $this->info('✅ Spatie config and migrations published');
+
 
         // Clear caches
         $this->info('Clearing caches...');
