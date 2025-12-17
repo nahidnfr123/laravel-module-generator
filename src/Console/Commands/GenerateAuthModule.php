@@ -101,10 +101,6 @@ class GenerateAuthModule extends Command
             'Traits/HasSlug/SlugOptions' => 'app/Traits/HasSlug/SlugOptions.php',
             'Traits/HasSlug/Exceptions/InvalidOption' => 'app/Traits/HasSlug/Exceptions/InvalidOption.php',
 
-            ...($includeEmailVerification ?
-                ['Controllers/AuthController-EmailVerification' => 'app/Http/Controllers/AuthController.php',] :
-                ['Controllers/AuthController' => 'app/Http/Controllers/AuthController.php',]),
-
             'Services/AuthService' => 'app/Services/AuthService.php',
             'Services/Auth/PasswordService' => 'app/Services/Auth/PasswordService.php',
 
@@ -115,7 +111,13 @@ class GenerateAuthModule extends Command
 
             'resources/views/emails/reset_password_mail.blade' => 'resources/views/emails/reset_password_mail.blade.php',
 
-            'routes/auth' => 'routes/api/auth.php',
+            ...($includeEmailVerification ? [
+                'Controllers/AuthController-ev' => 'app/Http/Controllers/AuthController.php',
+                'routes/auth-ev' => 'routes/api/auth.php',
+            ] : [
+                'Controllers/AuthController' => 'app/Http/Controllers/AuthController.php',
+                'routes/auth' => 'routes/api/auth.php'
+            ]),
 
             'Mail/PasswordResetEmail' => 'app/Mail/PasswordResetEmail.php',
             'Mail/UserAccountCreateMail' => 'app/Mail/UserAccountCreateMail.php',
@@ -180,8 +182,8 @@ class GenerateAuthModule extends Command
 
             'routes/access-control' => 'routes/api/access-control.php',
 
-            'Models/Role' => 'App/Models/Role.php',
-            'Models/Permission' => 'App/Models/Permission.php',
+            'Models/Role' => 'app/Models/Role.php',
+            'Models/Permission' => 'app/Models/Permission.php',
         ];
 
         $this->copyFiles($files, 'Roles & Permissions');
