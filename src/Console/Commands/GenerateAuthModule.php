@@ -114,6 +114,7 @@ class GenerateAuthModule extends Command
             'Services/UserService.php' => 'app/Services/UserService.php',
             'Requests/StoreUserRequest.php' => 'app/Http/Requests/User/StoreUserRequest.php',
             'Requests/UpdateUserRequest.php' => 'app/Http/Requests/User/UpdateUserRequest.php',
+            'Requests/ChangePasswordRequest.php' => 'app/Http/Requests/User/ChangePasswordRequest.php',
             'Resources/UserResource.php' => 'app/Http/Resources/UserResource.php',
             'Resources/UserCollection.php' => 'app/Http/Resources/UserCollection.php',
         ];
@@ -141,6 +142,8 @@ class GenerateAuthModule extends Command
             'Resources/PermissionCollection.php' => 'app/Http/Resources/PermissionCollection.php',
             'config/permission.php' => 'config/permission.php',
             'routes/access-control.php' => 'routes/api/access-control.php',
+            'Models/Role.php' => 'App/Models/Role.php',
+            'Models/Permission.php' => 'App/Models/Permission.php',
         ];
 
         $this->copyFiles($files, 'Roles & Permissions');
