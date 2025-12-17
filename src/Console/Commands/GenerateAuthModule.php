@@ -98,6 +98,7 @@ class GenerateAuthModule extends Command
             'Requests/ResetPasswordRequest.php' => 'app/Http/Requests/Auth/ResetPasswordRequest.php',
             'resources/views/emails/reset_password_mail.blade.php' => 'resources/views/emails/reset_password_mail.blade.php',
             'resources/views/emails/verify_email_mail.blade.php' => 'resources/views/emails/verify_email_mail.blade.php',
+            'Mail/VerifyEmailMail.php' => 'app/Mail/VerifyEmailMail.php',
             'routes/auth.php' => 'routes/api/auth.php',
         ];
 
