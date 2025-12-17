@@ -24,7 +24,7 @@ class GenerateAuthModule extends Command
     public function __construct()
     {
         parent::__construct();
-        $this->packageStubPath = __DIR__.'/../../stubs/auth';
+        $this->packageStubPath = __DIR__.'/../../AuthModule';
     }
 
     /**
