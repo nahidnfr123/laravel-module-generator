@@ -235,37 +235,50 @@ class GenerateAuthModule extends Command
         $this->info('📦 Installing and configuring Spatie Laravel Permission package...');
 
         $composerJsonPath = base_path('composer.json');
-        $composerJson = json_decode(File::get($composerJsonPath), true, 512, JSON_THROW_ON_ERROR);
+        $composerJson = json_decode(File::get($composerJsonPath), true);
 
-        if (isset($composerJson['require']['spatie/laravel-permission'])) {
-            $this->line('✅ Spatie Laravel Permission already installed');
-        } else {
+        $freshInstall = false;
+
+        if (!isset($composerJson['require']['spatie/laravel-permission'])) {
             $this->info('Running: composer require spatie/laravel-permission');
-            $this->line('Please wait...');
-
             exec('composer require spatie/laravel-permission 2>&1', $output, $returnCode);
 
-            if ($returnCode === 0) {
-                $this->info('✅ Spatie Laravel Permission installed successfully');
-            } else {
+            if ($returnCode !== 0) {
                 $this->error('❌ Failed to install Spatie Laravel Permission');
                 $this->warn('Please run manually: composer require spatie/laravel-permission');
-
                 return;
             }
+
+            $freshInstall = true;
+            $this->info('✅ Spatie Laravel Permission installed');
+        } else {
+            $this->line('✅ Spatie Laravel Permission already installed');
         }
 
-        // Publish config and migrations
-        $this->info('Publishing Spatie configuration and migrations...');
+        /**
+         * 🔴 THIS IS THE MISSING PART 🔴
+         * Laravel must rediscover providers
+         */
+        if ($freshInstall) {
+            $this->info('Refreshing Composer autoload...');
+            exec('composer dump-autoload 2>&1');
+
+            $this->info('Running package discovery...');
+            Artisan::call('package:discover', [], $this->getOutput());
+        }
+
+        // Publish config + migrations
+        $this->info('Publishing Spatie config and migrations...');
         Artisan::call('vendor:publish', [
             '--provider' => 'Spatie\Permission\PermissionServiceProvider',
-        ]);
-        $this->line('✅ Spatie files published');
+            '--force' => true,
+        ], $this->getOutput());
 
-        // Clear optimization cache
-        $this->info('Clearing optimization cache...');
-        Artisan::call('optimize:clear');
-        $this->line('✅ Cache cleared');
+        // Clear caches
+        $this->info('Clearing caches...');
+        Artisan::call('optimize:clear', [], $this->getOutput());
+
+        $this->info('✅ Spatie Permission fully configured');
     }
 
     /**
