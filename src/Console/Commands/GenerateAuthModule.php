@@ -69,9 +69,6 @@ class GenerateAuthModule extends Command
         // Update bootstrap/app.php
         $this->updateBootstrapApp($includeRoles);
 
-        // Update composer.json to autoload helpers
-        $this->updateComposerJson();
-
         $this->newLine();
         $this->info('✅ Authentication system generated successfully!');
         $this->newLine();
