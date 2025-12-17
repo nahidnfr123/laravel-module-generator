@@ -24,7 +24,7 @@ class GenerateAuthModule extends Command
     public function __construct()
     {
         parent::__construct();
-        $this->packageStubPath = __DIR__ . '/../../AuthModule';
+        $this->packageStubPath = __DIR__ . '/../../_stubs/AuthModule';
     }
 
     /**
@@ -86,20 +86,7 @@ class GenerateAuthModule extends Command
         $this->info('📝 Generating Authentication files...');
 
         $files = [
-            'Helpers/FileManager' => 'app/Helpers/FileManager.php',
-            'Helpers/GeneralHelper' => 'app/Helpers/GeneralHelper.php',
-
             'Middleware/Cors' => 'app/Http/Middleware/Cors.php',
-
-            'Exceptions/ExceptionHandler' => 'app/Exceptions/ExceptionHandler.php',
-
-            'Traits/MetaResponseTrait' => 'app/Traits/MetaResponseTrait.php',
-            'Traits/ApiResponseTrait' => 'app/Traits/ApiResponseTrait.php',
-            'Traits/HandlesPagination' => 'app/Traits/HandlesPagination.php',
-            'Traits/HasSlugModelBinding' => 'app/Traits/HasSlugModelBinding.php',
-            'Traits/HasSlug/HasSlug' => 'app/Traits/HasSlug/HasSlug.php',
-            'Traits/HasSlug/SlugOptions' => 'app/Traits/HasSlug/SlugOptions.php',
-            'Traits/HasSlug/Exceptions/InvalidOption' => 'app/Traits/HasSlug/Exceptions/InvalidOption.php',
 
             'Services/AuthService' => 'app/Services/AuthService.php',
             'Services/Auth/PasswordService' => 'app/Services/Auth/PasswordService.php',
@@ -294,71 +281,6 @@ class GenerateAuthModule extends Command
         $this->info('✅ Spatie Permission fully configured');
     }
 
-    /**
-     * Update composer.json to autoload helper files
-     *
-     * @throws FileNotFoundException
-     * @throws \JsonException
-     */
-    protected function updateComposerJson(): void
-    {
-        $this->info('📝 Updating composer.json to autoload helpers...');
-
-        $composerJsonPath = base_path('composer.json');
-
-        if (!File::exists($composerJsonPath)) {
-            $this->warn('⚠️  composer.json not found');
-            return;
-        }
-
-        $composerJson = json_decode(File::get($composerJsonPath), true, 512, JSON_THROW_ON_ERROR);
-        $modified = false;
-
-        // Initialize autoload.files array if it doesn't exist
-        if (!isset($composerJson['autoload']['files'])) {
-            $composerJson['autoload']['files'] = [];
-        }
-
-        // Helper files to add
-        $helperFiles = [
-            'app/Helpers/GeneralHelper.php',
-            'app/Helpers/FileManager.php',
-        ];
-
-        // Add helper files if they don't already exist
-        foreach ($helperFiles as $file) {
-            if (!in_array($file, $composerJson['autoload']['files'], true)) {
-                $composerJson['autoload']['files'][] = $file;
-                $modified = true;
-                $this->line("✅ Added {$file} to autoload files");
-            } else {
-                $this->line("ℹ️  {$file} already in autoload files");
-            }
-        }
-
-        if ($modified) {
-            // Write back to composer.json with pretty print
-            File::put(
-                $composerJsonPath,
-                json_encode($composerJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n"
-            );
-            $this->info('✅ composer.json updated successfully');
-
-            // Run composer dump-autoload
-            $this->info('Running composer dump-autoload...');
-            exec('composer dump-autoload 2>&1', $output, $returnCode);
-
-            if ($returnCode === 0) {
-                $this->info('✅ Autoload files regenerated');
-            } else {
-                $this->warn('⚠️  Failed to run composer dump-autoload automatically');
-                $this->warn('Please run manually: composer dump-autoload');
-            }
-        } else {
-            $this->line('ℹ️  composer.json already up to date');
-        }
-    }
-
     protected function updateUserModel(bool $includeRoles, bool $includeEmailVerification): void
     {
         $userModelPath = app_path('Models/User.php');
@@ -519,24 +441,6 @@ class GenerateAuthModule extends Command
                 "->withMiddleware(function (Middleware \$middleware): void {{$updatedMiddlewareContent}\n    })",
                 $content
             );
-        }
-
-        // Handle withExceptions section
-        if (preg_match('/->withExceptions\(function\s*\(Exceptions\s+\$exceptions\)\s*:\s*void\s*\{(.*?)\}\)/s', $content, $matches)) {
-            $exceptionsContent = $matches[1];
-
-            // Check if an exception handler already exists
-            if (!str_contains($exceptionsContent, 'ExceptionHandler::handle')) {
-                $updatedExceptionsContent = "\n        App\Exceptions\ExceptionHandler::handle(\$exceptions);";
-
-                $content = preg_replace(
-                    '/->withExceptions\(function\s*\(Exceptions\s+\$exceptions\)\s*:\s*void\s*\{.*?\}\)/s',
-                    "->withExceptions(function (Exceptions \$exceptions): void {{$updatedExceptionsContent}\n    })",
-                    $content
-                );
-                $modified = true;
-                $this->line('✅ Added exception handler');
-            }
         }
 
         if ($modified) {

@@ -4,6 +4,10 @@ namespace NahidFerdous\LaravelModuleGenerator\Console\Commands;
 
 use Illuminate\Console\Command;
 use Symfony\Component\Yaml\Yaml;
+use Illuminate\Contracts\Filesystem\FileNotFoundException;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
+use Symfony\Component\Console\Exception\CommandNotFoundException;
 
 class Install extends Command
 {
@@ -21,17 +25,22 @@ class Install extends Command
      */
     protected $description = 'Install the Laravel Module Generator package and optionally generate the Auth Module';
 
+    protected $basePath;
+
     /**
      * Execute the console command.
      *
      * @return int
+     * @throws \JsonException
      */
     public function handle()
     {
+        $this->basePath = base_path();
+
         // ✅ Auto-create models.yaml if not exists
         $this->ensureModelsYamlExists();
-        $this->generateApiTraits();
-        $this->generateMetaTrait();
+        $this->copyDefaultFiles();
+        $this->updateComposerJson();
 
         //        $authConfirm = $this->ask('Would you like to generate the Auth Module with login, register, forget-password, reset-password, profile? (yes/no)', 'no');
         //        if (strtolower($authConfirm) === 'yes') {
@@ -48,110 +57,26 @@ class Install extends Command
         //        }
     }
 
-    protected function generateApiTraits(): void
+    protected function copyDefaultFiles(): void
     {
-        $directory = app_path('Traits');
-        $filePath = $directory.'/ApiResponseTrait.php';
+        $this->info('Generating Traits...');
 
-        // Ensure the Traits directory exists
-        if (! file_exists($directory) && ! mkdir($directory, 0755, true) && ! is_dir($directory)) {
-            throw new \RuntimeException(sprintf('Directory "%s" was not created', $directory));
-        }
+        $files = [
+            'Traits/MetaResponseTrait' => 'app/Traits/MetaResponseTrait.php',
+            'Traits/ApiResponseTrait' => 'app/Traits/ApiResponseTrait.php',
+            'Traits/HandlesPagination' => 'app/Traits/HandlesPagination.php',
+            'Traits/HasSlugModelBinding' => 'app/Traits/HasSlugModelBinding.php',
+            'Traits/HasSlug/HasSlug' => 'app/Traits/HasSlug/HasSlug.php',
+            'Traits/HasSlug/SlugOptions' => 'app/Traits/HasSlug/SlugOptions.php',
+            'Traits/HasSlug/Exceptions/InvalidOption' => 'app/Traits/HasSlug/Exceptions/InvalidOption.php',
 
-        // Create the trait file if it doesn't exist
-        if (! file_exists($filePath)) {
-            $content = <<<PHP
-<?php
+            'Exceptions/ExceptionHandler' => 'app/Exceptions/ExceptionHandler.php',
 
-namespace App\Traits;
-
-trait ApiResponseTrait
-{
-    protected function success(\$message, \$data = null, \$status = 200): \\Illuminate\\Http\\JsonResponse
-    {
-        return response()->json([
-            'success' => true,
-            'data' => \$data,
-            'message' => \$message,
-        ], \$status);
-    }
-
-    protected function failure(\$message, \$status = 400, \$errors = null): \\Illuminate\\Http\\JsonResponse
-    {
-        \$response = [
-            'success' => false,
-            'message' => \$message,
+            'Helpers/FileManager' => 'app/Helpers/FileManager.php',
+            'Helpers/GeneralHelper' => 'app/Helpers/GeneralHelper.php',
         ];
-        if (\$errors) {
-            if (is_array(\$errors)) {
-                \$response['errors'] = \$errors;
-            } elseif (is_string(\$errors)) {
-                \$response['error'] = \$errors;
-            } else {
-                \$response['error'] = 'An unexpected error occurred.';
-            }
-        }
 
-        return response()->json(\$response, \$status);
-    }
-}
-PHP;
-
-            file_put_contents($filePath, $content);
-        }
-    }
-
-    protected function generateMetaTrait(): void
-    {
-        $directory = app_path('Traits');
-        $filePath = $directory.'/MetaResponseTrait.php';
-
-        // Ensure the Traits directory exists
-        if (! file_exists($directory) && ! mkdir($directory, 0755, true) && ! is_dir($directory)) {
-            throw new \RuntimeException(sprintf('Directory "%s" was not created', $directory));
-        }
-
-        // Create the trait file if it doesn't exist
-        if (! file_exists($filePath)) {
-            $content = <<<PHP
-<?php
-
-namespace App\Traits;
-
-use Illuminate\Pagination\LengthAwarePaginator;
-
-trait MetaResponseTrait
-{
-    /**
-     * Generate meta information for the resource collection.
-     *
-     * @return array<int|string, mixed>
-     */
-    protected function generateMeta(): array
-    {
-        if (\$this->resource instanceof LengthAwarePaginator) {
-            return [
-                'first_page_url' => \$this->url(1),
-                'prev_page_url' => \$this->previousPageUrl(),
-                'next_page_url' => \$this->nextPageUrl(),
-                'last_page_url' => \$this->url(\$this->lastPage()),
-                'path' => \$this->path(),
-                'current_page' => \$this->currentPage(),
-                'last_page' => \$this->lastPage(),
-                'from' => \$this->firstItem(),
-                'to' => \$this->lastItem(),
-                'per_page' => \$this->perPage(),
-                'total' => \$this->total(),
-            ];
-        }
-
-        return [];
-    }
-}
-PHP;
-
-            file_put_contents($filePath, $content);
-        }
+        $this->copyFiles($files, __DIR__ . '/../../stubs');
     }
 
     protected function ensureModelsYamlExists(): void
@@ -159,11 +84,11 @@ PHP;
         $path = config('module-generator.models_path');
         $directory = dirname($path); // get the directory portion of the path
 
-        if (! file_exists($directory) && ! mkdir($directory, 0755, true) && ! is_dir($directory)) {
+        if (!file_exists($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
             throw new \RuntimeException(sprintf('Directory "%s" was not created', $directory));
         }
 
-        if (! file_exists($path)) {
+        if (!file_exists($path)) {
             file_put_contents($path, <<<'YAML'
 # This file is auto-generated by LaravelModuleGenerator
 # Define your models here. Example:
@@ -186,6 +111,153 @@ User:
 
 YAML
             );
+        }
+    }
+
+    protected function copyFiles(array $files, string $path): void
+    {
+        foreach ($files as $source => $destination) {
+            // Determine source extension based on file type
+            $sourceExtension = '.stub';
+
+            // For blade files, the stub should have .blade.stub extension
+            if (str_ends_with($destination, '.blade.php')) {
+                $sourcePath = $path . '/' . $source . '.stub';
+            } else {
+                $sourcePath = $path . '/' . $source . '.stub';
+            }
+
+            $destinationPath = $this->basePath . '/' . $destination;
+
+            if (!File::exists($sourcePath)) {
+                $this->warn("⚠️  Source file not found: {$sourcePath}");
+
+                continue;
+            }
+
+            if (File::exists($destinationPath) && !$this->option('force')) {
+                if (!$this->confirm("File already exists: {$destination}. Do you want to replace it?", false)) {
+                    $this->line("⏭️  Skipped: {$destination}");
+
+                    continue;
+                }
+            }
+
+            $directory = dirname($destinationPath);
+            if (!File::isDirectory($directory)) {
+                File::makeDirectory($directory, 0755, true);
+            }
+
+            File::copy($sourcePath, $destinationPath);
+            $this->line("✅ Created: {$destination}");
+        }
+    }
+
+
+    protected function updateBootstrapApp(bool $includeRoles): void
+    {
+        $bootstrapPath = base_path('bootstrap/app.php');
+
+        if (!File::exists($bootstrapPath)) {
+            $this->warn('⚠️  bootstrap/app.php not found');
+
+            return;
+        }
+
+        $this->info('📝 Updating bootstrap/app.php...');
+
+        $content = File::get($bootstrapPath);
+        $modified = false;
+
+        // Handle withExceptions section
+        if (preg_match('/->withExceptions\(function\s*\(Exceptions\s+\$exceptions\)\s*:\s*void\s*\{(.*?)\}\)/s', $content, $matches)) {
+            $exceptionsContent = $matches[1];
+
+            // Check if an exception handler already exists
+            if (!str_contains($exceptionsContent, 'ExceptionHandler::handle')) {
+                $updatedExceptionsContent = "\n        App\Exceptions\ExceptionHandler::handle(\$exceptions);";
+
+                $content = preg_replace(
+                    '/->withExceptions\(function\s*\(Exceptions\s+\$exceptions\)\s*:\s*void\s*\{.*?\}\)/s',
+                    "->withExceptions(function (Exceptions \$exceptions): void {{$updatedExceptionsContent}\n    })",
+                    $content
+                );
+                $modified = true;
+                $this->line('✅ Added exception handler');
+            }
+        }
+
+        if ($modified) {
+            File::put($bootstrapPath, $content);
+            $this->info('✅ bootstrap/app.php updated successfully');
+        } else {
+            $this->line('ℹ️  bootstrap/app.php already up to date');
+        }
+    }
+
+
+    /**
+     * Update composer.json to autoload helper files
+     *
+     * @throws FileNotFoundException
+     * @throws \JsonException
+     */
+    protected function updateComposerJson(): void
+    {
+        $this->info('📝 Updating composer.json to autoload helpers...');
+
+        $composerJsonPath = base_path('composer.json');
+
+        if (!File::exists($composerJsonPath)) {
+            $this->warn('⚠️  composer.json not found');
+            return;
+        }
+
+        $composerJson = json_decode(File::get($composerJsonPath), true, 512, JSON_THROW_ON_ERROR);
+        $modified = false;
+
+        // Initialize autoload.files array if it doesn't exist
+        if (!isset($composerJson['autoload']['files'])) {
+            $composerJson['autoload']['files'] = [];
+        }
+
+        // Helper files to add
+        $helperFiles = [
+            'app/Helpers/GeneralHelper.php',
+            'app/Helpers/FileManager.php',
+        ];
+
+        // Add helper files if they don't already exist
+        foreach ($helperFiles as $file) {
+            if (!in_array($file, $composerJson['autoload']['files'], true)) {
+                $composerJson['autoload']['files'][] = $file;
+                $modified = true;
+                $this->line("✅ Added {$file} to autoload files");
+            } else {
+                $this->line("ℹ️  {$file} already in autoload files");
+            }
+        }
+
+        if ($modified) {
+            // Write back to composer.json with pretty print
+            File::put(
+                $composerJsonPath,
+                json_encode($composerJson, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n"
+            );
+            $this->info('✅ composer.json updated successfully');
+
+            // Run composer dump-autoload
+            $this->info('Running composer dump-autoload...');
+            exec('composer dump-autoload 2>&1', $output, $returnCode);
+
+            if ($returnCode === 0) {
+                $this->info('✅ Autoload files regenerated');
+            } else {
+                $this->warn('⚠️  Failed to run composer dump-autoload automatically');
+                $this->warn('Please run manually: composer dump-autoload');
+            }
+        } else {
+            $this->line('ℹ️  composer.json already up to date');
         }
     }
 }

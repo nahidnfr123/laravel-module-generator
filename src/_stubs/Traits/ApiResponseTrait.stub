@@ -12,8 +12,6 @@ trait ApiResponseTrait
             'success' => true,
             'message' => $message,
             'data' => $data,
-            //            'user_time' => Carbon::now()->format('Y-m-d H:i:s'),
-            //            'server_time' => now(),
         ], $status);
     }
 
@@ -22,13 +20,10 @@ trait ApiResponseTrait
      *
      * @param  true  $reportError  - if the caller has already logged the error they can request that it not be re-reported here
      */
-    protected function failure($message, $status = 400, $errors = null, bool $reportError = true, $flag = null): \Illuminate\Http\JsonResponse
+    protected function failure($message, $status = 400, $errors = null, bool $reportError = true): \Illuminate\Http\JsonResponse
     {
         $code = (int) $status;
         $code = ($code >= 100 && $code <= 599) ? $code : 400;
-        // Ensure every error is logged. If for some reason we're unable to process $message or $errors
-        // ensure *something* is logged so we know an error occurred. The caller can request that the error
-        // not be reported here if they've already logged the error in their local scope.
         if ($reportError) {
             try {
                 Log::error('Error: '.$message.' with additional information: '.$errors);
@@ -50,9 +45,6 @@ trait ApiResponseTrait
             } else {
                 $response['error'] = $errors;
             }
-        }
-        if ($flag) {
-            $response['flag'] = $flag;
         }
 
         return response()->json($response, $code);
