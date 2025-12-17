@@ -98,7 +98,7 @@ class GenerateAuthModule extends Command
             'Requests/ResetPasswordRequest.php' => 'app/Http/Requests/Auth/ResetPasswordRequest.php',
             'resources/views/emails/reset_password_mail.blade.php' => 'resources/views/emails/reset_password_mail.blade.php',
             'resources/views/emails/verify_email_mail.blade.php' => 'resources/views/emails/verify_email_mail.blade.php',
-            'routes/auth.php' => 'routes/auth.php',
+            'routes/auth.php' => 'routes/api/auth.php',
         ];
 
         $this->copyFiles($files, 'Authentication');
@@ -139,6 +139,7 @@ class GenerateAuthModule extends Command
             'Resources/PermissionResource.php' => 'app/Http/Resources/PermissionResource.php',
             'Resources/PermissionCollection.php' => 'app/Http/Resources/PermissionCollection.php',
             'config/permission.php' => 'config/permission.php',
+            'routes/access-control.php' => 'routes/api/access-control.php',
         ];
 
         $this->copyFiles($files, 'Roles & Permissions');
@@ -301,46 +302,46 @@ class GenerateAuthModule extends Command
         $content = File::get($bootstrapPath);
         $modified = false;
 
-        // Add Cors middleware import if not exists
-        if (! str_contains($content, 'use App\Http\Middleware\Cors;')) {
-            $content = preg_replace(
-                '/<\?php/',
-                "<?php\n\nuse App\Http\Middleware\Cors;",
-                $content,
-                1
-            );
-            $modified = true;
-        }
+//        // Add Cors middleware import if not exists
+//        if (! str_contains($content, 'use App\Http\Middleware\Cors;')) {
+//            $content = preg_replace(
+//                '/<\?php/',
+//                "<?php\n\nuse App\Http\Middleware\Cors;",
+//                $content,
+//                1
+//            );
+//            $modified = true;
+//        }
 
-        // Add Spatie middleware imports if roles are enabled
-        if ($includeRoles && ! str_contains($content, 'use Spatie\Permission\Middleware')) {
-            $lastUsePos = strrpos($content, 'use ');
-            if ($lastUsePos !== false) {
-                $endOfLine = strpos($content, ';', $lastUsePos);
-                $content = substr_replace(
-                    $content,
-                    ";\nuse Spatie\Permission\Middleware\RoleMiddleware;\nuse Spatie\Permission\Middleware\PermissionMiddleware;\nuse Spatie\Permission\Middleware\RoleOrPermissionMiddleware;",
-                    $endOfLine,
-                    1
-                );
-                $modified = true;
-            }
-        }
+//        // Add Spatie middleware imports if roles are enabled
+//        if ($includeRoles && ! str_contains($content, 'use Spatie\Permission\Middleware')) {
+//            $lastUsePos = strrpos($content, 'use ');
+//            if ($lastUsePos !== false) {
+//                $endOfLine = strpos($content, ';', $lastUsePos);
+//                $content = substr_replace(
+//                    $content,
+//                    ";\nuse Spatie\Permission\Middleware\RoleMiddleware;\nuse Spatie\Permission\Middleware\PermissionMiddleware;\nuse Spatie\Permission\Middleware\RoleOrPermissionMiddleware;",
+//                    $endOfLine,
+//                    1
+//                );
+//                $modified = true;
+//            }
+//        }
 
-        // Add ExceptionHandler import if not exists (without alias)
-        if (! str_contains($content, 'use App\Exceptions\ExceptionHandler')) {
-            $lastUsePos = strrpos($content, 'use ');
-            if ($lastUsePos !== false) {
-                $endOfLine = strpos($content, ';', $lastUsePos);
-                $content = substr_replace(
-                    $content,
-                    ";\nuse App\Exceptions\ExceptionHandler;",
-                    $endOfLine,
-                    1
-                );
-                $modified = true;
-            }
-        }
+//        // Add ExceptionHandler import if not exists (without alias)
+//        if (! str_contains($content, 'use App\Exceptions\ExceptionHandler')) {
+//            $lastUsePos = strrpos($content, 'use ');
+//            if ($lastUsePos !== false) {
+//                $endOfLine = strpos($content, ';', $lastUsePos);
+//                $content = substr_replace(
+//                    $content,
+//                    ";\nuse App\Exceptions\ExceptionHandler;",
+//                    $endOfLine,
+//                    1
+//                );
+//                $modified = true;
+//            }
+//        }
 
         // Handle withMiddleware section
         if (preg_match('/->withMiddleware\(function\s*\(Middleware\s+\$middleware\)\s*:\s*void\s*\{(.*?)\}\)/s', $content, $matches)) {
@@ -358,7 +359,7 @@ class GenerateAuthModule extends Command
             if (! str_contains($middlewareContent, '$middleware->alias(')) {
                 // Build the alias array
                 $aliases = "\n        \$middleware->alias([\n";
-                $aliases .= "            'cors' => Cors::class,\n";
+                $aliases .= "            'cors' => App\Http\Middleware\Cors::class,\n";
 
                 if ($includeRoles) {
                     $aliases .= "\n            // spatie permission middleware\n";
@@ -376,7 +377,7 @@ class GenerateAuthModule extends Command
                 if (! str_contains($middlewareContent, "'cors'")) {
                     $updatedMiddlewareContent = preg_replace(
                         '/(\$middleware->alias\(\[)/s',
-                        "$1\n            'cors' => Cors::class,",
+                        "$1\n            'cors' => App\Http\Middleware\Cors::class,",
                         $updatedMiddlewareContent
                     );
                     $modified = true;
@@ -422,9 +423,9 @@ class GenerateAuthModule extends Command
         if (preg_match('/->withExceptions\(function\s*\(Exceptions\s+\$exceptions\)\s*:\s*void\s*\{(.*?)\}\)/s', $content, $matches)) {
             $exceptionsContent = $matches[1];
 
-            // Check if exception handler already exists
+            // Check if an exception handler already exists
             if (! str_contains($exceptionsContent, 'ExceptionHandler::handle')) {
-                $updatedExceptionsContent = "\n        ExceptionHandler::handle(\$exceptions);";
+                $updatedExceptionsContent = "\n        App\Exceptions\ExceptionHandler::handle(\$exceptions);";
 
                 $content = preg_replace(
                     '/->withExceptions\(function\s*\(Exceptions\s+\$exceptions\)\s*:\s*void\s*\{.*?\}\)/s',
@@ -449,7 +450,7 @@ class GenerateAuthModule extends Command
         $this->info('📋 Next Steps:');
         $this->line('');
         $this->line('1. Add route files to your routes/api.php or web.php:');
-        $this->line('   Route::middleware(\'api\')->group(base_path(\'routes/auth.php\'));');
+        $this->line('   Route::middleware(\'api\')->group(base_path(\'routes/api/auth.php\'));');
         $this->line('   Route::middleware([\'api\', \'auth:sanctum\'])->group(base_path(\'routes/user.php\'));');
 
         if ($includeRoles) {
