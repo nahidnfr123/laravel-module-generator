@@ -5,7 +5,7 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 
-Route::middleware(['api', 'cors', 'json'])->group(function () {
+Route::middleware(['api', 'cors'])->group(function () {
     // Authentication routes
     Route::post('login', [AuthController::class, 'login'])->middleware('guest', 'throttle:6,1');
     Route::post('register', [AuthController::class, 'register'])->middleware('guest', 'throttle:6,1');
@@ -28,14 +28,5 @@ Route::middleware(['api', 'cors', 'json'])->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
 
         Route::post('user/password-change', [UserController::class, 'changePassword']);
-
-        // Roles and Permissions
-        Route::middleware(['role:supper-admin'])->group(function () {
-            Route::apiResource('users', UserController::class);
-            Route::apiResource('roles', RoleController::class);
-            Route::get('/permissions', [PermissionController::class, 'index']);
-            Route::post('/assign-permission-to-role', [PermissionController::class, 'assignPermissionToRole']);
-            Route::post('/assign-permission-to-user', [PermissionController::class, 'assignPermissionToUser']);
-        });
     });
 });
