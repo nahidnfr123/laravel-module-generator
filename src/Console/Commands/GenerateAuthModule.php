@@ -38,6 +38,7 @@ class GenerateAuthModule extends Command
         $this->info('🚀 Starting Authentication & User Management Generation...');
         $this->newLine();
 
+        // $includeRoles = true;
         // Ask about roles and permissions
         $includeRoles = ! $this->option('skip-roles') &&
             $this->confirm('Do you want to add roles and permissions management?', true);
@@ -51,7 +52,7 @@ class GenerateAuthModule extends Command
         }
 
         // Copy Authentication files
-        $this->copyAuthenticationFiles();
+        $this->copyAuthenticationFiles($includeEmailVerification);
 
         // Copy User Management files
         $this->copyUserManagementFiles();
@@ -77,29 +78,48 @@ class GenerateAuthModule extends Command
         return Command::SUCCESS;
     }
 
-    protected function copyAuthenticationFiles(): void
+    protected function copyAuthenticationFiles($includeEmailVerification): void
     {
         $this->info('📝 Generating Authentication files...');
 
         $files = [
-            'Middleware/Cors.php' => 'app/Http/Middleware/Cors.php',
-            'Exceptions/ExceptionHandler.php' => 'app/Exceptions/ExceptionHandler.php',
-            'Traits/ApiResponseTrait.php' => 'app/Traits/ApiResponseTrait.php',
-            'Traits/HandlesPagination.php' => 'app/Traits/HandlesPagination.php',
-            'Traits/HasSlugModelBinding.php' => 'app/Traits/HasSlugModelBinding.php',
-            'Traits/HasSlug/HasSlug.php' => 'app/Traits/HasSlug/HasSlug.php',
-            'Traits/HasSlug/SlugOptions.php' => 'app/Traits/HasSlug/SlugOptions.php',
-            'Traits/HasSlug/Exceptions/InvalidOption.php' => 'app/Traits/HasSlug/Exceptions/InvalidOption.php',
-            'Controllers/AuthController.php' => 'app/Http/Controllers/AuthController.php',
-            'Services/AuthService.php' => 'app/Services/AuthService.php',
-            'Requests/LoginRequest.php' => 'app/Http/Requests/Auth/LoginRequest.php',
-            'Requests/RegisterRequest.php' => 'app/Http/Requests/Auth/RegisterRequest.php',
-            'Requests/ForgotPasswordRequest.php' => 'app/Http/Requests/Auth/ForgotPasswordRequest.php',
-            'Requests/ResetPasswordRequest.php' => 'app/Http/Requests/Auth/ResetPasswordRequest.php',
-            'resources/views/emails/reset_password_mail.blade.php' => 'resources/views/emails/reset_password_mail.blade.php',
-            'resources/views/emails/verify_email_mail.blade.php' => 'resources/views/emails/verify_email_mail.blade.php',
-            'Mail/VerifyEmailMail.php' => 'app/Mail/VerifyEmailMail.php',
-            'routes/auth.php' => 'routes/api/auth.php',
+            'Helpers/FileManager' => 'app/Helpers/FileManager.php',
+            'Helpers/GeneralHelper' => 'app/Helpers/GeneralHelper.php',
+
+            'Middleware/Cors' => 'app/Http/Middleware/Cors.php',
+
+            'Exceptions/ExceptionHandler' => 'app/Exceptions/ExceptionHandler.php',
+
+            'Traits/MetaResponseTrait' => 'app/Traits/MetaResponseTrait.php',
+            'Traits/ApiResponseTrait' => 'app/Traits/ApiResponseTrait.php',
+            'Traits/HandlesPagination' => 'app/Traits/HandlesPagination.php',
+            'Traits/HasSlugModelBinding' => 'app/Traits/HasSlugModelBinding.php',
+            'Traits/HasSlug/HasSlug' => 'app/Traits/HasSlug/HasSlug.php',
+            'Traits/HasSlug/SlugOptions' => 'app/Traits/HasSlug/SlugOptions.php',
+            'Traits/HasSlug/Exceptions/InvalidOption' => 'app/Traits/HasSlug/Exceptions/InvalidOption.php',
+
+            'Controllers/AuthController' => 'app/Http/Controllers/AuthController.php',
+
+            'Services/AuthService' => 'app/Services/AuthService.php',
+            'Services/Auth/PasswordService' => 'app/Services/Auth/PasswordService.php',
+
+            'Requests/LoginRequest' => 'app/Http/Requests/Auth/LoginRequest.php',
+            'Requests/RegisterRequest' => 'app/Http/Requests/Auth/RegisterRequest.php',
+            'Requests/ForgotPasswordRequest' => 'app/Http/Requests/Auth/ForgotPasswordRequest.php',
+            'Requests/ResetPasswordRequest' => 'app/Http/Requests/Auth/ResetPasswordRequest.php',
+
+            'resources/views/emails/reset_password_mail.blade' => 'resources/views/emails/reset_password_mail.blade.php',
+
+            'routes/auth' => 'routes/api/auth.php',
+
+            'Mail/PasswordResetEmail' => 'app/Mail/PasswordResetEmail.php',
+            'Mail/UserAccountCreateMail' => 'app/Mail/UserAccountCreateMail.php',
+
+            ...($includeEmailVerification ? [
+                'Services/Auth/VerificationService' => 'app/Services/Auth/VerificationService.php',
+                'Mail/VerifyEmailMail' => 'app/Mail/VerifyEmailMail.php',
+                'resources/views/emails/verify_email_mail.blade' => 'resources/views/emails/verify_email_mail.blade.php',
+            ] : []),
         ];
 
         $this->copyFiles($files, 'Authentication');
@@ -110,13 +130,18 @@ class GenerateAuthModule extends Command
         $this->info('📝 Generating User Management files...');
 
         $files = [
-            'Controllers/UserController.php' => 'app/Http/Controllers/UserController.php',
-            'Services/UserService.php' => 'app/Services/UserService.php',
-            'Requests/StoreUserRequest.php' => 'app/Http/Requests/User/StoreUserRequest.php',
-            'Requests/UpdateUserRequest.php' => 'app/Http/Requests/User/UpdateUserRequest.php',
-            'Requests/ChangePasswordRequest.php' => 'app/Http/Requests/User/ChangePasswordRequest.php',
-            'Resources/UserResource.php' => 'app/Http/Resources/UserResource.php',
-            'Resources/UserCollection.php' => 'app/Http/Resources/UserCollection.php',
+            'Controllers/UserController' => 'app/Http/Controllers/UserController.php',
+
+            'Services/UserService' => 'app/Services/UserService.php',
+            'seeders/UserTableSeeder' => 'database/seeders/UserTableSeeder.php',
+
+            'Requests/StoreUserRequest' => 'app/Http/Requests/User/StoreUserRequest.php',
+            'Requests/UpdateUserRequest' => 'app/Http/Requests/User/UpdateUserRequest.php',
+            'Requests/ChangePasswordRequest' => 'app/Http/Requests/User/ChangePasswordRequest.php',
+
+            'Resources/UserProfileResource' => 'app/Http/Resources/UserProfileResource.php',
+            'Resources/UserResource' => 'app/Http/Resources/UserResource.php',
+            'Resources/UserCollection' => 'app/Http/Resources/UserCollection.php',
         ];
 
         $this->copyFiles($files, 'User Management');
@@ -127,23 +152,31 @@ class GenerateAuthModule extends Command
         $this->info('📝 Generating Roles & Permissions files...');
 
         $files = [
-            'Controllers/RoleController.php' => 'app/Http/Controllers/RoleController.php',
-            'Controllers/PermissionController.php' => 'app/Http/Controllers/PermissionController.php',
-            'Services/RoleService.php' => 'app/Services/RoleService.php',
-            'Services/PermissionService.php' => 'app/Services/PermissionService.php',
-            'Requests/UpsertRoleRequest.php' => 'app/Http/Requests/Role/UpsertRoleRequest.php',
-            'Requests/StorePermissionRequest.php' => 'app/Http/Requests/Permission/StorePermissionRequest.php',
-            'Requests/UpdatePermissionRequest.php' => 'app/Http/Requests/Permission/UpdatePermissionRequest.php',
-            'Requests/AssignPermissionToRoleRequest.php' => 'app/Http/Requests/Permission/AssignPermissionToRoleRequest.php',
-            'Requests/AssignPermissionToUserRequest.php' => 'app/Http/Requests/Permission/AssignPermissionToUserRequest.php',
-            'Resources/RoleResource.php' => 'app/Http/Resources/RoleResource.php',
-            'Resources/RoleCollection.php' => 'app/Http/Resources/RoleCollection.php',
-            'Resources/PermissionResource.php' => 'app/Http/Resources/PermissionResource.php',
-            'Resources/PermissionCollection.php' => 'app/Http/Resources/PermissionCollection.php',
-            'config/permission.php' => 'config/permission.php',
-            'routes/access-control.php' => 'routes/api/access-control.php',
-            'Models/Role.php' => 'App/Models/Role.php',
-            'Models/Permission.php' => 'App/Models/Permission.php',
+            'Controllers/RoleController' => 'app/Http/Controllers/RoleController.php',
+            'Controllers/PermissionController' => 'app/Http/Controllers/PermissionController.php',
+
+            'Utils/PermissionsData' => 'app/Utils/PermissionsData.php',
+            'Services/RoleService' => 'app/Services/RoleService.php',
+            'Services/PermissionService' => 'app/Services/PermissionService.php',
+
+            'Requests/UpsertRoleRequest' => 'app/Http/Requests/Role/UpsertRoleRequest.php',
+            'Requests/StorePermissionRequest' => 'app/Http/Requests/Permission/StorePermissionRequest.php',
+            'Requests/UpdatePermissionRequest' => 'app/Http/Requests/Permission/UpdatePermissionRequest.php',
+            'Requests/AssignPermissionToRoleRequest' => 'app/Http/Requests/Permission/AssignPermissionToRoleRequest.php',
+            'Requests/AssignPermissionToUserRequest' => 'app/Http/Requests/Permission/AssignPermissionToUserRequest.php',
+
+            'Resources/RoleResource' => 'app/Http/Resources/RoleResource.php',
+            'Resources/RoleCollection' => 'app/Http/Resources/RoleCollection.php',
+            'Resources/PermissionResource' => 'app/Http/Resources/PermissionResource.php',
+            'Resources/PermissionCollection' => 'app/Http/Resources/PermissionCollection.php',
+
+            'seeders/PermissionSeeder' => 'database/seeders/PermissionSeeder.php',
+            'config/permission' => 'config/permission.php',
+
+            'routes/access-control' => 'routes/api/access-control.php',
+
+            'Models/Role' => 'App/Models/Role.php',
+            'Models/Permission' => 'App/Models/Permission.php',
         ];
 
         $this->copyFiles($files, 'Roles & Permissions');
@@ -152,11 +185,20 @@ class GenerateAuthModule extends Command
     protected function copyFiles(array $files, string $component): void
     {
         foreach ($files as $source => $destination) {
-            $sourcePath = $this->packageStubPath.'/'.$source;
+            // Determine source extension based on file type
+            $sourceExtension = '.stub';
+
+            // For blade files, the stub should have .blade.stub extension
+            if (str_ends_with($destination, '.blade.php')) {
+                $sourcePath = $this->packageStubPath.'/'.$source.'.stub';
+            } else {
+                $sourcePath = $this->packageStubPath.'/'.$source.'.stub';
+            }
+
             $destinationPath = $this->basePath.'/'.$destination;
 
             if (! File::exists($sourcePath)) {
-                $this->warn("⚠️  Source file not found: {$source}");
+                $this->warn("⚠️  Source file not found: {$sourcePath}");
 
                 continue;
             }
@@ -298,6 +340,7 @@ class GenerateAuthModule extends Command
 
         if (! File::exists($bootstrapPath)) {
             $this->warn('⚠️  bootstrap/app.php not found');
+
             return;
         }
 
@@ -305,47 +348,6 @@ class GenerateAuthModule extends Command
 
         $content = File::get($bootstrapPath);
         $modified = false;
-
-//        // Add Cors middleware import if not exists
-//        if (! str_contains($content, 'use App\Http\Middleware\Cors;')) {
-//            $content = preg_replace(
-//                '/<\?php/',
-//                "<?php\n\nuse App\Http\Middleware\Cors;",
-//                $content,
-//                1
-//            );
-//            $modified = true;
-//        }
-
-//        // Add Spatie middleware imports if roles are enabled
-//        if ($includeRoles && ! str_contains($content, 'use Spatie\Permission\Middleware')) {
-//            $lastUsePos = strrpos($content, 'use ');
-//            if ($lastUsePos !== false) {
-//                $endOfLine = strpos($content, ';', $lastUsePos);
-//                $content = substr_replace(
-//                    $content,
-//                    ";\nuse Spatie\Permission\Middleware\RoleMiddleware;\nuse Spatie\Permission\Middleware\PermissionMiddleware;\nuse Spatie\Permission\Middleware\RoleOrPermissionMiddleware;",
-//                    $endOfLine,
-//                    1
-//                );
-//                $modified = true;
-//            }
-//        }
-
-//        // Add ExceptionHandler import if not exists (without alias)
-//        if (! str_contains($content, 'use App\Exceptions\ExceptionHandler')) {
-//            $lastUsePos = strrpos($content, 'use ');
-//            if ($lastUsePos !== false) {
-//                $endOfLine = strpos($content, ';', $lastUsePos);
-//                $content = substr_replace(
-//                    $content,
-//                    ";\nuse App\Exceptions\ExceptionHandler;",
-//                    $endOfLine,
-//                    1
-//                );
-//                $modified = true;
-//            }
-//        }
 
         // Handle withMiddleware section
         if (preg_match('/->withMiddleware\(function\s*\(Middleware\s+\$middleware\)\s*:\s*void\s*\{(.*?)\}\)/s', $content, $matches)) {
@@ -372,7 +374,7 @@ class GenerateAuthModule extends Command
                     $aliases .= "            'role_or_permission' => \\Spatie\\Permission\\Middleware\\RoleOrPermissionMiddleware::class,\n";
                 }
 
-                $aliases .= "        ]);";
+                $aliases .= '        ]);';
                 $updatedMiddlewareContent .= $aliases;
                 $modified = true;
                 $this->line('✅ Added middleware aliases');

@@ -1,0 +1,107 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\Auth\ForgotPasswordRequest;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\ResetPasswordRequest;
+use App\Http\Resources\UserProfileResource;
+use App\Services\Auth\PasswordService;
+use App\Services\Auth\VerificationService;
+use App\Services\AuthService;
+use Illuminate\Http\Request;
+
+class AuthController extends Controller
+{
+    public AuthService $authService;
+
+    public function __construct(AuthService $authService)
+    {
+        $this->authService = $authService;
+    }
+
+    /**
+     * Handle user login
+     */
+    public function login(LoginRequest $request): ?\Illuminate\Http\JsonResponse
+    {
+        try {
+            return successResponse('Login successful', $this->authService->login($request));
+        } catch (\Exception $e) {
+            return failureResponse($e->getMessage(), $e->getCode() ?? 400);
+        }
+    }
+
+    public function register(RegisterRequest $request): ?\Illuminate\Http\JsonResponse
+    {
+        try {
+            return successResponse('Register successful', $this->authService->register($request->validated()));
+        } catch (\Exception $e) {
+            return failureResponse($e->getMessage(), $e->getCode() ?? 400);
+        }
+    }
+
+    public function logout(Request $request): \Illuminate\Http\JsonResponse
+    {
+        try {
+            $request->user()->currentAccessToken()->delete();
+
+            return successResponse('Successfully logged out.');
+        } catch (\Exception $e) {
+            return failureResponse($e->getMessage(), $e->getCode() ?? 500);
+        }
+    }
+
+    public function userProfile(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $user = $request->user();
+        $user->load(['role']);
+
+        return successResponse('User details', new UserProfileResource($user));
+    }
+
+    public function verifyEmail(Request $request, int $id, string $hash, VerificationService $service): \Illuminate\Http\JsonResponse
+    {
+        if (! $request->hasValidSignature()) {
+            return failureResponse('Invalid or expired verification link.', 403);
+        }
+
+        if (! $service->verify($id, $hash)) {
+            return failureResponse('Verification failed.', 400);
+        }
+
+        return successResponse('Email verified successfully.');
+    }
+
+    public function resendEmailVerificationLink(Request $request, VerificationService $service): \Illuminate\Http\JsonResponse
+    {
+        $service->resend($request->user());
+
+        return response()->json([
+            'message' => 'Verification link sent.',
+        ]);
+    }
+
+    public function forgotPassword(ForgotPasswordRequest $request): \Illuminate\Http\JsonResponse
+    {
+        try {
+            (new PasswordService)->forgetPassword($request->validated());
+
+            return successResponse('If the email exists, a password reset link has been sent');
+        } catch (\Exception $e) {
+            return failureResponse($e->getMessage(), $e->getCode() ?? 400);
+        }
+    }
+
+    public function resetPassword(ResetPasswordRequest $request): \Illuminate\Http\JsonResponse
+    {
+        try {
+            (new PasswordService)->resetPassword($request);
+
+            return successResponse('Password has been reset successfully.');
+        } catch (\Exception $e) {
+            return failureResponse($e->getMessage(), $e->getCode() ?? 400);
+        }
+    }
+}

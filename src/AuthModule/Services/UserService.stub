@@ -1,0 +1,78 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
+
+class UserService
+{
+    public function getAll()
+    {
+        return User::with(['roles'])
+            ->orderBy(request('order_by', 'created_by'), request('order', 'ASC'))
+            ->paginate(request('per_page', 25));
+    }
+
+    public function store($request, $rawPassword = null): User
+    {
+        $data = $request->validated() ?? $request;
+        $password = $rawPassword ?? $data['password'];
+        if ($password) {
+            $data['password'] = Hash::make($password);
+        }
+
+        $user = User::create($data);
+
+        if (isset($data['roles']) && $data['roles']) {
+            $user->assignRole($data['roles']);
+        }
+
+        $this->uploadFiles($request, $user);
+
+        return $user;
+    }
+
+    public function update($request, $user)
+    {
+        $data = $request->validated() ?? $request;
+        unset($data['email']); // Prevent email update directly
+
+        $user->update($data);
+
+        if (isset($data['roles']) && $data['roles']) {
+            $user->syncRoles($data['roles']);
+            $user->tokens()->delete();
+        }
+
+        $this->uploadFiles($request, $user);
+
+        return $user;
+    }
+
+    public function changePassword($request, $user)
+    {
+        // check old password
+        if (! Hash::check($request->current_password, $user->password)) {
+            throw ValidationException::withMessages(['current_password' => ['Current password is incorrect.']]);
+        }
+        $user->update(['password' => Hash::make($request->password)]);
+
+        return $user;
+    }
+
+    public function delete($user)
+    {
+        $user->delete();
+
+        return $user;
+    }
+
+    protected function uploadFiles($request, $model): void
+    {
+        if ($request->has('avatar') && $request->avatar) {
+            $model->uploadMedia($request->avatar, 'avatar_'.mt_rand(), 'avatar');
+        }
+    }
+}

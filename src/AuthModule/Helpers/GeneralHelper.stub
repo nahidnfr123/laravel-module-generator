@@ -1,0 +1,133 @@
+<?php
+
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Log;
+
+if (!function_exists('successResponse')) {
+    function successResponse($message, $data = null, $status = 200): \Illuminate\Http\JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'data' => $data,
+        ], $status);
+    }
+}
+
+if (!function_exists('failureResponse')) {
+    function failureResponse($message, $status = 400, $errors = null, bool $reportError = true): \Illuminate\Http\JsonResponse
+    {
+        $code = (int)$status;
+        $code = ($code >= 100 && $code <= 599) ? $code : 400;
+        // Ensure every error is logged. If for some reason we're unable to process $message or $errors
+        // ensure *something* is logged so we know an error occurred. The caller can request that the error
+        // not be reported here if they've already logged the error in their local scope.
+        if ($reportError) {
+            try {
+                Log::error('Error: ' . $message . ' with additional information: ' . $errors);
+            } catch (\Exception $exception) {
+                // Don't do anything with non-static data here to absolutely ensure that the error is logged.
+                Log::error('Catastrophic error in ApiResponseTrait::failure. Unable to report error.');
+            }
+        }
+
+        $response = ['success' => false, 'message' => $message,];
+        if ($errors) {
+            if (is_array($errors)) {
+                $response['errors'] = $errors;
+            } elseif (is_string($errors)) {
+                $response['error'] = $errors;
+            } else {
+                $response['error'] = $errors;
+            }
+        }
+
+        return response()->json($response, $code);
+    }
+}
+
+if (!function_exists('inProduction')) {
+    function inProduction(): bool
+    {
+        return config('app.env') === 'production';
+    }
+}
+
+if (!function_exists('perPage')) {
+    function perPage($perPage = 20): int
+    {
+        $perPage = (int)request('per_page', $perPage);
+        if (getAllData()) {
+            $perPage = 100000000;
+        } // get all data
+
+        return $perPage;
+    }
+}
+
+if (!function_exists('getAllData')) {
+    function getAllData(): bool
+    {
+        return (int)request('per_page') <= 0;
+    }
+}
+
+if (!function_exists('getOrPaginate')) {
+    function getOrPaginate($data)
+    {
+        $perPage = request()->get('per_page', 10);
+        getAllData() ? $data = $data->get() : $data = $data->paginate($perPage);
+
+        return $data;
+    }
+}
+
+
+if (!function_exists('removeUnderscore')) {
+    function removeUnderscore($value): array|string
+    {
+        return str_replace('_', ' ', $value);
+    }
+}
+
+if (!function_exists('clearAllCache')) {
+    function clearAllCache(): void
+    {
+        Artisan::call('optimize:clear');
+        Artisan::call('cache:clear');
+        Artisan::call('route:clear');
+        Artisan::call('view:clear');
+        Artisan::call('config:clear');
+        Cache::forget('roles');
+        Cache::forget('permissions');
+        Cache::forget('settings');
+    }
+}
+
+
+if (!function_exists('isEncrypted')) {
+    function isEncrypted($value): bool
+    {
+        try {
+            Crypt::decryptString($value);
+
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+}
+
+
+if (!function_exists('decryptData')) {
+    function decryptData($value)
+    {
+        try {
+            return Crypt::decryptString($value);
+        } catch (\Exception $e) {
+            return $value;
+        }
+    }
+}

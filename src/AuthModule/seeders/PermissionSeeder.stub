@@ -1,0 +1,45 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Role;
+use App\Utils\PermissionsData;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
+use Spatie\Permission\Models\Permission;
+
+class PermissionSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        Cache::forget('roles');
+        Cache::forget('permissions');
+        Artisan::call('optimize:clear');
+
+        Model::unguard();
+        $roles = ['admin', 'super-admin'];
+        foreach ($roles as $role) {
+            Role::updateOrCreate(['name' => $role, 'guard_name' => 'api']);
+        }
+
+        $permissions = new PermissionsData;
+        foreach ($permissions->permissionGroups() as $key => $permissionGroup) {
+            foreach ($permissionGroup as $permission) {
+                Permission::updateOrCreate([
+                    'name' => gettype($permission) === 'string' ? $permission : $permission[0],
+                    'guard_name' => 'api',
+                ], [
+                    'type' => $key,
+                ]);
+            }
+        }
+
+        Role::where('name', 'super-admin')->first()->syncPermissions(Permission::all());
+    }
+}

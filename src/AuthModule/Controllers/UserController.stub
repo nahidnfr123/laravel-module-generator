@@ -1,0 +1,87 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
+use App\Http\Resources\UserCollection;
+use App\Http\Resources\UserResource;
+use App\Models\User;
+use App\Services\UserService;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\DB;
+
+class UserController extends Controller implements HasMiddleware
+{
+    public function __construct(protected UserService $userService) {}
+
+    public static function middleware(): array
+    {
+        $model = 'user';
+
+        return [
+            new Middleware(["permission:view_$model"], only: ['index']),
+            new Middleware(["permission:show_$model"], only: ['show']),
+            new Middleware(["permission:create_$model"], only: ['store']),
+            new Middleware(["permission:update_$model"], only: ['update']),
+            new Middleware(["permission:delete_$model"], only: ['destroy']),
+        ];
+    }
+
+    public function index(): \Illuminate\Http\JsonResponse
+    {
+        $users = $this->userService->getAll();
+
+        return successResponse('Success.', UserCollection::make($users));
+    }
+
+    public function show(User $user): \Illuminate\Http\JsonResponse
+    {
+        return successResponse('Success.', new UserResource($user));
+    }
+
+    public function store(StoreUserRequest $request): \Illuminate\Http\JsonResponse
+    {
+        $user = $this->userService->store($request);
+
+        return successResponse('Role created successfully.', new UserResource($user));
+    }
+
+    public function update(UpdateUserRequest $request, User $user): \Illuminate\Http\JsonResponse
+    {
+        $this->userService->update($request, $user);
+
+        return successResponse('Role updated successfully.', new UserResource($user));
+    }
+
+    public function updateProfile(UpdateUserRequest $request, $id): \Illuminate\Http\JsonResponse
+    {
+        try {
+            DB::beginTransaction();
+            $data = (new UserService)->update($request, User::findOrFail($id));
+            DB::commit();
+
+            return successResponse('Profile updated successfully.', $data);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return failureResponse($e->getMessage());
+        }
+    }
+
+    public function destroy(User $user): \Illuminate\Http\JsonResponse
+    {
+        $this->userService->delete($user);
+
+        return successResponse('Role deleted successfully.');
+    }
+
+    public function changePassword(\App\Http\Requests\User\ChangePasswordRequest $request): \Illuminate\Http\JsonResponse
+    {
+        $user = User::findOrFail(auth()->id());
+        $user = $this->userService->changePassword($request, $user);
+
+        return successResponse('Role updated successfully.', new UserResource($user));
+    }
+}

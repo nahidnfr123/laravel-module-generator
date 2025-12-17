@@ -1,0 +1,36 @@
+<?php
+
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserController;
+use Illuminate\Support\Facades\Route;
+
+Route::middleware(['api', 'cors'])->group(function () {
+    Route::middleware(['guest', 'throttle:6,1'])->group(function () {
+        // Authentication routes
+        Route::post('login', [AuthController::class, 'login']);
+        Route::post('register', [AuthController::class, 'register']);
+
+        // password reset routes
+        Route::prefix('password')->group(function () {
+            Route::post('forgot', [AuthController::class, 'forgotPassword']);
+            Route::post('reset', [AuthController::class, 'resetPassword']);
+        });
+    });
+
+    // Email verification routes
+    Route::get('email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
+        ->middleware(['signed', 'throttle:6,1'])->name('api.verification.verify');
+    Route::post('email/resend-verification-link', [AuthController::class, 'resendEmailVerificationLink'])
+        ->middleware(['auth:sanctum', 'throttle:6,1']);
+
+    // Protected routes
+    Route::middleware(['auth:sanctum'])->group(function () {
+        // profile routes
+        Route::prefix('profile')->group(function () {
+            Route::get('/', [AuthController::class, 'userProfile']);
+            Route::put('/update/{id}', [UserController::class, 'updateProfile']);
+            Route::post('update/password', [UserController::class, 'changePassword']);
+        });
+        Route::post('logout', [AuthController::class, 'logout']);
+    });
+});

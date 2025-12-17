@@ -1,0 +1,23 @@
+<?php
+
+namespace App\Http\Requests\Permission;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class UpdatePermissionRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'name' => 'required',
+            'guard_name' => 'sometimes|in:web,api',
+            'roles' => 'sometimes|array',
+            'roles.*' => 'exists:roles,id',
+        ];
+    }
+}

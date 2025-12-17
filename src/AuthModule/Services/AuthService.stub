@@ -1,0 +1,50 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
+
+class AuthService
+{
+    public function login($request): object
+    {
+        $user = User::where('email', $request->email)->first();
+        if (! $user || ! Hash::check($request->password, $user->password)) {
+            throw ValidationException::withMessages([
+                'email' => ['Credentials do not match our records.'],
+            ]);
+        }
+
+        // check status
+        if (isset($user->is_active)) {
+            $this->checkUserStatus($user);
+        }
+        // roles
+        $role = $user->role ?? null;
+        // OPTIONAL: revoke old tokens
+        $user->tokens()->delete();
+        $token = $user->createToken('user'.'Token', ['check-'.$role ?? 'user']);
+
+        return (object) [
+            'token' => $token->plainTextToken,
+            'role' => $role,
+        ];
+    }
+
+    private function checkUserStatus($user): void
+    {
+        if (! $user || ! $user->is_active) {
+            $user->currentAccessToken()?->delete();
+            throw ValidationException::withMessages(['email' => ['User is inactive.']]);
+        }
+    }
+
+    public function register($request): object
+    {
+        (new UserService)->store($request);
+
+        return $this->login($request);
+    }
+}

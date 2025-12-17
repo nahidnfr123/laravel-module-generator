@@ -1,0 +1,70 @@
+<?php
+
+use Illuminate\Support\Facades\Storage;
+
+function uploadFile($file, $path = 'files', $name = ''): ?string
+{
+    if (! $file) {
+        return null;
+    }
+    $file_name = null;
+    if ($name) {
+        $file_name = $name.'_'.time().mt_rand().'.'.$file->getClientOriginalExtension();
+    } else {
+        $file_name = time().mt_rand().'.'.$file->getClientOriginalExtension();
+    }
+    $file->storeAs('public/'.$path.'/', $file_name);
+    //    $file->storeAs($path.'/', $file_name);
+
+    return $path.'/'.$file_name;
+}
+
+function updateFile($newFile, $oldFile = null, $path = 'files', $name = ''): ?string
+{
+    if (! $newFile) {
+        return $oldFile;
+    }
+    // delete old file
+    if ($oldFile) {
+        deleteFile($oldFile);
+    }
+
+    // upload new file
+    return uploadFile($newFile, $path, $name);
+}
+
+function deleteFile($photo): void
+{
+    if ($photo && file_exists(storage_path('app/public/'.$photo))) {
+        unlink(storage_path('app/public/'.$photo));
+    }
+}
+
+/*
+ * Upload multiple files
+ */
+function uploadFiles($photos, $path = 'files/'): array
+{
+    if (empty($photos) || ! is_array($photos)) {
+        return [];
+    }
+    $file_names = [];
+    foreach ($photos as $photo) {
+        if (! $photo) {
+            continue;
+        }
+        $file_names[] = uploadFile($photo, $path);
+    }
+
+    return $file_names;
+}
+
+/*
+ * Delete multiple files
+ */
+function deleteFiles($photos): void
+{
+    foreach ($photos as $photo) {
+        deleteFile($photo);
+    }
+}

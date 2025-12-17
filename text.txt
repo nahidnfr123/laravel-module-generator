@@ -3,6 +3,12 @@ git add . && git commit -m "_ _" && git push && git tag v1.0.7 && git push origi
 
 git tag v1.1.41 && git push origin v1.1.41
 
+git add .
+git commit -m "Convert PHP template files to stub files to fix PSR-4 autoloading conflicts"
+git tag 1.2.5
+git push origin main --tags
+
+
 ## work with enum fields
 ## module:generate empty file error...
 

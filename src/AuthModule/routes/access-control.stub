@@ -1,0 +1,19 @@
+<?php
+
+use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\UserController;
+use Illuminate\Support\Facades\Route;
+
+Route::middleware(['api', 'cors'])->group(function () {
+    Route::middleware(['auth:sanctum'])->group(function () {
+        // Roles and Permissions
+        Route::middleware(['role:supper-admin'])->group(function () {
+            Route::apiResource('users', UserController::class);
+            Route::apiResource('roles', RoleController::class);
+            Route::get('/permissions', [PermissionController::class, 'index']);
+            Route::post('/assign-permission-to-role', [PermissionController::class, 'assignPermissionToRole']);
+            Route::post('/assign-permission-to-user', [PermissionController::class, 'assignPermissionToUser']);
+        });
+    });
+});
