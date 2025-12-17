@@ -24,7 +24,7 @@ class GenerateAuthModule extends Command
     public function __construct()
     {
         parent::__construct();
-        $this->packageStubPath = __DIR__.'/../../AuthModule';
+        $this->packageStubPath = __DIR__ . '/../../AuthModule';
     }
 
     /**
@@ -40,14 +40,14 @@ class GenerateAuthModule extends Command
 
         // $includeRoles = true;
         // Ask about roles and permissions
-        $includeRoles = ! $this->option('skip-roles') &&
+        $includeRoles = !$this->option('skip-roles') &&
             $this->confirm('Do you want to add roles and permissions management?', true);
 
         // Ask about email verification
-        $includeEmailVerification = ! $this->option('skip-email-verification') &&
+        $includeEmailVerification = !$this->option('skip-email-verification') &&
             $this->confirm('Do you want to enable email verification?', true);
 
-        if (! $this->runRequiredCommand('install:api')) {
+        if (!$this->runRequiredCommand('install:api')) {
             return self::FAILURE;
         }
 
@@ -68,6 +68,9 @@ class GenerateAuthModule extends Command
 
         // Update bootstrap/app.php
         $this->updateBootstrapApp($includeRoles);
+
+        // Update composer.json to autoload helpers
+        $this->updateComposerJson();
 
         $this->newLine();
         $this->info('✅ Authentication system generated successfully!');
@@ -98,7 +101,9 @@ class GenerateAuthModule extends Command
             'Traits/HasSlug/SlugOptions' => 'app/Traits/HasSlug/SlugOptions.php',
             'Traits/HasSlug/Exceptions/InvalidOption' => 'app/Traits/HasSlug/Exceptions/InvalidOption.php',
 
-            'Controllers/AuthController' => 'app/Http/Controllers/AuthController.php',
+            ...($includeEmailVerification ?
+                ['Controllers/AuthController-EmailVerification' => 'app/Http/Controllers/AuthController.php',] :
+                ['Controllers/AuthController' => 'app/Http/Controllers/AuthController.php',]),
 
             'Services/AuthService' => 'app/Services/AuthService.php',
             'Services/Auth/PasswordService' => 'app/Services/Auth/PasswordService.php',
@@ -190,21 +195,21 @@ class GenerateAuthModule extends Command
 
             // For blade files, the stub should have .blade.stub extension
             if (str_ends_with($destination, '.blade.php')) {
-                $sourcePath = $this->packageStubPath.'/'.$source.'.stub';
+                $sourcePath = $this->packageStubPath . '/' . $source . '.stub';
             } else {
-                $sourcePath = $this->packageStubPath.'/'.$source.'.stub';
+                $sourcePath = $this->packageStubPath . '/' . $source . '.stub';
             }
 
-            $destinationPath = $this->basePath.'/'.$destination;
+            $destinationPath = $this->basePath . '/' . $destination;
 
-            if (! File::exists($sourcePath)) {
+            if (!File::exists($sourcePath)) {
                 $this->warn("⚠️  Source file not found: {$sourcePath}");
 
                 continue;
             }
 
-            if (File::exists($destinationPath) && ! $this->option('force')) {
-                if (! $this->confirm("File already exists: {$destination}. Do you want to replace it?", false)) {
+            if (File::exists($destinationPath) && !$this->option('force')) {
+                if (!$this->confirm("File already exists: {$destination}. Do you want to replace it?", false)) {
                     $this->line("⏭️  Skipped: {$destination}");
 
                     continue;
@@ -212,7 +217,7 @@ class GenerateAuthModule extends Command
             }
 
             $directory = dirname($destinationPath);
-            if (! File::isDirectory($directory)) {
+            if (!File::isDirectory($directory)) {
                 File::makeDirectory($directory, 0755, true);
             }
 
@@ -263,12 +268,77 @@ class GenerateAuthModule extends Command
         $this->line('✅ Cache cleared');
     }
 
+    /**
+     * Update composer.json to autoload helper files
+     *
+     * @throws FileNotFoundException
+     * @throws \JsonException
+     */
+    protected function updateComposerJson(): void
+    {
+        $this->info('📝 Updating composer.json to autoload helpers...');
+
+        $composerJsonPath = base_path('composer.json');
+
+        if (!File::exists($composerJsonPath)) {
+            $this->warn('⚠️  composer.json not found');
+            return;
+        }
+
+        $composerJson = json_decode(File::get($composerJsonPath), true, 512, JSON_THROW_ON_ERROR);
+        $modified = false;
+
+        // Initialize autoload.files array if it doesn't exist
+        if (!isset($composerJson['autoload']['files'])) {
+            $composerJson['autoload']['files'] = [];
+        }
+
+        // Helper files to add
+        $helperFiles = [
+            'app/Helpers/GeneralHelper.php',
+            'app/Helpers/FileManager.php',
+        ];
+
+        // Add helper files if they don't already exist
+        foreach ($helperFiles as $file) {
+            if (!in_array($file, $composerJson['autoload']['files'], true)) {
+                $composerJson['autoload']['files'][] = $file;
+                $modified = true;
+                $this->line("✅ Added {$file} to autoload files");
+            } else {
+                $this->line("ℹ️  {$file} already in autoload files");
+            }
+        }
+
+        if ($modified) {
+            // Write back to composer.json with pretty print
+            File::put(
+                $composerJsonPath,
+                json_encode($composerJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n"
+            );
+            $this->info('✅ composer.json updated successfully');
+
+            // Run composer dump-autoload
+            $this->info('Running composer dump-autoload...');
+            exec('composer dump-autoload 2>&1', $output, $returnCode);
+
+            if ($returnCode === 0) {
+                $this->info('✅ Autoload files regenerated');
+            } else {
+                $this->warn('⚠️  Failed to run composer dump-autoload automatically');
+                $this->warn('Please run manually: composer dump-autoload');
+            }
+        } else {
+            $this->line('ℹ️  composer.json already up to date');
+        }
+    }
+
     protected function updateUserModel(bool $includeRoles, bool $includeEmailVerification): void
     {
         $userModelPath = app_path('Models/User.php');
 
-        if (! File::exists($userModelPath)) {
-            $this->warn('⚠️  User model not found at: '.$userModelPath);
+        if (!File::exists($userModelPath)) {
+            $this->warn('⚠️  User model not found at: ' . $userModelPath);
 
             return;
         }
@@ -280,7 +350,7 @@ class GenerateAuthModule extends Command
 
         // Add MustVerifyEmail interface
         if ($includeEmailVerification) {
-            if (! str_contains($content, 'MustVerifyEmail')) {
+            if (!str_contains($content, 'MustVerifyEmail')) {
                 $content = str_replace(
                     'use Illuminate\Foundation\Auth\User as Authenticatable;',
                     "use Illuminate\Contracts\Auth\MustVerifyEmail;\nuse Illuminate\Foundation\Auth\User as Authenticatable;",
@@ -301,7 +371,7 @@ class GenerateAuthModule extends Command
 
         // Add HasRoles trait
         if ($includeRoles) {
-            if (! str_contains($content, 'use Spatie\Permission\Traits\HasRoles;')) {
+            if (!str_contains($content, 'use Spatie\Permission\Traits\HasRoles;')) {
                 $content = str_replace(
                     'use Illuminate\Notifications\Notifiable;',
                     "use Illuminate\Notifications\Notifiable;\nuse Spatie\Permission\Traits\HasRoles;",
@@ -311,8 +381,8 @@ class GenerateAuthModule extends Command
                 // Add trait usage in class
                 if (preg_match('/class User.*?\{.*?use ([^;]+);/s', $content, $matches)) {
                     $traits = $matches[1];
-                    if (! str_contains($traits, 'HasRoles')) {
-                        $newTraits = trim($traits).', HasRoles';
+                    if (!str_contains($traits, 'HasRoles')) {
+                        $newTraits = trim($traits) . ', HasRoles';
                         $content = str_replace(
                             "use {$traits};",
                             "use {$newTraits};",
@@ -338,7 +408,7 @@ class GenerateAuthModule extends Command
     {
         $bootstrapPath = base_path('bootstrap/app.php');
 
-        if (! File::exists($bootstrapPath)) {
+        if (!File::exists($bootstrapPath)) {
             $this->warn('⚠️  bootstrap/app.php not found');
 
             return;
@@ -355,14 +425,14 @@ class GenerateAuthModule extends Command
             $updatedMiddlewareContent = $middlewareContent;
 
             // Add statefulApi if not exists
-            if (! str_contains($middlewareContent, '$middleware->statefulApi()')) {
+            if (!str_contains($middlewareContent, '$middleware->statefulApi()')) {
                 $updatedMiddlewareContent = "\n        \$middleware->statefulApi();";
                 $modified = true;
                 $this->line('✅ Added statefulApi middleware');
             }
 
             // Check if alias method exists
-            if (! str_contains($middlewareContent, '$middleware->alias(')) {
+            if (!str_contains($middlewareContent, '$middleware->alias(')) {
                 // Build the alias array
                 $aliases = "\n        \$middleware->alias([\n";
                 $aliases .= "            'cors' => App\Http\Middleware\Cors::class,\n";
@@ -380,7 +450,7 @@ class GenerateAuthModule extends Command
                 $this->line('✅ Added middleware aliases');
             } else {
                 // Alias exists, check and add missing ones
-                if (! str_contains($middlewareContent, "'cors'")) {
+                if (!str_contains($middlewareContent, "'cors'")) {
                     $updatedMiddlewareContent = preg_replace(
                         '/(\$middleware->alias\(\[)/s',
                         "$1\n            'cors' => App\Http\Middleware\Cors::class,",
@@ -390,7 +460,7 @@ class GenerateAuthModule extends Command
                 }
 
                 if ($includeRoles) {
-                    if (! str_contains($middlewareContent, "'role'")) {
+                    if (!str_contains($middlewareContent, "'role'")) {
                         $updatedMiddlewareContent = preg_replace(
                             '/(\$middleware->alias\(\[[^\]]*)/s',
                             "$1\n            'role' => \\Spatie\\Permission\\Middleware\\RoleMiddleware::class,",
@@ -398,7 +468,7 @@ class GenerateAuthModule extends Command
                         );
                         $modified = true;
                     }
-                    if (! str_contains($middlewareContent, "'permission'")) {
+                    if (!str_contains($middlewareContent, "'permission'")) {
                         $updatedMiddlewareContent = preg_replace(
                             '/(\$middleware->alias\(\[[^\]]*)/s',
                             "$1\n            'permission' => \\Spatie\\Permission\\Middleware\\PermissionMiddleware::class,",
@@ -406,7 +476,7 @@ class GenerateAuthModule extends Command
                         );
                         $modified = true;
                     }
-                    if (! str_contains($middlewareContent, "'role_or_permission'")) {
+                    if (!str_contains($middlewareContent, "'role_or_permission'")) {
                         $updatedMiddlewareContent = preg_replace(
                             '/(\$middleware->alias\(\[[^\]]*)/s',
                             "$1\n            'role_or_permission' => \\Spatie\\Permission\\Middleware\\RoleOrPermissionMiddleware::class,",
@@ -430,7 +500,7 @@ class GenerateAuthModule extends Command
             $exceptionsContent = $matches[1];
 
             // Check if an exception handler already exists
-            if (! str_contains($exceptionsContent, 'ExceptionHandler::handle')) {
+            if (!str_contains($exceptionsContent, 'ExceptionHandler::handle')) {
                 $updatedExceptionsContent = "\n        App\Exceptions\ExceptionHandler::handle(\$exceptions);";
 
                 $content = preg_replace(
@@ -468,7 +538,7 @@ class GenerateAuthModule extends Command
         $this->line('2. Run migrations:');
         $this->line('   php artisan migrate');
 
-        if (! $includeRoles) {
+        if (!$includeRoles) {
             $this->line('');
             $this->line('3. Install Laravel Sanctum if not already installed:');
             $this->line('   composer require laravel/sanctum');
@@ -478,7 +548,7 @@ class GenerateAuthModule extends Command
 
         $this->line('');
         $step = $includeRoles ? '3' : '4';
-        $this->line($step.'. Update your .env file with mail configuration for password reset'.($includeEmailVerification ? ' and email verification' : ''));
+        $this->line($step . '. Update your .env file with mail configuration for password reset' . ($includeEmailVerification ? ' and email verification' : ''));
         $this->line('   MAIL_MAILER=smtp');
         $this->line('   MAIL_HOST=your-mail-host');
         $this->line('   MAIL_PORT=587');
