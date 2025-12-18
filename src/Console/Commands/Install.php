@@ -80,6 +80,9 @@ class Install extends Command
         ];
 
         $this->copyFiles($files, __DIR__ . '/../../_stubs');
+        $this->copyFiles([
+            'resources/views/errors/error.blade' => 'resources/views/errors/error.blade.php',
+        ], __DIR__ . '/../../AuthModule');
     }
 
     protected function ensureModelsYamlExists(): void
