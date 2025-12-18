@@ -107,7 +107,9 @@ class GenerateAuthModule extends Command
             'Mail/UserAccountCreateMail' => 'app/Mail/UserAccountCreateMail.php',
 
             ...($includeEmailVerification ? [
-                'Services/Auth/VerificationService' => 'app/Services/Auth/VerificationService.php',
+//                'Services/Auth/VerificationService' => 'app/Services/Auth/VerificationService.php',
+                'Models/EmailVerificationToken' => 'app/Models/EmailVerificationToken.php',
+                'migrations/2025_00_00_000000_create_email_verification_tokens_table' => 'database/migrations/2025_00_00_000000_create_email_verification_tokens_table.php',
                 'Mail/VerifyEmailMail' => 'app/Mail/VerifyEmailMail.php',
                 'resources/views/emails/verify_email_mail.blade' => 'resources/views/emails/verify_email_mail.blade.php',
             ] : []),
