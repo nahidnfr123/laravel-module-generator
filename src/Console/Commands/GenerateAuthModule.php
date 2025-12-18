@@ -38,7 +38,10 @@ class GenerateAuthModule extends Command
         $this->info('🚀 Starting Authentication & User Management Generation...');
         $this->newLine();
 
-        $this->checkDatabaseConnection();
+        if (!$this->checkDatabaseConnection()) {
+            return;
+        }
+
         $this->newLine();
 
         // Ask about roles and permissions
