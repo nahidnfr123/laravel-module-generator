@@ -83,7 +83,7 @@ class GenerateAuthModule extends Command
         $this->info('📝 Generating Authentication files...');
 
         $files = [
-            'Middleware/Cors' => 'app/Http/Middleware/Cors.php',
+            'Middleware/Authenticate' => 'app/Http/Middleware/Authenticate.php',
 
             'Services/AuthService' => 'app/Services/AuthService.php',
             'Services/Auth/PasswordService' => 'app/Services/Auth/PasswordService.php',
@@ -380,6 +380,7 @@ class GenerateAuthModule extends Command
             if (!str_contains($middlewareContent, '$middleware->alias(')) {
                 // Build the alias array
                 $aliases = "\n        \$middleware->alias([\n";
+                $aliases .= "            'auth' => \App\Http\Middleware\Authenticate::class,";
                 $aliases .= "            'cors' => App\Http\Middleware\Cors::class,\n";
 
                 if ($includeRoles) {
@@ -399,6 +400,14 @@ class GenerateAuthModule extends Command
                     $updatedMiddlewareContent = preg_replace(
                         '/(\$middleware->alias\(\[)/s',
                         "$1\n            'cors' => App\Http\Middleware\Cors::class,",
+                        $updatedMiddlewareContent
+                    );
+                    $modified = true;
+                }
+                if (!str_contains($middlewareContent, "'auth'")) {
+                    $updatedMiddlewareContent = preg_replace(
+                        '/(\$middleware->alias\(\[)/s',
+                        "$1\n            'auth' => \App\Http\Middleware\Authenticate::class,",
                         $updatedMiddlewareContent
                     );
                     $modified = true;

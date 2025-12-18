@@ -10,8 +10,11 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\UnauthorizedException;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Routing\Exception\MethodNotAllowedException;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
+// use Spatie\Permission\Exceptions\UnauthorizedException as SpatieUnauthorizedException;
 use Throwable;
 
 class ExceptionHandler
@@ -24,28 +27,40 @@ class ExceptionHandler
         // 404 - Not Found (Route)
         $exceptions->render(function (NotFoundHttpException $e, Request $request) {
             if ($request->is('api/*')) {
-                return self::failureResponse('Resource not found', 404);
+                return self::failureResponse('Resource not found', $e->getCode() ?? 404, [
+                    'message' => $e->getMessage(),
+                ]);
             }
 
-            return response()->view('errors.error', ['error' => $e], 404);
+            return response()->view('errors.error', ['error' => $e], $e->getCode() ?? 404);
         });
 
         // 404 - Model Not Found
         $exceptions->render(function (ModelNotFoundException $e, Request $request) {
             if ($request->is('api/*')) {
-                return self::failureResponse('Resource not found', 404);
+                return self::failureResponse('Resource not found', $e->getcode() ?? 404, [
+                    'message' => $e->getMessage(),
+                ]);
             }
 
-            return response()->view('errors.error', ['error' => $e], 404);
+            return response()->view('errors.error', ['error' => $e], $e->getCode() ?? 404);
+        });
+
+        $exceptions->render(function (MethodNotAllowedException|MethodNotAllowedHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return self::failureResponse($e->getMessage() ?? 'Method Not Allowed', $e->getCode() ?? 405);
+            }
+
+            return response()->view('errors.error', ['error' => $e], $e->getCode() ?? 405);
         });
 
         // 401 - Unauthenticated
         $exceptions->render(function (AuthenticationException $e, Request $request) {
             if ($request->is('api/*')) {
-                return self::failureResponse('Unauthenticated', 401);
+                return self::failureResponse('Unauthenticated', $e->getCode() ?? 401);
             }
 
-            return response()->view('errors.error', ['error' => $e], 401);
+            return response()->view('errors.error', ['error' => $e], $e->getCode() ?? 401);
         });
 
         // 403 - Access Denied (Abilities/Scopes)
@@ -53,31 +68,26 @@ class ExceptionHandler
             if ($request->is('api/*')) {
                 return self::failureResponse(
                     'Unauthorized action. You do not have the required permissions.',
-                    403
+                    $e->getCode() ?? 403
                 );
             }
 
-            return response()->view('errors.error', ['error' => $e], 403);
+            return response()->view('errors.error', ['error' => $e], $e->getCode() ?? 403);
         });
 
         // 403 - Unauthorized
         $exceptions->render(function (UnauthorizedException $e, Request $request) {
             if ($request->is('api/*')) {
-                return self::failureResponse('Unauthorized action.', 403);
+                return self::failureResponse('Unauthorized action.', $e->getCode() ?? 403);
             }
 
-            return response()->view('errors.error', ['error' => $e], 403);
+            return response()->view('errors.error', ['error' => $e], $e->getCode() ?? 403);
         });
 
         // 422 - Validation Errors
         $exceptions->render(function (ValidationException $e, Request $request) {
             if ($request->is('api/*')) {
-                return response()->json([
-                    'success' => false,
-                    'errors' => $e->errors(),
-                    'message' => $e->getMessage(),
-                    'status' => 422,
-                ], 422);
+                return self::failureResponse($e->getMessage() ?? 'The given data was invalid.', $e->getCode() ?? 422, $e->errors());
             }
 
             return redirect()->back()->withErrors($e->errors());
@@ -86,10 +96,28 @@ class ExceptionHandler
         // route not found
         $exceptions->render(function (RouteNotFoundException $e, Request $request) {
             if ($request->is('api/*')) {
-                return self::failureResponse('Route not found', 404);
+                return self::failureResponse('Route not found', $e->getCode() ?? 404);
             }
 
-            return response()->view('errors.error', ['error' => $e], 404);
+            return response()->view('errors.error', ['error' => $e], $e->getCode() ?? 404);
+        });
+
+        // Spatie UnauthorizedException
+        //        $exceptions->render(function (SpatieUnauthorizedException $e, Request $request) {
+        //            if ($request->is('api/*')) {
+        //                return failureResponse("Unauthorized action. You don't have permission to view this data.", 403);
+        //            }
+        //
+        //            return response()->view('errors.error', ['error' => $e], 403);
+        //        });
+
+        // All other exceptions
+        $exceptions->render(function (Throwable $e, Request $request) {
+            if ($request->is('api/*')) {
+                return self::failureResponse($e->getMessage() ?? 'An error occurred', $e->getCode() >= 100 && $e->getCode() <= 599 ? $e->getCode() : 500);
+            }
+
+            return response()->view('errors.error', ['error' => $e], $e->getCode() ?? 500);
         });
 
         // Log all exceptions with full context
@@ -110,12 +138,22 @@ class ExceptionHandler
     /**
      * Helper method for consistent failure responses
      */
-    protected static function failureResponse(string $message, int $status = 400): \Illuminate\Http\JsonResponse
+    protected static function failureResponse(string $message, int $status = 400, $errors = null): \Illuminate\Http\JsonResponse
     {
-        return response()->json([
-            'success' => false,
-            'message' => $message,
-            'status' => $status,
-        ], $status);
+        $code = (int) $status;
+        $code = ($code >= 100 && $code <= 599) ? $code : 400;
+
+        $response = ['success' => false, 'message' => $message, 'status' => $code];
+        if ($errors) {
+            if (is_array($errors)) {
+                $response['errors'] = $errors;
+            } elseif (is_string($errors)) {
+                $response['error'] = $errors;
+            } else {
+                $response['error'] = $errors;
+            }
+        }
+
+        return response()->json($response, $code);
     }
 }

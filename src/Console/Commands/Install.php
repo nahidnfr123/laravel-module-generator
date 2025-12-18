@@ -40,6 +40,7 @@ class Install extends Command
         // ✅ Auto-create models.yaml if not exists
         $this->ensureModelsYamlExists();
         $this->copyDefaultFiles();
+        $this->updateBootstrapApp();
         $this->updateComposerJson();
 
         //        $authConfirm = $this->ask('Would you like to generate the Auth Module with login, register, forget-password, reset-password, profile? (yes/no)', 'no');
@@ -62,6 +63,8 @@ class Install extends Command
         $this->info('Generating Traits...');
 
         $files = [
+            'Middleware/Cors' => 'app/Http/Middleware/Cors.php',
+
             'Traits/MetaResponseTrait' => 'app/Traits/MetaResponseTrait.php',
             'Traits/ApiResponseTrait' => 'app/Traits/ApiResponseTrait.php',
             'Traits/HandlesPagination' => 'app/Traits/HandlesPagination.php',
@@ -154,7 +157,7 @@ YAML
     }
 
 
-    protected function updateBootstrapApp(bool $includeRoles): void
+    protected function updateBootstrapApp(): void
     {
         $bootstrapPath = base_path('bootstrap/app.php');
 
@@ -168,6 +171,56 @@ YAML
 
         $content = File::get($bootstrapPath);
         $modified = false;
+
+        // Handle withMiddleware section
+        if (preg_match('/->withMiddleware\(function\s*\(Middleware\s+\$middleware\)\s*:\s*void\s*\{(.*?)\}\)/s', $content, $matches)) {
+            $middlewareContent = $matches[1];
+            $updatedMiddlewareContent = $middlewareContent;
+
+            // Add statefulApi if not exists
+            if (!str_contains($middlewareContent, '$middleware->statefulApi()')) {
+                $updatedMiddlewareContent = "\n        \$middleware->statefulApi();";
+                $modified = true;
+                $this->line('✅ Added statefulApi middleware');
+            }
+
+            // Check if alias method exists
+            if (!str_contains($middlewareContent, '$middleware->alias(')) {
+                // Build the alias array
+                $aliases = "\n        \$middleware->alias([\n";
+                $aliases .= "            'auth' => \App\Http\Middleware\Authenticate::class,";
+                $aliases .= "            'cors' => App\Http\Middleware\Cors::class,\n";
+
+                $aliases .= '        ]);';
+                $updatedMiddlewareContent .= $aliases;
+                $modified = true;
+                $this->line('✅ Added middleware aliases');
+            } else {
+                if (!str_contains($middlewareContent, "'cors'")) {
+                    $updatedMiddlewareContent = preg_replace(
+                        '/(\$middleware->alias\(\[)/s',
+                        "$1\n            'cors' => App\Http\Middleware\Cors::class,",
+                        $updatedMiddlewareContent
+                    );
+                    $modified = true;
+                }
+                if (!str_contains($middlewareContent, "'auth'")) {
+                    $updatedMiddlewareContent = preg_replace(
+                        '/(\$middleware->alias\(\[)/s',
+                        "$1\n            'auth' => \App\Http\Middleware\Authenticate::class,",
+                        $updatedMiddlewareContent
+                    );
+                    $modified = true;
+                }
+            }
+
+            // Replace the middleware content
+            $content = preg_replace(
+                '/->withMiddleware\(function\s*\(Middleware\s+\$middleware\)\s*:\s*void\s*\{.*?\}\)/s',
+                "->withMiddleware(function (Middleware \$middleware): void {{$updatedMiddlewareContent}\n    })",
+                $content
+            );
+        }
 
         // Handle withExceptions section
         if (preg_match('/->withExceptions\(function\s*\(Exceptions\s+\$exceptions\)\s*:\s*void\s*\{(.*?)\}\)/s', $content, $matches)) {
