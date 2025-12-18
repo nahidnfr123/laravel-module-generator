@@ -38,6 +38,9 @@ class GenerateAuthModule extends Command
         $this->info('🚀 Starting Authentication & User Management Generation...');
         $this->newLine();
 
+        $this->checkDatabaseConnection();
+        $this->newLine();
+
         // Ask about roles and permissions
         $includeRoles = !$this->option('skip-roles') &&
             $this->confirm('Do you want to add roles and permissions management?', true);
@@ -76,6 +79,24 @@ class GenerateAuthModule extends Command
         $this->displayNextSteps($includeRoles, $includeEmailVerification);
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * Check if database connection is working
+     */
+    protected function checkDatabaseConnection(): bool
+    {
+        $this->info('🔍 Checking database connection...');
+
+        try {
+            \DB::connection()->getPdo();
+            $this->line('✅ Database connected successfully');
+            return true;
+        } catch (\Exception $e) {
+            $this->error('❌ Database connection failed: ' . $e->getMessage());
+            $this->warn('Please configure your database in .env file and ensure the database server is running');
+            return false;
+        }
     }
 
     protected function copyAuthenticationFiles($includeEmailVerification): void
