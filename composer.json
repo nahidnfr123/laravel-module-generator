@@ -1,7 +1,7 @@
 {
   "name": "nahid-ferdous/laravel-module-generator",
   "description": "Speeds up Laravel development by automating repetitive tasks. This package helps to generate module files (service, controller, model, migration, resource, request, collection) from YAML file.",
-  "version": "1.2.11",
+  "version": "1.2.12",
   "type": "library",
   "license": "MIT",
   "keywords": [

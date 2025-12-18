@@ -76,7 +76,7 @@ class Install extends Command
             'Helpers/GeneralHelper' => 'app/Helpers/GeneralHelper.php',
         ];
 
-        $this->copyFiles($files, __DIR__ . '/../../stubs');
+        $this->copyFiles($files, __DIR__ . '/../../_stubs');
     }
 
     protected function ensureModelsYamlExists(): void
