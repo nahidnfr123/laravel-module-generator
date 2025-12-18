@@ -63,7 +63,6 @@ class Install extends Command
         $this->info('Generating Traits...');
 
         $files = [
-
             'Traits/MetaResponseTrait' => 'app/Traits/MetaResponseTrait.php',
             'Traits/ApiResponseTrait' => 'app/Traits/ApiResponseTrait.php',
             'Traits/HandlesPagination' => 'app/Traits/HandlesPagination.php',
@@ -83,7 +82,7 @@ class Install extends Command
             'Middleware/Cors' => 'app/Http/Middleware/Cors.php',
             'Middleware/Authenticate' => 'app/Http/Middleware/Authenticate.php',
             'resources/views/errors/error.blade' => 'resources/views/errors/error.blade.php',
-        ], __DIR__ . '/../../AuthModule');
+        ], __DIR__ . '/../../_stubs/AuthModule');
     }
 
     protected function ensureModelsYamlExists(): void
