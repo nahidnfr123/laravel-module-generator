@@ -83,7 +83,7 @@ class GenerateAuthModule extends Command
         $this->info('📝 Generating Authentication files...');
 
         $files = [
-            'Middleware/Authenticate' => 'app/Http/Middleware/Authenticate.php',
+            //'Middleware/Authenticate' => 'app/Http/Middleware/Authenticate.php',
 
             'Services/AuthService' => 'app/Services/AuthService.php',
             'Services/Auth/PasswordService' => 'app/Services/Auth/PasswordService.php',
