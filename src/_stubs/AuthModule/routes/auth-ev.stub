@@ -17,6 +17,12 @@ Route::middleware(['api', 'cors'])->group(function () {
         });
     });
 
+    // Email verification routes
+    Route::get('email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
+        ->middleware(['signed', 'throttle:6,1'])->name('api.verification.verify');
+    Route::post('email/resend-verification-link', [AuthController::class, 'resendEmailVerificationLink'])
+        ->middleware(['auth:sanctum', 'throttle:6,1']);
+
     // Protected routes
     Route::middleware(['auth:sanctum'])->group(function () {
         // profile routes
