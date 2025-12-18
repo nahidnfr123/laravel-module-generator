@@ -8,7 +8,6 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Resources\UserProfileResource;
 use App\Services\Auth\PasswordService;
-use App\Services\Auth\VerificationService;
 use App\Services\AuthService;
 use Illuminate\Http\Request;
 
@@ -36,7 +35,7 @@ class AuthController extends Controller
     public function register(RegisterRequest $request): ?\Illuminate\Http\JsonResponse
     {
         try {
-            return successResponse('Register successful', $this->authService->register($request->validated()));
+            return successResponse('Register successful', $this->authService->register($request, false));
         } catch (\Exception $e) {
             return failureResponse($e->getMessage(), $e->getCode() ?? 400);
         }
@@ -45,7 +44,7 @@ class AuthController extends Controller
     public function logout(Request $request): \Illuminate\Http\JsonResponse
     {
         try {
-            $request->user()->currentAccessToken()->delete();
+            $request->user()?->currentAccessToken()?->delete();
 
             return successResponse('Successfully logged out.');
         } catch (\Exception $e) {
@@ -56,31 +55,38 @@ class AuthController extends Controller
     public function userProfile(Request $request): \Illuminate\Http\JsonResponse
     {
         $user = $request->user();
-        $user->load(['role']);
+        $user->load(['roles']);
 
         return successResponse('User details', new UserProfileResource($user));
     }
 
-    public function verifyEmail(Request $request, int $id, string $hash, VerificationService $service): \Illuminate\Http\JsonResponse
+    public function verifyEmail(Request $request): \Illuminate\Http\JsonResponse
     {
-        if (! $request->hasValidSignature()) {
-            return failureResponse('Invalid or expired verification link.', 403);
-        }
+        $request->validate(['token' => 'required|string']);
+        try {
+            abort_if(! auth()->check(), 401, 'Unauthenticated.');
+            abort_if(auth()->user()->hasVerifiedEmail(), 403, 'Email already verified.');
 
-        if (! $service->verify($id, $hash)) {
-            return failureResponse('Verification failed.', 400);
-        }
+            $this->authService->verifyEmailVerificationLink($request);
 
-        return successResponse('Email verified successfully.');
+            return successResponse('Email verified successfully.');
+        } catch (\Exception $e) {
+            return failureResponse($e->getMessage(), $e->getCode() ?? 500);
+        }
     }
 
-    public function resendEmailVerificationLink(Request $request, VerificationService $service): \Illuminate\Http\JsonResponse
+    public function resendEmailVerificationLink(): \Illuminate\Http\JsonResponse
     {
-        $service->resend($request->user());
+        try {
+            abort_if(! auth()->check(), 401, 'Unauthenticated.');
+            abort_if(auth()->user()->hasVerifiedEmail(), 403, 'Email already verified.');
 
-        return response()->json([
-            'message' => 'Verification link sent.',
-        ]);
+            $this->authService->resendEmailVerificationLink();
+
+            return successResponse('Verification link sent.');
+        } catch (\Exception $e) {
+            return failureResponse($e->getMessage(), $e->getCode() ?? 500);
+        }
     }
 
     public function forgotPassword(ForgotPasswordRequest $request): \Illuminate\Http\JsonResponse

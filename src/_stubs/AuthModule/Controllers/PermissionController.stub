@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\AssignPermissionToRoleRequest;
-use App\Http\Requests\AssignPermissionToUserRequest;
+use App\Http\Requests\Permission\AssignPermissionToRoleRequest;
+use App\Http\Requests\Permission\AssignPermissionToUserRequest;
 use App\Http\Resources\PermissionCollection;
 use App\Services\PermissionService;
 use Illuminate\Routing\Controllers\HasMiddleware;

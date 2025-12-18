@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreUserRequest;
-use App\Http\Requests\UpdateUserRequest;
+use App\Http\Requests\User\StoreUserRequest;
+use App\Http\Requests\User\UpdateUserRequest;
 use App\Http\Resources\UserCollection;
 use App\Http\Resources\UserResource;
 use App\Models\User;
@@ -45,25 +45,26 @@ class UserController extends Controller implements HasMiddleware
     {
         $user = $this->userService->store($request);
 
-        return successResponse('Role created successfully.', new UserResource($user));
+        return successResponse('Profile created successfully.', new UserResource($user));
     }
 
     public function update(UpdateUserRequest $request, User $user): \Illuminate\Http\JsonResponse
     {
         $this->userService->update($request, $user);
 
-        return successResponse('Role updated successfully.', new UserResource($user));
+        return successResponse('Profile updated successfully.', new UserResource($user));
     }
 
-    public function updateProfile(UpdateUserRequest $request, $id): \Illuminate\Http\JsonResponse
+    public function updateProfile(UpdateUserRequest $request, ?int $id = null): \Illuminate\Http\JsonResponse
     {
         try {
             DB::beginTransaction();
-            $data = (new UserService)->update($request, User::findOrFail($id));
+            $user = User::findOrFail($id ?? auth()->id());
+            $data = $this->userService->update($request, $user);
             DB::commit();
 
             return successResponse('Profile updated successfully.', $data);
-        } catch (\Exception $e) {
+        } catch (\Throwable|\Exception $e) {
             DB::rollBack();
 
             return failureResponse($e->getMessage());
@@ -74,7 +75,7 @@ class UserController extends Controller implements HasMiddleware
     {
         $this->userService->delete($user);
 
-        return successResponse('Role deleted successfully.');
+        return successResponse('User deleted successfully.');
     }
 
     public function changePassword(\App\Http\Requests\User\ChangePasswordRequest $request): \Illuminate\Http\JsonResponse
@@ -82,6 +83,6 @@ class UserController extends Controller implements HasMiddleware
         $user = User::findOrFail(auth()->id());
         $user = $this->userService->changePassword($request, $user);
 
-        return successResponse('Role updated successfully.', new UserResource($user));
+        return successResponse('Password changed successfully.');
     }
 }

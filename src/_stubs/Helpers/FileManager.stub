@@ -1,7 +1,5 @@
 <?php
 
-use Illuminate\Support\Facades\Storage;
-
 function uploadFile($file, $path = 'files', $name = ''): ?string
 {
     if (! $file) {

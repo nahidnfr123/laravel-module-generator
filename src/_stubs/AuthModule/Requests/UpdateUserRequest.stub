@@ -15,7 +15,7 @@ class UpdateUserRequest extends FormRequest
     {
         return [
             'name' => 'required',
-            'email' => 'required|email|unique:users,email,'.auth()->id(),
+            'email' => 'sometimes|email|unique:users,email,'.auth()->id(),
             'roles' => 'sometimes|array',
             'roles.*' => 'exists:roles,id',
         ];

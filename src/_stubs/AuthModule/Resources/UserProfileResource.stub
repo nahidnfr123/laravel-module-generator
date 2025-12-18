@@ -20,7 +20,7 @@ class UserProfileResource extends JsonResource
             'email' => $this->email,
             'email_verified_at' => $this->email_verified_at,
             'created_at' => $this->created_at,
-            'role' => $this->whenLoaded('role'),
+            'roles' => $this->whenLoaded('roles'),
             'permissions' => $this->getAllPermissions()->pluck('name')->mapWithKeys(function ($permission) {
                 return [$permission => true];
             }),
