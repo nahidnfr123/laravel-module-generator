@@ -16,7 +16,8 @@ class Install extends Command
      *
      * @var string
      */
-    protected $signature = 'module-generator:install';
+    //protected $signature = 'module-generator:install';
+    protected $signature = 'module-generator:install {--force : Overwrite existing files without confirmation}';
 
     /**
      * The console command description.
