@@ -39,7 +39,7 @@ class GenerateAuthModule extends Command
         $this->newLine();
 
         if (!$this->checkDatabaseConnection()) {
-            return;
+            return self::FAILURE;
         }
 
         $this->newLine();
