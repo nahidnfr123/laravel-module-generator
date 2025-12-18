@@ -38,7 +38,6 @@ class GenerateAuthModule extends Command
         $this->info('🚀 Starting Authentication & User Management Generation...');
         $this->newLine();
 
-        // $includeRoles = true;
         // Ask about roles and permissions
         $includeRoles = !$this->option('skip-roles') &&
             $this->confirm('Do you want to add roles and permissions management?', true);
@@ -61,6 +60,7 @@ class GenerateAuthModule extends Command
         if ($includeRoles) {
             $this->installAndConfigureSpatiePackage();
             $this->copyRolesAndPermissionsFiles();
+            $this->copyPermissionMigrationWithTimestamp();
         }
 
         // Update User model
@@ -83,8 +83,6 @@ class GenerateAuthModule extends Command
         $this->info('📝 Generating Authentication files...');
 
         $files = [
-            //'Middleware/Authenticate' => 'app/Http/Middleware/Authenticate.php',
-
             'Services/AuthService' => 'app/Services/AuthService.php',
             'Services/Auth/PasswordService' => 'app/Services/Auth/PasswordService.php',
 
@@ -107,7 +105,6 @@ class GenerateAuthModule extends Command
             'Mail/UserAccountCreateMail' => 'app/Mail/UserAccountCreateMail.php',
 
             ...($includeEmailVerification ? [
-//                'Services/Auth/VerificationService' => 'app/Services/Auth/VerificationService.php',
                 'Models/EmailVerificationToken' => 'app/Models/EmailVerificationToken.php',
                 'migrations/2025_00_00_000000_create_email_verification_tokens_table' => 'database/migrations/2025_00_00_000000_create_email_verification_tokens_table.php',
                 'Mail/VerifyEmailMail' => 'app/Mail/VerifyEmailMail.php',
@@ -173,6 +170,73 @@ class GenerateAuthModule extends Command
         ];
 
         $this->copyFiles($files, 'Roles & Permissions');
+    }
+
+    /**
+     * Copy the add_type_to_permissions_table migration with a timestamp
+     * that ensures it runs after Spatie's permission migrations
+     */
+    protected function copyPermissionMigrationWithTimestamp(): void
+    {
+        $this->info('📝 Copying custom permission migration...');
+
+        $stubPath = $this->packageStubPath . '/migrations/2025_00_00_000000_add_type_to_permissions_table.stub';
+
+        if (!File::exists($stubPath)) {
+            $this->warn('⚠️  Migration stub not found: ' . $stubPath);
+            return;
+        }
+
+        // Find the latest Spatie permission migration timestamp
+        $migrationsPath = database_path('migrations');
+        $spatieMigrations = File::glob($migrationsPath . '/*_create_permission_tables.php');
+
+        $timestamp = null;
+
+        if (!empty($spatieMigrations)) {
+            // Get the timestamp from the Spatie migration filename
+            $latestMigration = end($spatieMigrations);
+            $filename = basename($latestMigration);
+
+            // Extract timestamp (first 17 characters: YYYY_MM_DD_HHMMSS)
+            preg_match('/^(\d{4}_\d{2}_\d{2}_\d{6})_/', $filename, $matches);
+
+            if (isset($matches[1])) {
+                // Add 1 second to ensure it runs after Spatie's migration
+                $originalTimestamp = str_replace('_', '', $matches[1]);
+                $dateTime = \DateTime::createFromFormat('YmdHis', $originalTimestamp);
+                $dateTime->modify('+1 second');
+                $timestamp = $dateTime->format('Y_m_d_His');
+
+                $this->line("✅ Found Spatie migration timestamp: {$matches[1]}");
+                $this->line("✅ Using timestamp: {$timestamp}");
+            }
+        }
+
+        // If no Spatie migration found, use current timestamp
+        if (!$timestamp) {
+            $timestamp = date('Y_m_d_His');
+            $this->warn('⚠️  Spatie migration not found, using current timestamp');
+        }
+
+        $destinationFilename = "{$timestamp}_add_type_to_permissions_table.php";
+        $destinationPath = $migrationsPath . '/' . $destinationFilename;
+
+        // Check if migration already exists (any timestamp variant)
+        $existingMigrations = File::glob($migrationsPath . '/*_add_type_to_permissions_table.php');
+
+        if (!empty($existingMigrations) && !$this->option('force')) {
+            $existingFile = basename($existingMigrations[0]);
+            if (!$this->confirm("Migration already exists: {$existingFile}. Do you want to replace it?", false)) {
+                $this->line("⏭️  Skipped: {$destinationFilename}");
+                return;
+            }
+            // Remove old migration
+            File::delete($existingMigrations[0]);
+        }
+
+        File::copy($stubPath, $destinationPath);
+        $this->line("✅ Created: database/migrations/{$destinationFilename}");
     }
 
     protected function copyFiles(array $files, string $component): void
@@ -244,7 +308,6 @@ class GenerateAuthModule extends Command
         }
 
         /**
-         * 🔴 THIS IS THE MISSING PART 🔴
          * Laravel must rediscover providers
          */
         if ($freshInstall) {
@@ -271,7 +334,6 @@ class GenerateAuthModule extends Command
         }
 
         $this->info('✅ Spatie config and migrations published');
-
 
         // Clear caches
         $this->info('Clearing caches...');
