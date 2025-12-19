@@ -113,6 +113,9 @@ class GenerateAuthModule extends Command
 
         $this->info('📝 Generating Authentication files...');
 
+        $this->info($path);
+        $this->info($directory);
+
         $files = [
             'AuthModule.postman_collection.stub' => $directory . '/AuthModule.postman_collection.json',
             'Services/AuthService' => 'app/Services/AuthService.php',
