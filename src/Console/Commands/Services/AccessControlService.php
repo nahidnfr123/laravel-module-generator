@@ -4,8 +4,9 @@ namespace NahidFerdous\LaravelModuleGenerator\Console\Commands\Services;
 
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
-use function NahidFerdous\LaravelModuleGenerator\Services\service\base_path;
-use function NahidFerdous\LaravelModuleGenerator\Services\service\database_path;
+use function base_path;
+use function config;
+use function database_path;
 
 class AccessControlService extends BaseAuthModuleService
 {
