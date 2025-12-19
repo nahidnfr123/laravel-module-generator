@@ -15,38 +15,36 @@ class UserService
             ->paginate(request('per_page', 25));
     }
 
-    public function store($request, $rawPassword = null): User
+    public function store($data, $rawPassword = null, $avatar = null): User
     {
-        $data = $request->validated() ?? $request;
         $password = $rawPassword ?? $data['password'];
         if ($password) {
             $data['password'] = Hash::make($password);
         }
-
+        if ($avatar) {
+            $data['avatar'] = uploadFile($avatar, 'avatars', $data['name']);
+        }
         $user = User::create($data);
 
         if (isset($data['roles']) && $data['roles']) {
             $user->assignRole($data['roles']);
         }
 
-        $this->uploadFiles($request, $user);
-
         return $user;
     }
 
-    public function update($request, $user)
+    public function update($data, $user, $avatar = null)
     {
-        $data = $request->validated() ?? $request;
         unset($data['email']); // Prevent email update directly
-
+        if ($avatar) {
+            $data['avatar'] = uploadFile($avatar, 'avatars', $user->name);
+        }
         $user->update($data);
 
         if (isset($data['roles']) && $data['roles']) {
             $user->syncRoles($data['roles']);
             $user->tokens()->delete();
         }
-
-        $this->uploadFiles($request, $user);
 
         return $user;
     }
@@ -67,12 +65,5 @@ class UserService
         $user->delete();
 
         return $user;
-    }
-
-    protected function uploadFiles($request, $model): void
-    {
-        if ($request->has('avatar') && $request->avatar) {
-            $model->uploadMedia($request->avatar, 'avatar_'.mt_rand(), 'avatar');
-        }
     }
 }

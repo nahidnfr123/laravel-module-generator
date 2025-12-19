@@ -43,14 +43,14 @@ class UserController extends Controller implements HasMiddleware
 
     public function store(StoreUserRequest $request): \Illuminate\Http\JsonResponse
     {
-        $user = $this->userService->store($request);
+        $user = $this->userService->store($request->validated(), avatar: $request->file('avatar'));
 
         return successResponse('Profile created successfully.', new UserResource($user));
     }
 
     public function update(UpdateUserRequest $request, User $user): \Illuminate\Http\JsonResponse
     {
-        $this->userService->update($request, $user);
+        $this->userService->update($request->validated(), $user, avatar: $request->file('avatar'));
 
         return successResponse('Profile updated successfully.', new UserResource($user));
     }

@@ -2,16 +2,20 @@
 
 namespace App\Services;
 
+use App\Mail\VerifyEmailMail;
+use App\Models\EmailVerificationToken;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthService
 {
-    public function login($request): object
+    public function login($data): object
     {
-        $user = User::where('email', $request->email)->first();
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+        $user = User::where('email', $data['email'])->first();
+        if (! $user || ! Hash::check($data['password'], $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['Credentials do not match our records.'],
             ]);
@@ -24,11 +28,11 @@ class AuthService
         // roles
         $role = $user->role ?? null;
         // OPTIONAL: revoke old tokens
-        $user->tokens()->delete();
-        $token = $user->createToken('user'.'Token', ['check-'.$role ?? 'user']);
+        $user?->currentAccessToken()?->delete();
+        $token = $user?->createToken('user'.'Token', ['check-'.$role ?? 'user'])?->plainTextToken;
 
         return (object) [
-            'token' => $token->plainTextToken,
+            'token' => $token,
             'role' => $role,
         ];
     }
@@ -41,10 +45,47 @@ class AuthService
         }
     }
 
-    public function register($request): object
+    public function register($data, $login = true): object
     {
-        (new UserService)->store($request);
+        $user = (new UserService)->store($data);
 
-        return $this->login($request);
+        if ($login) {
+            return $this->login($data);
+        }
+
+        return $user;
+    }
+
+    public function resendEmailVerificationLink(): void
+    {
+        $token = hash('sha256', Str::random(60));
+        $user = auth()->user();
+        EmailVerificationToken::create([
+            'user_id' => $user->id,
+            'token' => $token,
+            'expires_at' => now()->addMinutes(60),
+        ]);
+
+        $redirectUrl = config('app.frontend_url').'/verify-email?token='.$token;
+        Mail::to($user->email)->send(new VerifyEmailMail($user, $redirectUrl));
+    }
+
+    public function verifyEmailVerificationLink($data): void
+    {
+        $record = EmailVerificationToken::where('token', $data['token'])
+            ->where('expires_at', '>', now())
+            ->first();
+
+        if (! $record) {
+            throw ValidationException::withMessages(['token' => ['Invalid or expired token.']]);
+        }
+
+        $user = $record->user;
+
+        if (! $user->hasVerifiedEmail()) {
+            $user->markEmailAsVerified();
+        }
+
+        $record->delete();
     }
 }

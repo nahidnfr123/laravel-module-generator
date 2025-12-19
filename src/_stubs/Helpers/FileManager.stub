@@ -5,7 +5,7 @@ function uploadFile($file, $path = 'files', $name = ''): ?string
     if (! $file) {
         return null;
     }
-    $file_name = null;
+    // $file_name = null;
     if ($name) {
         $file_name = $name.'_'.time().mt_rand().'.'.$file->getClientOriginalExtension();
     } else {
