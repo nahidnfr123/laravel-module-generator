@@ -104,9 +104,17 @@ class GenerateAuthModule extends Command
 
     protected function copyAuthenticationFiles($includeEmailVerification): void
     {
+        $path = config('module-generator.models_path');
+        $directory = dirname($path); // get the directory portion of the path
+
+        if (!file_exists($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+            throw new \RuntimeException(sprintf('Directory "%s" was not created', $directory));
+        }
+
         $this->info('📝 Generating Authentication files...');
 
         $files = [
+            'AuthModule.postman_collection.json' => $directory . '/AuthModule.postman_collection.json',
             'Services/AuthService' => 'app/Services/AuthService.php',
             'Services/Auth/PasswordService' => 'app/Services/Auth/PasswordService.php',
 
@@ -263,7 +271,7 @@ class GenerateAuthModule extends Command
         $this->line("✅ Created: database/migrations/{$destinationFilename}");
     }
 
-    protected function copyFiles(array $files, string $component): void
+    protected function copyFiles(array $files): void
     {
         foreach ($files as $source => $destination) {
             // Determine source extension based on file type
