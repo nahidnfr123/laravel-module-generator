@@ -19,7 +19,7 @@ class PermissionsData
         ];
     }
 
-    public function defaultPermissionsBasic($key, $hasList = true): array
+    public function defaultPermissionsBasic($key): array
     {
         return [
             'view_'.$key.'_module',

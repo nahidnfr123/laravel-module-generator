@@ -1,0 +1,72 @@
+<?php
+
+namespace App\Models;
+
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
+
+class User extends Authenticatable
+{
+    /** @use HasFactory<\Database\Factories\UserFactory> */
+    use HasApiTokens, HasFactory, HasRoles, Notifiable;
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var list<string>
+     */
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'avatar',
+    ];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+        ];
+    }
+
+    public function role()
+    {
+        return $this->hasOneThrough(
+            Role::class,        // Final model
+            UserRole::class,    // Intermediate model (pivot table as a model)
+            'model_id',         // Foreign key on UserRole pointing to users.id
+            'id',               // Foreign key on Role pointing to roles.id
+            'id',               // Local key on users table
+            'role_id'           // Local key on UserRole table pointing to roles.id
+        )->where('model_type', self::class); // required for Spatie
+    }
+
+    public function getAvatarAttribute(): ?string
+    {
+        if ($this->avatar) {
+            return asset('storage/avatars/'.$this->avatar);
+        }
+
+        return null;
+    }
+}
