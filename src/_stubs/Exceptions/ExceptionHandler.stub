@@ -15,8 +15,9 @@ use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Exception\MethodNotAllowedException;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
-// use Spatie\Permission\Exceptions\UnauthorizedException as SpatieUnauthorizedException;
 use Throwable;
+
+// use Spatie\Permission\Exceptions\UnauthorizedException as SpatieUnauthorizedException;
 
 class ExceptionHandler
 {
@@ -28,18 +29,18 @@ class ExceptionHandler
         // 404 - Not Found (Route)
         $exceptions->render(function (NotFoundHttpException $e, Request $request) {
             if ($request->is('api/*')) {
-                return self::failureResponse('Resource not found', $e->getCode() ?? 404, [
+                return self::failureResponse('Resource not found', $e->getStatusCode() ?? 404, [
                     'message' => $e->getMessage(),
                 ]);
             }
 
-            return response()->view('errors.error', ['error' => $e], $e->getCode() ?? 404);
+            return response()->view('errors.error', ['error' => $e], $e->getStatusCode() ?? 404);
         });
 
         // 404 - Model Not Found
         $exceptions->render(function (ModelNotFoundException $e, Request $request) {
             if ($request->is('api/*')) {
-                return self::failureResponse('Resource not found', $e->getcode() ?? 404, [
+                return self::failureResponse('Resource not found', $e->getCode() ?? 404, [
                     'message' => $e->getMessage(),
                 ]);
             }
@@ -49,19 +50,19 @@ class ExceptionHandler
 
         $exceptions->render(function (MethodNotAllowedException|MethodNotAllowedHttpException $e, Request $request) {
             if ($request->is('api/*')) {
-                return self::failureResponse($e->getMessage() ?? 'Method Not Allowed', $e->getCode() ?? 405);
+                return self::failureResponse($e->getMessage() ?? 'Method Not Allowed', $e->getStatusCode() ?? 405);
             }
 
-            return response()->view('errors.error', ['error' => $e], $e->getCode() ?? 405);
+            return response()->view('errors.error', ['error' => $e], $e->getStatusCode() ?? 405);
         });
 
         // 401 - Unauthenticated
         $exceptions->render(function (AuthenticationException $e, Request $request) {
             if ($request->is('api/*')) {
-                return self::failureResponse('Unauthenticated', $e->getCode() ?? 401);
+                return self::failureResponse('Unauthenticated', 401);
             }
 
-            return response()->view('errors.error', ['error' => $e], $e->getCode() ?? 401);
+            return response()->view('errors.error', ['error' => $e], 401);
         });
 
         // 403 - Access Denied (Abilities/Scopes)
@@ -69,11 +70,11 @@ class ExceptionHandler
             if ($request->is('api/*')) {
                 return self::failureResponse(
                     'Unauthorized action. You do not have the required permissions.',
-                    $e->getCode() ?? 403
+                    $e->getStatusCode() ?? 403
                 );
             }
 
-            return response()->view('errors.error', ['error' => $e], $e->getCode() ?? 403);
+            return response()->view('errors.error', ['error' => $e], $e->getStatusCode() ?? 403);
         });
 
         // 403 - Unauthorized
