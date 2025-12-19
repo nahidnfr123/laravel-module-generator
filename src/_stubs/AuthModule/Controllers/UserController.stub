@@ -21,7 +21,7 @@ class UserController extends Controller implements HasMiddleware
         $model = 'user';
 
         return [
-            'auth',
+            'auth:api',
             new Middleware(["permission:view_$model"], only: ['index']),
             new Middleware(["permission:show_$model"], only: ['show']),
             new Middleware(["permission:create_$model"], only: ['store']),

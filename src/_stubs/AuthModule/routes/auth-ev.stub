@@ -22,11 +22,11 @@ Route::middleware(['api', 'cors'])->group(function () {
         Route::post('email/verify', [AuthController::class, 'verifyEmail'])
             ->middleware(['throttle:6,1'])->name('api.verification.verify');
         Route::get('email/resend-verification-link', [AuthController::class, 'resendEmailVerificationLink'])
-            ->middleware(['auth:sanctum', 'throttle:6,1']);
+            ->middleware(['auth:api', 'throttle:6,1']);
     });
 
     // Protected routes
-    Route::middleware(['auth:sanctum'])->group(function () {
+    Route::middleware(['auth:api'])->group(function () {
         Route::get('auth/profile', [AuthController::class, 'userProfile']);
         Route::post('logout', [AuthController::class, 'logout']);
         // profile routes

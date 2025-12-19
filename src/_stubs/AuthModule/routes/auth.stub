@@ -20,7 +20,7 @@ Route::middleware(['api', 'cors'])->group(function () {
     });
 
     // Protected routes
-    Route::middleware(['auth:sanctum'])->group(function () {
+    Route::middleware(['auth:api'])->group(function () {
         Route::get('auth/profile', [AuthController::class, 'userProfile']);
         Route::post('logout', [AuthController::class, 'logout']);
         // profile routes

@@ -18,7 +18,7 @@ class PermissionController extends Controller implements HasMiddleware
         $model = 'permission';
 
         return [
-            'auth',
+            'auth:api',
             new Middleware(["permission:view_$model"], only: ['index']),
             new Middleware(["permission:update_$model"], only: ['assignPermissionToRole', 'assignPermissionToUser']),
         ];
