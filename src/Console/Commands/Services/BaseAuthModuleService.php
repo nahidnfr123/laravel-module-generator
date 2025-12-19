@@ -19,7 +19,7 @@ abstract class BaseAuthModuleService
     {
         $this->command = $command;
         $this->basePath = base_path();
-        $this->packageStubPath = __DIR__ . '/../_stubs/AuthModule';
+        $this->packageStubPath = __DIR__ . '/../../../_stubs/AuthModule';
     }
 
     /**
