@@ -4,8 +4,6 @@ namespace NahidFerdous\LaravelModuleGenerator\Console\Commands\Services;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
-use function NahidFerdous\LaravelModuleGenerator\Services\service\app_path;
-use function NahidFerdous\LaravelModuleGenerator\Services\service\base_path;
 
 abstract class BaseAuthModuleService
 {
