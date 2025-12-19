@@ -10,7 +10,6 @@ class PermissionsData
             'dashboard' => ['view_dashboard'],
             'user' => [
                 ...$this->defaultPermissionsBasic('user'),
-                'update_status_user',
             ],
             'role' => [
                 ...$this->defaultPermissionsBasic('role'),

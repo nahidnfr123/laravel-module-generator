@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -10,8 +11,11 @@ class UserService
 {
     public function getAll()
     {
-        return User::with(['roles'])
-            ->orderBy(request('order_by', 'created_by'), request('order', 'ASC'))
+        return User::when(request('query'), function (Builder $query) {
+            $query->where('name', 'like', '%'.request('query').'%')
+                ->orWhere('email', 'like', '%'.request('query').'%');
+        })
+            ->orderBy(request('order_by', 'created_at'), request('order', 'ASC'))
             ->paginate(request('per_page', 25));
     }
 

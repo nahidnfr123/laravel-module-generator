@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['api', 'cors'])->group(function () {
     Route::middleware(['auth:sanctum'])->group(function () {
         // Roles and Permissions
-        Route::middleware(['role:supper-admin'])->group(function () {
+        Route::middleware(['role:super-admin'])->group(function () {
             Route::apiResource('users', UserController::class);
             Route::apiResource('roles', RoleController::class);
             Route::get('/permissions', [PermissionController::class, 'index']);
