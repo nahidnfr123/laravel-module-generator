@@ -4,9 +4,9 @@ namespace NahidFerdous\LaravelModuleGenerator\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
-use NahidFerdous\LaravelModuleGenerator\Services\AccessControlService;
-use NahidFerdous\LaravelModuleGenerator\Services\AuthenticationService;
-use NahidFerdous\LaravelModuleGenerator\Services\EmailVerificationService;
+use NahidFerdous\LaravelModuleGenerator\Console\Commands\Services\AccessControlService;
+use NahidFerdous\LaravelModuleGenerator\Console\Commands\Services\AuthenticationService;
+use NahidFerdous\LaravelModuleGenerator\Console\Commands\Services\EmailVerificationService;
 use Symfony\Component\Console\Exception\CommandNotFoundException;
 
 class GenerateAuthModule extends Command
