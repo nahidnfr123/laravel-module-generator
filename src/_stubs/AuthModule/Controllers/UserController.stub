@@ -62,7 +62,7 @@ class UserController extends Controller implements HasMiddleware
         try {
             DB::beginTransaction();
             $user = User::findOrFail($id ?? auth()->id());
-            $data = $this->userService->update($request, $user);
+            $data = $this->userService->update($request->validated(), $user);
             DB::commit();
 
             return successResponse('Profile updated successfully.', $data);

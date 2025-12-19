@@ -25,7 +25,7 @@ Route::middleware(['api', 'cors'])->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
         // profile routes
         Route::prefix('profile')->group(function () {
-            Route::put('update/{id}', [UserController::class, 'updateProfile']);
+            Route::put('update/{id?}', [UserController::class, 'updateProfile']);
             Route::post('update/password', [UserController::class, 'changePassword']);
         });
         // Remove this route if access-control is generated ...
