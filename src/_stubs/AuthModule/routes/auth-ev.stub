@@ -28,11 +28,13 @@ Route::middleware(['api', 'cors'])->group(function () {
     // Protected routes
     Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('auth/profile', [AuthController::class, 'userProfile']);
+        Route::post('logout', [AuthController::class, 'logout']);
         // profile routes
         Route::prefix('profile')->group(function () {
             Route::put('update/{id}', [UserController::class, 'updateProfile']);
             Route::post('update/password', [UserController::class, 'changePassword']);
         });
-        Route::post('logout', [AuthController::class, 'logout']);
+        // Remove this route if access-control is generated ...
+        // Route::apiResource('users', UserController::class);
     });
 });

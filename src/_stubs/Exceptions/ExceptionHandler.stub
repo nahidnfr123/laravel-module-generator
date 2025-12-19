@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\UnauthorizedException;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Exception\MethodNotAllowedException;
@@ -93,6 +94,14 @@ class ExceptionHandler
             return redirect()->back()->withErrors($e->errors());
         });
 
+        $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
+            if ($request->is('api/*')) {
+                return self::failureResponse($e->getMessage() ?: 'HTTP error', $e->getStatusCode());
+            }
+
+            return response()->view('errors.error', ['error' => $e], $e->getStatusCode());
+        });
+
         // route not found
         $exceptions->render(function (RouteNotFoundException $e, Request $request) {
             if ($request->is('api/*')) {
@@ -114,10 +123,19 @@ class ExceptionHandler
         // All other exceptions
         $exceptions->render(function (Throwable $e, Request $request) {
             if ($request->is('api/*')) {
-                return self::failureResponse($e->getMessage() ?? 'An error occurred', $e->getCode() >= 100 && $e->getCode() <= 599 ? $e->getCode() : 500);
+                $status = 500;
+
+                if ($e instanceof HttpExceptionInterface) {
+                    $status = $e->getStatusCode();
+                }
+
+                return self::failureResponse(
+                    $e->getMessage() ?: 'An error occurred',
+                    $status
+                );
             }
 
-            return response()->view('errors.error', ['error' => $e], $e->getCode() ?? 500);
+            return response()->view('errors.error', ['error' => $e], 500);
         });
 
         // Log all exceptions with full context

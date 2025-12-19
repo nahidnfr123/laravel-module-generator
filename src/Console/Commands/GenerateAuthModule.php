@@ -114,7 +114,7 @@ class GenerateAuthModule extends Command
         $this->info('📝 Generating Authentication files...');
 
         $files = [
-            'AuthModule.postman_collection.json' => $directory . '/AuthModule.postman_collection.json',
+            'AuthModule.postman_collection.stub' => $directory . '/AuthModule.postman_collection.json',
             'Services/AuthService' => 'app/Services/AuthService.php',
             'Services/Auth/PasswordService' => 'app/Services/Auth/PasswordService.php',
 
@@ -144,7 +144,7 @@ class GenerateAuthModule extends Command
             ] : []),
         ];
 
-        $this->copyFiles($files, 'Authentication');
+        $this->copyFiles($files);
     }
 
     protected function copyUserManagementFiles(): void
@@ -166,7 +166,7 @@ class GenerateAuthModule extends Command
             'Resources/UserCollection' => 'app/Http/Resources/UserCollection.php',
         ];
 
-        $this->copyFiles($files, 'User Management');
+        $this->copyFiles($files);
     }
 
     protected function copyRolesAndPermissionsFiles(): void
@@ -201,7 +201,7 @@ class GenerateAuthModule extends Command
             'Models/Permission' => 'app/Models/Permission.php',
         ];
 
-        $this->copyFiles($files, 'Roles & Permissions');
+        $this->copyFiles($files);
     }
 
     /**
