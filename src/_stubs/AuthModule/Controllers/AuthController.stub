@@ -55,7 +55,6 @@ class AuthController extends Controller
     public function userProfile(Request $request): \Illuminate\Http\JsonResponse
     {
         $user = $request->user();
-        $user->load(['roles']);
 
         return successResponse('User details', new UserProfileResource($user));
     }
