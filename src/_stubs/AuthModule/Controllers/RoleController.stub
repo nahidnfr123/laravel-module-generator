@@ -39,6 +39,7 @@ class RoleController extends Controller implements HasMiddleware
     public function show(Role $role): \Illuminate\Http\JsonResponse
     {
         return successResponse('Success.', [
+            'role' => new RoleResource($role),
             'users' => UserResource::collection($role->users),
             'permissions' => $role->permissions->pluck('name'),
         ]);
@@ -58,14 +59,8 @@ class RoleController extends Controller implements HasMiddleware
         return successResponse('Role updated successfully.', new RoleResource($role));
     }
 
-    public function destroy($id): \Illuminate\Http\JsonResponse
+    public function destroy(Role $role): \Illuminate\Http\JsonResponse
     {
-        $role = Role::withTrashed()->findOrFail($id);
-
-        if (! $role) {
-            return failureResponse('Role not found.', 404);
-        }
-
         if (in_array($role->name, ['super-admin', 'admin'], true)) {
             return failureResponse('You cannot delete this role.', 403);
         }

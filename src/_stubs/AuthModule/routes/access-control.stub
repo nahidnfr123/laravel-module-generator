@@ -11,9 +11,14 @@ Route::middleware(['api', 'cors'])->group(function () {
         Route::middleware(['role:super-admin'])->group(function () {
             Route::apiResource('users', UserController::class);
             Route::apiResource('roles', RoleController::class);
-            Route::get('permissions', [PermissionController::class, 'index']);
-            Route::post('assign-permission-to-role', [PermissionController::class, 'assignPermissionToRole']);
-            Route::post('assign-permission-to-user', [PermissionController::class, 'assignPermissionToUser']);
+
+            Route::prefix('permissions')
+                ->controller(PermissionController::class)
+                ->group(function () {
+                    Route::get('', 'index');
+                    Route::post('assign-to-role', 'assignPermissionToRole');
+                    Route::post('assign-to-user', 'assignPermissionToUser');
+                });
         });
     });
 });

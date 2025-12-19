@@ -39,6 +39,7 @@ class UserController extends Controller implements HasMiddleware
 
     public function show(User $user): \Illuminate\Http\JsonResponse
     {
+        // $user->load('roles');
         return successResponse('Success.', new UserResource($user));
     }
 

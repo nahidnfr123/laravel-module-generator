@@ -35,7 +35,7 @@ class RoleResource extends JsonResource
             'permission_count' => $this->permissions_count,
             'user_count' => $this->users_count,
             'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            // 'updated_at' => $this->updated_at,
             'deletable' => ! in_array($this->name, ['super-admin', 'admin']) && ! $this->users_count,
             'can_assign_permission' => $canAssignPermission,
         ];
