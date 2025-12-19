@@ -135,7 +135,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"nahid\",\n    \"email\": \"nahicdc{{timestamp}}@gmail.com\",\n    \"password\": \"12345678\",\n    \"password_confirmation\": \"12345678\"\n}",
+							"raw": "{\n    \"name\": \"user\",\n    \"email\": \"user{{timestamp}}@gmail.com\",\n    \"password\": \"12345678\",\n    \"password_confirmation\": \"12345678\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -808,20 +808,13 @@
 							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}api/profile/update/:id",
+							"raw": "{{baseUrl}}api/profile/update",
 							"host": [
 								"{{baseUrl}}api"
 							],
 							"path": [
 								"profile",
-								"update",
-								":id"
-							],
-							"variable": [
-								{
-									"key": "id",
-									"value": "14"
-								}
+								"update"
 							]
 						}
 					},
@@ -1005,11 +998,1307 @@
 		},
 		{
 			"name": "User",
-			"item": []
+			"item": [
+				{
+					"name": "index",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}api/users?per_page=25&page=1",
+							"host": [
+								"{{baseUrl}}api"
+							],
+							"path": [
+								"users"
+							],
+							"query": [
+								{
+									"key": "query",
+									"value": "admin",
+									"disabled": true
+								},
+								{
+									"key": "per_page",
+									"value": "25"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "index",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}api/users?per_page=25&page=1",
+									"host": [
+										"{{baseUrl}}api"
+									],
+									"path": [
+										"users"
+									],
+									"query": [
+										{
+											"key": "query",
+											"value": "admin",
+											"disabled": true
+										},
+										{
+											"key": "per_page",
+											"value": "25"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Host",
+									"value": "127.0.0.1:8000"
+								},
+								{
+									"key": "Connection",
+									"value": "close"
+								},
+								{
+									"key": "X-Powered-By",
+									"value": "PHP/8.5.0"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 19 Dec 2025 15:59:27 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": {\n        \"data\": [\n            {\n                \"id\": 1,\n                \"name\": \"Super Admin\",\n                \"email\": \"admin@admin.com\",\n                \"email_verified_at\": \"2025-12-19T14:13:17.000000Z\",\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\"\n            }\n        ],\n        \"meta\": {\n            \"first_page_url\": \"http://127.0.0.1:8000/api/users?page=1\",\n            \"prev_page_url\": null,\n            \"next_page_url\": null,\n            \"last_page_url\": \"http://127.0.0.1:8000/api/users?page=1\",\n            \"path\": \"http://127.0.0.1:8000/api/users\",\n            \"current_page\": 1,\n            \"last_page\": 1,\n            \"from\": 1,\n            \"to\": 1,\n            \"per_page\": 25,\n            \"total\": 1\n        }\n    },\n    \"message\": \"Success.\",\n    \"success\": true,\n    \"status\": 200\n}"
+						}
+					]
+				},
+				{
+					"name": "show",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}api/users/:id",
+							"host": [
+								"{{baseUrl}}api"
+							],
+							"path": [
+								"users",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "7"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "show",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}api/users/:id",
+									"host": [
+										"{{baseUrl}}api"
+									],
+									"path": [
+										"users",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "7"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Host",
+									"value": "127.0.0.1:8000"
+								},
+								{
+									"key": "Connection",
+									"value": "close"
+								},
+								{
+									"key": "X-Powered-By",
+									"value": "PHP/8.5.0"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 19 Dec 2025 16:20:11 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": {\n        \"id\": 7,\n        \"name\": \"hello 2\",\n        \"email\": \"user1766161061@gmail.com\",\n        \"email_verified_at\": null,\n        \"created_at\": \"2025-12-19T16:17:41.000000Z\",\n        \"roles\": [\n            {\n                \"id\": 1,\n                \"name\": \"admin\",\n                \"guard_name\": \"api\",\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\",\n                \"updated_at\": \"2025-12-19T14:13:17.000000Z\",\n                \"pivot\": {\n                    \"model_type\": \"App\\\\Models\\\\User\",\n                    \"model_id\": 7,\n                    \"role_id\": 1\n                }\n            },\n            {\n                \"id\": 2,\n                \"name\": \"super-admin\",\n                \"guard_name\": \"api\",\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\",\n                \"updated_at\": \"2025-12-19T14:13:17.000000Z\",\n                \"pivot\": {\n                    \"model_type\": \"App\\\\Models\\\\User\",\n                    \"model_id\": 7,\n                    \"role_id\": 2\n                }\n            }\n        ]\n    },\n    \"message\": \"Success.\",\n    \"success\": true,\n    \"status\": 200\n}"
+						}
+					]
+				},
+				{
+					"name": "store",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"hello 2\",\n    \"email\": \"user{{timestamp}}@gmail.com\",\n    \"password\": \"12345678\",\n    \"password_confirmation\": \"12345678\",\n    \"roles\": [1,2]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}api/users",
+							"host": [
+								"{{baseUrl}}api"
+							],
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "New Request",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"hello 2\",\n    \"email\": \"user1766160046as@gmail.com\",\n    \"password\": \"12345678\",\n    \"password_confirmation\": \"12345678\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}api/users",
+									"host": [
+										"{{baseUrl}}api"
+									],
+									"path": [
+										"users"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Host",
+									"value": "127.0.0.1:8000"
+								},
+								{
+									"key": "Connection",
+									"value": "close"
+								},
+								{
+									"key": "X-Powered-By",
+									"value": "PHP/8.5.0"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 19 Dec 2025 16:16:32 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": {\n        \"id\": 6,\n        \"name\": \"hello 2\",\n        \"email\": \"user1766160046as@gmail.com\",\n        \"email_verified_at\": null,\n        \"created_at\": \"2025-12-19T16:16:32.000000Z\"\n    },\n    \"message\": \"Profile created successfully.\",\n    \"success\": true,\n    \"status\": 200\n}"
+						}
+					]
+				},
+				{
+					"name": "update",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"_method\": \"put\",\n    \"name\": \"hello 2\",\n    \"email\": \"user1766160046as@gmail.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}api/users/:id",
+							"host": [
+								"{{baseUrl}}api"
+							],
+							"path": [
+								"users",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "4"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "New Request",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"_method\": \"put\",\n    \"name\": \"hello\",\n    \"email\": \"user1766160046@gmail.com\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}api/users/:id",
+									"host": [
+										"{{baseUrl}}api"
+									],
+									"path": [
+										"users",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "4"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "",
+							"header": [
+								{
+									"key": "Host",
+									"value": "127.0.0.1:8000"
+								},
+								{
+									"key": "Connection",
+									"value": "close"
+								},
+								{
+									"key": "X-Powered-By",
+									"value": "PHP/8.5.0"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 19 Dec 2025 16:02:55 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								}
+							],
+							"cookie": [
+								{
+									"expires": "Invalid Date",
+									"domain": "",
+									"path": ""
+								}
+							],
+							"body": "{\n    \"data\": {\n        \"id\": 4,\n        \"name\": \"hello\",\n        \"email\": \"user1766160046@gmail.com\",\n        \"email_verified_at\": null,\n        \"created_at\": \"2025-12-19T16:00:46.000000Z\"\n    },\n    \"message\": \"Profile updated successfully.\",\n    \"success\": true,\n    \"status\": 200\n}"
+						}
+					]
+				},
+				{
+					"name": "delete",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}api/users/:id",
+							"host": [
+								"{{baseUrl}}api"
+							],
+							"path": [
+								"users",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "2"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "New Request",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}api/users/:id",
+									"host": [
+										"{{baseUrl}}api"
+									],
+									"path": [
+										"users",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "2"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Host",
+									"value": "127.0.0.1:8000"
+								},
+								{
+									"key": "Connection",
+									"value": "close"
+								},
+								{
+									"key": "X-Powered-By",
+									"value": "PHP/8.5.0"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 19 Dec 2025 16:01:03 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": null,\n    \"message\": \"User deleted successfully.\",\n    \"success\": true,\n    \"status\": 200\n}"
+						}
+					]
+				}
+			]
 		},
 		{
-			"name": "Roles & Permission",
-			"item": []
+			"name": "Roles",
+			"item": [
+				{
+					"name": "index",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}api/roles?per_page=25&page=1",
+							"host": [
+								"{{baseUrl}}api"
+							],
+							"path": [
+								"roles"
+							],
+							"query": [
+								{
+									"key": "query",
+									"value": "admin",
+									"disabled": true
+								},
+								{
+									"key": "per_page",
+									"value": "25"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "index",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}api/roles?per_page=25&page=1",
+									"host": [
+										"{{baseUrl}}api"
+									],
+									"path": [
+										"roles"
+									],
+									"query": [
+										{
+											"key": "query",
+											"value": "admin",
+											"disabled": true
+										},
+										{
+											"key": "per_page",
+											"value": "25"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Host",
+									"value": "127.0.0.1:8000"
+								},
+								{
+									"key": "Connection",
+									"value": "close"
+								},
+								{
+									"key": "X-Powered-By",
+									"value": "PHP/8.5.0"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 19 Dec 2025 16:21:37 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": {\n        \"data\": [\n            {\n                \"id\": 1,\n                \"name\": \"admin\",\n                \"guard_name\": \"api\",\n                \"permission_count\": 0,\n                \"user_count\": 1,\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\",\n                \"updated_at\": \"2025-12-19T14:13:17.000000Z\",\n                \"deletable\": false,\n                \"can_assign_permission\": false\n            },\n            {\n                \"id\": 2,\n                \"name\": \"super-admin\",\n                \"guard_name\": \"api\",\n                \"permission_count\": 15,\n                \"user_count\": 2,\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\",\n                \"updated_at\": \"2025-12-19T14:13:17.000000Z\",\n                \"deletable\": false,\n                \"can_assign_permission\": false\n            }\n        ],\n        \"meta\": {\n            \"first_page_url\": \"http://127.0.0.1:8000/api/roles?page=1\",\n            \"prev_page_url\": null,\n            \"next_page_url\": null,\n            \"last_page_url\": \"http://127.0.0.1:8000/api/roles?page=1\",\n            \"path\": \"http://127.0.0.1:8000/api/roles\",\n            \"current_page\": 1,\n            \"last_page\": 1,\n            \"from\": 1,\n            \"to\": 2,\n            \"per_page\": 25,\n            \"total\": 2\n        }\n    },\n    \"message\": \"Success.\",\n    \"success\": true,\n    \"status\": 200\n}"
+						}
+					]
+				},
+				{
+					"name": "show",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}api/roles/:id",
+							"host": [
+								"{{baseUrl}}api"
+							],
+							"path": [
+								"roles",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "show",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}api/roles/:id",
+									"host": [
+										"{{baseUrl}}api"
+									],
+									"path": [
+										"roles",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "1"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Host",
+									"value": "127.0.0.1:8000"
+								},
+								{
+									"key": "Connection",
+									"value": "close"
+								},
+								{
+									"key": "X-Powered-By",
+									"value": "PHP/8.5.0"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 19 Dec 2025 16:25:10 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": {\n        \"role\": {\n            \"id\": 1,\n            \"name\": \"admin\",\n            \"guard_name\": \"api\",\n            \"permission_count\": null,\n            \"user_count\": null,\n            \"created_at\": \"2025-12-19T14:13:17.000000Z\",\n            \"deletable\": false,\n            \"can_assign_permission\": false\n        },\n        \"users\": [\n            {\n                \"id\": 7,\n                \"name\": \"hello 2\",\n                \"email\": \"user1766161061@gmail.com\",\n                \"email_verified_at\": null,\n                \"created_at\": \"2025-12-19T16:17:41.000000Z\"\n            }\n        ],\n        \"permissions\": []\n    },\n    \"message\": \"Success.\",\n    \"success\": true,\n    \"status\": 200\n}"
+						}
+					]
+				},
+				{
+					"name": "store",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"test role\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}api/roles",
+							"host": [
+								"{{baseUrl}}api"
+							],
+							"path": [
+								"roles"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "store",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"test role\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}api/roles",
+									"host": [
+										"{{baseUrl}}api"
+									],
+									"path": [
+										"roles"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Host",
+									"value": "127.0.0.1:8000"
+								},
+								{
+									"key": "Connection",
+									"value": "close"
+								},
+								{
+									"key": "X-Powered-By",
+									"value": "PHP/8.5.0"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 19 Dec 2025 16:26:39 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": {\n        \"id\": 4,\n        \"name\": \"test role\",\n        \"guard_name\": \"api\",\n        \"permission_count\": null,\n        \"user_count\": null,\n        \"created_at\": \"2025-12-19T16:26:39.000000Z\",\n        \"deletable\": true,\n        \"can_assign_permission\": false\n    },\n    \"message\": \"Role created successfully.\",\n    \"success\": true,\n    \"status\": 200\n}"
+						}
+					]
+				},
+				{
+					"name": "update",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"_method\": \"put\",\n    \"name\": \"hello 2\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}api/roles/:id",
+							"host": [
+								"{{baseUrl}}api"
+							],
+							"path": [
+								"roles",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "4"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "update",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"_method\": \"put\",\n    \"name\": \"hello 2\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}api/roles/:id",
+									"host": [
+										"{{baseUrl}}api"
+									],
+									"path": [
+										"roles",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "4"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Host",
+									"value": "127.0.0.1:8000"
+								},
+								{
+									"key": "Connection",
+									"value": "close"
+								},
+								{
+									"key": "X-Powered-By",
+									"value": "PHP/8.5.0"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 19 Dec 2025 16:27:22 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": {\n        \"id\": 4,\n        \"name\": \"hello 2\",\n        \"guard_name\": \"api\",\n        \"permission_count\": null,\n        \"user_count\": null,\n        \"created_at\": \"2025-12-19T16:26:39.000000Z\",\n        \"deletable\": true,\n        \"can_assign_permission\": false\n    },\n    \"message\": \"Role updated successfully.\",\n    \"success\": true,\n    \"status\": 200\n}"
+						}
+					]
+				},
+				{
+					"name": "delete",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}api/roles/:id",
+							"host": [
+								"{{baseUrl}}api"
+							],
+							"path": [
+								"roles",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "4"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "delete",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}api/roles/:id",
+									"host": [
+										"{{baseUrl}}api"
+									],
+									"path": [
+										"roles",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "4"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Host",
+									"value": "127.0.0.1:8000"
+								},
+								{
+									"key": "Connection",
+									"value": "close"
+								},
+								{
+									"key": "X-Powered-By",
+									"value": "PHP/8.5.0"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 19 Dec 2025 16:28:25 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": null,\n    \"message\": \"Role deleted successfully.\",\n    \"success\": true,\n    \"status\": 200\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Permissions",
+			"item": [
+				{
+					"name": "index",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}api/permissions",
+							"host": [
+								"{{baseUrl}}api"
+							],
+							"path": [
+								"permissions"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "index",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}api/permissions",
+									"host": [
+										"{{baseUrl}}api"
+									],
+									"path": [
+										"permissions"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Host",
+									"value": "127.0.0.1:8000"
+								},
+								{
+									"key": "Connection",
+									"value": "close"
+								},
+								{
+									"key": "X-Powered-By",
+									"value": "PHP/8.5.0"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 19 Dec 2025 16:30:22 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": {\n        \"data\": [\n            {\n                \"id\": 1,\n                \"name\": \"view_dashboard\",\n                \"guard_name\": \"api\",\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\"\n            },\n            {\n                \"id\": 2,\n                \"name\": \"view_user_module\",\n                \"guard_name\": \"api\",\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\"\n            },\n            {\n                \"id\": 3,\n                \"name\": \"view_user\",\n                \"guard_name\": \"api\",\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\"\n            },\n            {\n                \"id\": 4,\n                \"name\": \"show_user\",\n                \"guard_name\": \"api\",\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\"\n            },\n            {\n                \"id\": 5,\n                \"name\": \"create_user\",\n                \"guard_name\": \"api\",\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\"\n            },\n            {\n                \"id\": 6,\n                \"name\": \"update_user\",\n                \"guard_name\": \"api\",\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\"\n            },\n            {\n                \"id\": 7,\n                \"name\": \"delete_user\",\n                \"guard_name\": \"api\",\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\"\n            },\n            {\n                \"id\": 8,\n                \"name\": \"view_role_module\",\n                \"guard_name\": \"api\",\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\"\n            },\n            {\n                \"id\": 9,\n                \"name\": \"view_role\",\n                \"guard_name\": \"api\",\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\"\n            },\n            {\n                \"id\": 10,\n                \"name\": \"show_role\",\n                \"guard_name\": \"api\",\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\"\n            },\n            {\n                \"id\": 11,\n                \"name\": \"create_role\",\n                \"guard_name\": \"api\",\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\"\n            },\n            {\n                \"id\": 12,\n                \"name\": \"update_role\",\n                \"guard_name\": \"api\",\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\"\n            },\n            {\n                \"id\": 13,\n                \"name\": \"delete_role\",\n                \"guard_name\": \"api\",\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\"\n            },\n            {\n                \"id\": 14,\n                \"name\": \"view_permission\",\n                \"guard_name\": \"api\",\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\"\n            },\n            {\n                \"id\": 15,\n                \"name\": \"update_permission\",\n                \"guard_name\": \"api\",\n                \"created_at\": \"2025-12-19T14:13:17.000000Z\"\n            }\n        ],\n        \"meta\": {\n            \"first_page_url\": \"http://127.0.0.1:8000/api/permissions?page=1\",\n            \"prev_page_url\": null,\n            \"next_page_url\": null,\n            \"last_page_url\": \"http://127.0.0.1:8000/api/permissions?page=1\",\n            \"path\": \"http://127.0.0.1:8000/api/permissions\",\n            \"current_page\": 1,\n            \"last_page\": 1,\n            \"from\": 1,\n            \"to\": 15,\n            \"per_page\": 50,\n            \"total\": 15\n        }\n    },\n    \"message\": \"Success.\",\n    \"success\": true,\n    \"status\": 200\n}"
+						}
+					]
+				},
+				{
+					"name": "assign-permission-to-role",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"role_id\": 3,\n    \"permissions\": [1,2,3]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}api/permissions/assign-to-role",
+							"host": [
+								"{{baseUrl}}api"
+							],
+							"path": [
+								"permissions",
+								"assign-to-role"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "New Request",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"role_id\": 3,\n    \"permissions\": [1,2,3]\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}api/permissions/assign-to-role",
+									"host": [
+										"{{baseUrl}}api"
+									],
+									"path": [
+										"permissions",
+										"assign-to-role"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Host",
+									"value": "127.0.0.1:8000"
+								},
+								{
+									"key": "Connection",
+									"value": "close"
+								},
+								{
+									"key": "X-Powered-By",
+									"value": "PHP/8.5.0"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 19 Dec 2025 16:33:52 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": null,\n    \"message\": \"Permissions assigned to role successfully.\",\n    \"success\": true,\n    \"status\": 200\n}"
+						}
+					]
+				},
+				{
+					"name": "assign-permission-to-user",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_id\": 3,\n    \"permissions\": [1,2,3]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}api/permissions/assign-to-user",
+							"host": [
+								"{{baseUrl}}api"
+							],
+							"path": [
+								"permissions",
+								"assign-to-user"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "New Request",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"user_id\": 3,\n    \"permissions\": [1,2,3]\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}api/permissions/assign-to-user",
+									"host": [
+										"{{baseUrl}}api"
+									],
+									"path": [
+										"permissions",
+										"assign-to-user"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Host",
+									"value": "127.0.0.1:8000"
+								},
+								{
+									"key": "Connection",
+									"value": "close"
+								},
+								{
+									"key": "X-Powered-By",
+									"value": "PHP/8.5.0"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, private"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 19 Dec 2025 16:34:51 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": null,\n    \"message\": \"Permissions assigned to user successfully.\",\n    \"success\": true,\n    \"status\": 200\n}"
+						}
+					]
+				}
+			]
 		}
 	],
 	"event": [
