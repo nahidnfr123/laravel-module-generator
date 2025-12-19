@@ -17,12 +17,11 @@ Route::middleware(['api', 'cors'])->group(function () {
                 Route::post('reset', [AuthController::class, 'resetPassword']);
             });
         });
-
-        Route::get('profile', [AuthController::class, 'userProfile']);
     });
 
     // Protected routes
     Route::middleware(['auth:sanctum'])->group(function () {
+        Route::get('auth/profile', [AuthController::class, 'userProfile']);
         // profile routes
         Route::prefix('profile')->group(function () {
             Route::put('update/{id}', [UserController::class, 'updateProfile']);
