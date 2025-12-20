@@ -1,0 +1,40 @@
+<?php
+
+use App\Http\Controllers\SocialAuthController;
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Social Authentication Routes
+|--------------------------------------------------------------------------
+|
+| These routes handle social authentication via OAuth providers like
+| Google, Facebook, GitHub, etc.
+|
+*/
+
+// Public routes - Social login
+Route::prefix('auth')->group(function () {
+    // Redirect to provider
+    Route::get('/{provider}', [SocialAuthController::class, 'redirectToProvider'])
+        ->name('social.redirect');
+
+    // Handle provider callback
+    Route::get('/{provider}/callback', [SocialAuthController::class, 'handleProviderCallback'])
+        ->name('social.callback');
+});
+
+// Protected routes - Manage linked accounts
+Route::middleware(['auth:sanctum'])->prefix('user/social')->group(function () {
+    // Get linked social accounts
+    Route::get('/accounts', [SocialAuthController::class, 'getLinkedAccounts'])
+        ->name('social.accounts');
+
+    // Link social account
+    Route::post('/{provider}/link', [SocialAuthController::class, 'linkAccount'])
+        ->name('social.link');
+
+    // Unlink social account
+    Route::delete('/{provider}/unlink', [SocialAuthController::class, 'unlinkAccount'])
+        ->name('social.unlink');
+});

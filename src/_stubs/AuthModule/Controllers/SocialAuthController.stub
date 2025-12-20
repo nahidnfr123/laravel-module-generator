@@ -1,0 +1,168 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Services\SocialAuthService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Laravel\Socialite\Facades\Socialite;
+
+class SocialAuthController extends Controller
+{
+    protected $socialAuthService;
+
+    public function __construct(SocialAuthService $socialAuthService)
+    {
+        $this->socialAuthService = $socialAuthService;
+    }
+
+    /**
+     * Redirect to social provider
+     *
+     * @param string $provider
+     * @return JsonResponse
+     */
+    public function redirectToProvider(string $provider): JsonResponse
+    {
+        try {
+            $this->validateProvider($provider);
+
+            $url = Socialite::driver($provider)
+                ->stateless()
+                ->redirect()
+                ->getTargetUrl();
+
+            return response()->json([
+                'success' => true,
+                'url' => $url,
+                'message' => "Redirect to {$provider} authentication"
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid social provider or configuration error',
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * Handle callback from social provider
+     *
+     * @param string $provider
+     * @return JsonResponse
+     */
+    public function handleProviderCallback(string $provider): JsonResponse
+    {
+        try {
+            $this->validateProvider($provider);
+
+            $socialUser = Socialite::driver($provider)->stateless()->user();
+
+            $result = $this->socialAuthService->handleSocialLogin($provider, $socialUser);
+
+            return response()->json([
+                'success' => true,
+                'message' => $result['message'],
+                'user' => $result['user'],
+                'token' => $result['token'],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Social authentication failed',
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * Link social account to existing user
+     *
+     * @param Request $request
+     * @param string $provider
+     * @return JsonResponse
+     */
+    public function linkAccount(Request $request, string $provider): JsonResponse
+    {
+        try {
+            $this->validateProvider($provider);
+
+            $user = $request->user();
+            $socialUser = Socialite::driver($provider)->stateless()->user();
+
+            $this->socialAuthService->linkSocialAccount($user, $provider, $socialUser);
+
+            return response()->json([
+                'success' => true,
+                'message' => ucfirst($provider) . ' account linked successfully',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to link social account',
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * Unlink social account from user
+     *
+     * @param Request $request
+     * @param string $provider
+     * @return JsonResponse
+     */
+    public function unlinkAccount(Request $request, string $provider): JsonResponse
+    {
+        try {
+            $this->validateProvider($provider);
+
+            $user = $request->user();
+            $this->socialAuthService->unlinkSocialAccount($user, $provider);
+
+            return response()->json([
+                'success' => true,
+                'message' => ucfirst($provider) . ' account unlinked successfully',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to unlink social account',
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * Get linked social accounts
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getLinkedAccounts(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $socialAccounts = $user->socialAccounts()->get(['provider', 'created_at']);
+
+        return response()->json([
+            'success' => true,
+            'accounts' => $socialAccounts,
+        ]);
+    }
+
+    /**
+     * Validate social provider
+     *
+     * @param string $provider
+     * @throws \Exception
+     */
+    protected function validateProvider(string $provider): void
+    {
+        $allowedProviders = ['google', 'facebook', 'github', 'twitter', 'linkedin'];
+
+        if (!in_array($provider, $allowedProviders)) {
+            throw new \Exception('Invalid social provider: ' . $provider);
+        }
+    }
+}

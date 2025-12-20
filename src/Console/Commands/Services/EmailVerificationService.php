@@ -17,8 +17,7 @@ class EmailVerificationService extends BaseAuthModuleService
 
         $files = [
             'Models/EmailVerificationToken' => 'app/Models/EmailVerificationToken.php',
-            'migrations/2025_00_00_000000_create_email_verification_tokens_table' =>
-                'database/migrations/2025_00_00_000000_create_email_verification_tokens_table.php',
+            'migrations/create_email_verification_tokens_table' => 'database/migrations/create_email_verification_tokens_table.php',
             'Mail/VerifyEmailMail' => 'app/Mail/VerifyEmailMail.php',
             'resources/views/emails/verify_email_mail.blade' => 'resources/views/emails/verify_email_mail.blade.php',
         ];

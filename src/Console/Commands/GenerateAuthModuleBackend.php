@@ -215,7 +215,7 @@ class GenerateAuthModuleBackend extends Command
     {
         $this->info('📝 Copying custom permission migration...');
 
-        $stubPath = $this->packageStubPath . '/migrations/2025_00_00_000000_add_type_to_permissions_table.stub';
+        $stubPath = $this->packageStubPath . '/migrations/add_type_to_permissions_table.stub';
 
         if (!File::exists($stubPath)) {
             $this->warn('⚠️  Migration stub not found: ' . $stubPath);

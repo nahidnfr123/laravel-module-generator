@@ -1,0 +1,173 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\SocialAccount;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+
+class SocialAuthService
+{
+    /**
+     * Handle social login/registration
+     *
+     * @param string $provider
+     * @param object $socialUser
+     * @return array
+     */
+    public function handleSocialLogin(string $provider, object $socialUser): array
+    {
+        DB::beginTransaction();
+
+        try {
+            // Check if social account exists
+            $socialAccount = SocialAccount::where('provider', $provider)
+                ->where('provider_id', $socialUser->getId())
+                ->first();
+
+            if ($socialAccount) {
+                // Update social account info
+                $socialAccount->update([
+                    'token' => $socialUser->token ?? null,
+                    'refresh_token' => $socialUser->refreshToken ?? null,
+                    'expires_in' => $socialUser->expiresIn ?? null,
+                ]);
+
+                $user = $socialAccount->user;
+                $message = 'Logged in successfully';
+            } else {
+                // Check if user exists with this email
+                $user = User::where('email', $socialUser->getEmail())->first();
+
+                if ($user) {
+                    // Link social account to existing user
+                    $this->createSocialAccount($user, $provider, $socialUser);
+                    $message = 'Social account linked and logged in successfully';
+                } else {
+                    // Create new user and social account
+                    $user = $this->createUserFromSocial($provider, $socialUser);
+                    $message = 'Account created and logged in successfully';
+                }
+            }
+
+            // Create authentication token
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            DB::commit();
+
+            return [
+                'user' => $user,
+                'token' => $token,
+                'message' => $message,
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Create user from social provider data
+     *
+     * @param string $provider
+     * @param object $socialUser
+     * @return User
+     */
+    protected function createUserFromSocial(string $provider, object $socialUser): User
+    {
+        $user = User::create([
+            'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? 'User',
+            'email' => $socialUser->getEmail(),
+            'password' => bcrypt(Str::random(32)), // Random password
+            'email_verified_at' => now(), // Auto-verify email for social login
+        ]);
+
+        $this->createSocialAccount($user, $provider, $socialUser);
+
+        return $user;
+    }
+
+    /**
+     * Create social account record
+     *
+     * @param User $user
+     * @param string $provider
+     * @param object $socialUser
+     * @return SocialAccount
+     */
+    protected function createSocialAccount(User $user, string $provider, object $socialUser): SocialAccount
+    {
+        return SocialAccount::create([
+            'user_id' => $user->id,
+            'provider' => $provider,
+            'provider_id' => $socialUser->getId(),
+            'token' => $socialUser->token ?? null,
+            'refresh_token' => $socialUser->refreshToken ?? null,
+            'expires_in' => $socialUser->expiresIn ?? null,
+            'avatar' => $socialUser->getAvatar() ?? null,
+        ]);
+    }
+
+    /**
+     * Link social account to existing authenticated user
+     *
+     * @param User $user
+     * @param string $provider
+     * @param object $socialUser
+     * @return SocialAccount
+     */
+    public function linkSocialAccount(User $user, string $provider, object $socialUser): SocialAccount
+    {
+        // Check if this social account is already linked to another user
+        $existingAccount = SocialAccount::where('provider', $provider)
+            ->where('provider_id', $socialUser->getId())
+            ->first();
+
+        if ($existingAccount && $existingAccount->user_id !== $user->id) {
+            throw new \Exception('This ' . $provider . ' account is already linked to another user');
+        }
+
+        // Check if user already has this provider linked
+        $userAccount = SocialAccount::where('user_id', $user->id)
+            ->where('provider', $provider)
+            ->first();
+
+        if ($userAccount) {
+            throw new \Exception('You already have a ' . $provider . ' account linked');
+        }
+
+        return $this->createSocialAccount($user, $provider, $socialUser);
+    }
+
+    /**
+     * Unlink social account from user
+     *
+     * @param User $user
+     * @param string $provider
+     * @return bool
+     */
+    public function unlinkSocialAccount(User $user, string $provider): bool
+    {
+        $socialAccount = SocialAccount::where('user_id', $user->id)
+            ->where('provider', $provider)
+            ->first();
+
+        if (!$socialAccount) {
+            throw new \Exception('Social account not found');
+        }
+
+        // Ensure user has a password or at least one other social account
+        if (empty($user->password)) {
+            $otherAccounts = SocialAccount::where('user_id', $user->id)
+                ->where('provider', '!=', $provider)
+                ->count();
+
+            if ($otherAccounts === 0) {
+                throw new \Exception('Cannot unlink. Please set a password first or link another social account');
+            }
+        }
+
+        return $socialAccount->delete();
+    }
+}

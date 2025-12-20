@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Artisan;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\Services\AccessControlService;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\Services\AuthenticationService;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\Services\EmailVerificationService;
+use NahidFerdous\LaravelModuleGenerator\Console\Commands\Services\SocialAuthenticationService;
 use Symfony\Component\Console\Exception\CommandNotFoundException;
 
 class GenerateAuthModule extends Command
@@ -14,7 +15,8 @@ class GenerateAuthModule extends Command
     protected $signature = 'auth:generate
                             {--force : Overwrite existing files without confirmation}
                             {--skip-roles : Skip roles and permissions setup}
-                            {--skip-email-verification : Skip email verification setup}';
+                            {--skip-email-verification : Skip email verification setup}
+                            {--with-social-login : Include social authentication setup}';
 
     protected $description = 'Generate authentication, user management, and optionally roles & permissions';
 
@@ -40,6 +42,10 @@ class GenerateAuthModule extends Command
         $includeEmailVerification = !$this->option('skip-email-verification') &&
             $this->confirm('Do you want to enable email verification?', true);
 
+        // Ask about social authentication
+        $includeSocialAuth = $this->option('with-social-login') ||
+            $this->confirm('Do you want to add social authentication?', false);
+
         if (!$this->runRequiredCommand('install:api')) {
             return self::FAILURE;
         }
@@ -54,6 +60,16 @@ class GenerateAuthModule extends Command
             $emailVerificationService->generate();
         }
 
+        // Generate Social Authentication if requested
+        if ($includeSocialAuth) {
+            if (!$this->installSocialite()) {
+                $this->warn('⚠️  Failed to install Laravel Socialite. You may need to install it manually.');
+            }
+
+            $socialAuthService = new SocialAuthenticationService($this);
+            $socialAuthService->generate();
+        }
+
         // Generate Access Control (Roles & Permissions) if requested
         if ($includeRoles) {
             $accessControlService = new AccessControlService($this);
@@ -64,7 +80,7 @@ class GenerateAuthModule extends Command
         $this->info('✅ Authentication system generated successfully!');
         $this->newLine();
 
-        $this->displayNextSteps($includeRoles, $includeEmailVerification);
+        $this->displayNextSteps($includeRoles, $includeEmailVerification, $includeSocialAuth);
 
         return Command::SUCCESS;
     }
@@ -87,7 +103,47 @@ class GenerateAuthModule extends Command
         }
     }
 
-    protected function displayNextSteps(bool $includeRoles, bool $includeEmailVerification): void
+    /**
+     * Install Laravel Socialite package
+     */
+    protected function installSocialite(): bool
+    {
+        $this->info('📦 Installing Laravel Socialite...');
+
+        try {
+            $process = proc_open(
+                'composer require laravel/socialite',
+                [
+                    0 => ['pipe', 'r'],
+                    1 => ['pipe', 'w'],
+                    2 => ['pipe', 'w'],
+                ],
+                $pipes,
+                base_path()
+            );
+
+            if (is_resource($process)) {
+                fclose($pipes[0]);
+                stream_get_contents($pipes[1]);
+                fclose($pipes[1]);
+                stream_get_contents($pipes[2]);
+                fclose($pipes[2]);
+                $returnCode = proc_close($process);
+
+                if ($returnCode === 0) {
+                    $this->line('✅ Laravel Socialite installed successfully');
+                    return true;
+                }
+            }
+
+            return false;
+        } catch (\Exception $e) {
+            $this->error('Failed to install Socialite: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    protected function displayNextSteps(bool $includeRoles, bool $includeEmailVerification, bool $includeSocialAuth): void
     {
         $this->info('📋 Next Steps:');
         $this->line('');
@@ -97,6 +153,10 @@ class GenerateAuthModule extends Command
 
         if ($includeRoles) {
             $this->line('   Route::middleware([\'api\', \'auth:sanctum\'])->group(base_path(\'routes/api/access-control.php\'));');
+        }
+
+        if ($includeSocialAuth) {
+            $this->line('   Route::middleware(\'api\')->group(base_path(\'routes/api/social-auth.php\'));');
         }
 
         $this->line('');
@@ -123,10 +183,34 @@ class GenerateAuthModule extends Command
         $this->line('   MAIL_FROM_ADDRESS=noreply@yourapp.com');
         $this->line('   MAIL_FROM_NAME="${APP_NAME}"');
 
+        if ($includeSocialAuth) {
+            $this->line('');
+            $nextStep = (int)$step + 1;
+            $this->line($nextStep . '. Configure social authentication providers in config/services.php:');
+            $this->line('');
+            $this->line('   \'google\' => [');
+            $this->line('       \'client_id\' => env(\'GOOGLE_CLIENT_ID\'),');
+            $this->line('       \'client_secret\' => env(\'GOOGLE_CLIENT_SECRET\'),');
+            $this->line('       \'redirect\' => env(\'GOOGLE_REDIRECT_URI\', \'/auth/google/callback\'),');
+            $this->line('   ],');
+            $this->line('   \'facebook\' => [');
+            $this->line('       \'client_id\' => env(\'FACEBOOK_CLIENT_ID\'),');
+            $this->line('       \'client_secret\' => env(\'FACEBOOK_CLIENT_SECRET\'),');
+            $this->line('       \'redirect\' => env(\'FACEBOOK_REDIRECT_URI\', \'/auth/facebook/callback\'),');
+            $this->line('   ],');
+            $this->line('   \'github\' => [');
+            $this->line('       \'client_id\' => env(\'GITHUB_CLIENT_ID\'),');
+            $this->line('       \'client_secret\' => env(\'GITHUB_CLIENT_SECRET\'),');
+            $this->line('       \'redirect\' => env(\'GITHUB_REDIRECT_URI\', \'/auth/github/callback\'),');
+            $this->line('   ],');
+            $this->line('');
+            $this->line('   And add the credentials to your .env file');
+        }
+
         if ($includeEmailVerification) {
             $this->line('');
-            $this->line('4. Email verification has been enabled in your User model');
-            $this->line('   Users will need to verify their email before accessing protected routes');
+            $this->line('→ Email verification has been enabled in your User model');
+            $this->line('  Users will need to verify their email before accessing protected routes');
         }
 
         $this->line('');
