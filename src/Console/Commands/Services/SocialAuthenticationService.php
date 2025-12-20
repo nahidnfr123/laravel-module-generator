@@ -10,7 +10,7 @@ class SocialAuthenticationService extends BaseAuthModuleService
 
         $this->copySocialAuthFiles();
         $this->createMigration();
-        $this->updateUserModel();
+        $this->addSocialAccountsRelationship();
     }
 
     protected function copySocialAuthFiles(): void
@@ -46,7 +46,7 @@ class SocialAuthenticationService extends BaseAuthModuleService
         }
     }
 
-    protected function updateUserModel(): void
+    protected function addSocialAccountsRelationship(): void
     {
         $this->command->info('📝 Checking User model for social accounts relationship...');
 

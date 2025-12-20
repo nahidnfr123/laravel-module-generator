@@ -116,6 +116,7 @@ class GenerateAuthModuleBackend extends Command
         $this->info($path);
         $this->info($directory);
 
+        $timestamp = date('Y_m_d_His');
         $files = [
             'AuthModule.postman_collection' => $directory . '/AuthModule.postman_collection.json',
             'Services/AuthService' => 'app/Services/AuthService.php',
@@ -141,7 +142,7 @@ class GenerateAuthModuleBackend extends Command
 
             ...($includeEmailVerification ? [
                 'Models/EmailVerificationToken' => 'app/Models/EmailVerificationToken.php',
-                'migrations/2025_00_00_000000_create_email_verification_tokens_table' => 'database/migrations/2025_00_00_000000_create_email_verification_tokens_table.php',
+                'migrations/create_email_verification_tokens_table' => "database/migrations/{$timestamp}_create_email_verification_tokens_table.php",
                 'Mail/VerifyEmailMail' => 'app/Mail/VerifyEmailMail.php',
                 'resources/views/emails/verify_email_mail.blade' => 'resources/views/emails/verify_email_mail.blade.php',
             ] : []),
