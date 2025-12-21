@@ -25,7 +25,7 @@ class SocialAuthController extends Controller
             $this->validateProvider($provider);
             $url = Socialite::driver($provider)->stateless()->redirect()->getTargetUrl();
 
-            return successResponse('Redirecting to ' . $provider . ' authentication', ['url' => $url]);
+            return successResponse('Redirecting to '.$provider.' authentication', ['url' => $url]);
         } catch (\Exception $e) {
             return failureResponse($e->getMessage() ?? 'Invalid social provider or configuration error', 400);
         }
@@ -70,7 +70,7 @@ class SocialAuthController extends Controller
 
             $this->socialAuthService->linkSocialAccount($user, $provider, $socialUser);
 
-            return successResponse(ucfirst($provider) . ' account linked successfully');
+            return successResponse(ucfirst($provider).' account linked successfully');
         } catch (\Exception $e) {
             return failureResponse('Failed to link social account', 400, $e->getMessage());
         }
@@ -87,7 +87,7 @@ class SocialAuthController extends Controller
             $user = $request->user();
             $this->socialAuthService->unlinkSocialAccount($user, $provider);
 
-            return successResponse(ucfirst($provider) . ' account unlinked successfully');
+            return successResponse(ucfirst($provider).' account unlinked successfully');
         } catch (\Exception $e) {
             return failureResponse('Failed to unlink social account', 400, $e->getMessage());
         }
@@ -113,8 +113,8 @@ class SocialAuthController extends Controller
     {
         $allowedProviders = ['google', 'facebook', 'github', 'twitter', 'linkedin'];
 
-        if (!in_array($provider, $allowedProviders)) {
-            throw new \Exception('Invalid social provider: ' . $provider);
+        if (! in_array($provider, $allowedProviders)) {
+            throw new \Exception('Invalid social provider: '.$provider);
         }
     }
 }

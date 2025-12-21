@@ -12,9 +12,7 @@ class SocialAuthService
     /**
      * Handle social login/registration
      *
-     * @param string $provider
-     * @param object $socialUser
-     * @return array
+     * @throws \Exception|\Throwable
      */
     public function handleSocialLogin(string $provider, object $socialUser): array
     {
@@ -69,10 +67,6 @@ class SocialAuthService
 
     /**
      * Create user from social provider data
-     *
-     * @param string $provider
-     * @param object $socialUser
-     * @return User
      */
     protected function createUserFromSocial(string $provider, object $socialUser): User
     {
@@ -90,11 +84,6 @@ class SocialAuthService
 
     /**
      * Create social account record
-     *
-     * @param User $user
-     * @param string $provider
-     * @param object $socialUser
-     * @return SocialAccount
      */
     protected function createSocialAccount(User $user, string $provider, object $socialUser): SocialAccount
     {
@@ -112,10 +101,7 @@ class SocialAuthService
     /**
      * Link social account to existing authenticated user
      *
-     * @param User $user
-     * @param string $provider
-     * @param object $socialUser
-     * @return SocialAccount
+     * @throws \Exception
      */
     public function linkSocialAccount(User $user, string $provider, object $socialUser): SocialAccount
     {
@@ -125,7 +111,7 @@ class SocialAuthService
             ->first();
 
         if ($existingAccount && $existingAccount->user_id !== $user->id) {
-            throw new \Exception('This ' . $provider . ' account is already linked to another user');
+            throw new \Exception('This '.$provider.' account is already linked to another user');
         }
 
         // Check if user already has this provider linked
@@ -134,7 +120,7 @@ class SocialAuthService
             ->first();
 
         if ($userAccount) {
-            throw new \Exception('You already have a ' . $provider . ' account linked');
+            throw new \Exception('You already have a '.$provider.' account linked');
         }
 
         return $this->createSocialAccount($user, $provider, $socialUser);
@@ -143,9 +129,7 @@ class SocialAuthService
     /**
      * Unlink social account from user
      *
-     * @param User $user
-     * @param string $provider
-     * @return bool
+     * @throws \Exception
      */
     public function unlinkSocialAccount(User $user, string $provider): bool
     {
@@ -153,11 +137,11 @@ class SocialAuthService
             ->where('provider', $provider)
             ->first();
 
-        if (!$socialAccount) {
+        if (! $socialAccount) {
             throw new \Exception('Social account not found');
         }
 
-        // Ensure user has a password or at least one other social account
+        // Ensure a user has a password or at least one other social account
         if (empty($user->password)) {
             $otherAccounts = SocialAccount::where('user_id', $user->id)
                 ->where('provider', '!=', $provider)
