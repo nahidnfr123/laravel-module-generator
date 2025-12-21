@@ -20,7 +20,7 @@ class SocialAuthenticationService extends BaseAuthModuleService
             'Services/SocialAuthService' => 'app/Services/SocialAuthService.php',
             'routes/social-auth' => 'routes/api/social-auth.php',
             'Models/SocialAccount' => 'app/Models/SocialAccount.php',
-            'migrations/create_social_accounts_table' => $this->getMigrationPath(),
+            //'migrations/create_social_accounts_table' => $this->getMigrationPath(),
         ];
 
         $this->copyFiles($files);
