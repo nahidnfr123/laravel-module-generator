@@ -50,6 +50,11 @@ class SocialAuthenticationService extends BaseAuthModuleService
         if (file_exists($stubPath . '.php')) {
             copy($stubPath . '.php', $destination);
             $this->command->line("✅ Created: {$destination}");
+        } else {
+            $files = [
+                'migrations/create_social_accounts_table' => $this->getMigrationPath(),
+            ];
+            $this->copyFiles($files);
         }
     }
 
