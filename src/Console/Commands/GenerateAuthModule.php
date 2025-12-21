@@ -44,7 +44,7 @@ class GenerateAuthModule extends Command
 
         // Ask about social authentication
         $includeSocialAuth = $this->option('with-social-login') ||
-            $this->confirm('Do you want to add social authentication?', false);
+            $this->confirm('Do you want to add social authentication?', true);
 
         if (!$this->runRequiredCommand('install:api')) {
             return self::FAILURE;

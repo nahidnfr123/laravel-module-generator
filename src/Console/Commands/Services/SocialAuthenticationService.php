@@ -20,7 +20,7 @@ class SocialAuthenticationService extends BaseAuthModuleService
             'Services/SocialAuthService' => 'app/Services/SocialAuthService.php',
             'routes/social-auth' => 'routes/api/social-auth.php',
             'Models/SocialAccount' => 'app/Models/SocialAccount.php',
-            //'migrations/create_social_accounts_table' => $this->getMigrationPath(),
+            // 'migrations/create_social_accounts_table' => $this->getMigrationPath(),
         ];
 
         $this->copyFiles($files);
@@ -34,6 +34,16 @@ class SocialAuthenticationService extends BaseAuthModuleService
 
     protected function createMigration(): void
     {
+        $migrationPath = database_path('migrations');
+
+        // Check if migration already exists by pattern matching
+        $existingMigrations = glob($migrationPath . '/*_create_social_accounts_table.php');
+
+        if (!empty($existingMigrations)) {
+            $this->command->line('ℹ️  Social accounts migration already exists: ' . basename($existingMigrations[0]));
+            return;  // <-- This should stop here
+        }
+
         $this->command->info('📝 Creating social_accounts migration...');
 
         $migrationPath = database_path('migrations');
@@ -41,8 +51,8 @@ class SocialAuthenticationService extends BaseAuthModuleService
         $filename = "{$timestamp}_create_social_accounts_table.php";
         $destination = "{$migrationPath}/{$filename}";
 
-        if (!file_exists($migrationPath)) {
-            mkdir($migrationPath, 0755, true);
+        if (!file_exists($migrationPath) && !mkdir($migrationPath, 0755, true) && !is_dir($migrationPath)) {
+            throw new \RuntimeException(sprintf('Directory "%s" was not created', $migrationPath));
         }
 
         $stubPath = $this->getStubPath('migrations/create_social_accounts_table');
@@ -50,12 +60,12 @@ class SocialAuthenticationService extends BaseAuthModuleService
         if (file_exists($stubPath . '.php')) {
             copy($stubPath . '.php', $destination);
             $this->command->line("✅ Created: {$destination}");
-        } else {
+        } /*else {
             $files = [
                 'migrations/create_social_accounts_table' => $this->getMigrationPath(),
             ];
             $this->copyFiles($files);
-        }
+        }*/
     }
 
     protected function getStubPath(string $filename): string
