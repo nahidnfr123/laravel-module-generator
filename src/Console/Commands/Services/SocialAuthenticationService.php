@@ -20,9 +20,16 @@ class SocialAuthenticationService extends BaseAuthModuleService
             'Services/SocialAuthService' => 'app/Services/SocialAuthService.php',
             'routes/social-auth' => 'routes/api/social-auth.php',
             'Models/SocialAccount' => 'app/Models/SocialAccount.php',
+            'migrations/create_social_accounts_table' => $this->getMigrationPath(),
         ];
 
         $this->copyFiles($files);
+    }
+
+    protected function getMigrationPath(): string
+    {
+        $timestamp = date('Y_m_d_His');
+        return "database/migrations/{$timestamp}_create_social_accounts_table.php";
     }
 
     protected function createMigration(): void
@@ -44,6 +51,11 @@ class SocialAuthenticationService extends BaseAuthModuleService
             copy($stubPath . '.php', $destination);
             $this->command->line("✅ Created: {$destination}");
         }
+    }
+
+    protected function getStubPath(string $filename): string
+    {
+        return __DIR__ . "/../../_stubs/AuthModule/migrations/{$filename}.stub";
     }
 
     protected function addSocialAccountsRelationship(): void

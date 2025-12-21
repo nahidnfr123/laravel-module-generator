@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\Console\Exception\CommandNotFoundException;
 
-class GenerateAuthModuleBackend extends Command
+class GenerateAuthModuleBackup extends Command
 {
     protected $signature = 'auth:generate
                             {--force : Overwrite existing files without confirmation}
