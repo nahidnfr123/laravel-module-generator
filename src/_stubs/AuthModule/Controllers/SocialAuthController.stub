@@ -19,7 +19,7 @@ class SocialAuthController extends Controller
     /**
      * Redirect to social provider
      */
-    public function redirectToProvider(string $provider): JsonResponse
+    public function redirectToProvider(string $provider): ?JsonResponse
     {
         try {
             $this->validateProvider($provider);
@@ -43,13 +43,15 @@ class SocialAuthController extends Controller
 
             $result = $this->socialAuthService->handleSocialLogin($provider, $socialUser);
 
-            return successResponse('Social authentication successful', $result);
-//            return response()->json([
-//                'success' => true,
-//                'message' => $result['message'],
-//                'user' => $result['user'],
-//                'token' => $result['token'],
-//            ]);
+            // Return the response with token
+            return response()->json([
+                'success' => true,
+                'message' => 'Social authentication successful',
+                'data' => [
+                    'user' => $result['user'],
+                    'token' => $result['token'],
+                ],
+            ]);
         } catch (\Exception $e) {
             return failureResponse('Social authentication failed', 400, $e->getMessage());
         }
@@ -87,7 +89,7 @@ class SocialAuthController extends Controller
 
             return successResponse(ucfirst($provider) . ' account unlinked successfully');
         } catch (\Exception $e) {
-            return failureResponse('Failed to link social account', 400, $e->getMessage());
+            return failureResponse('Failed to unlink social account', 400, $e->getMessage());
         }
     }
 
