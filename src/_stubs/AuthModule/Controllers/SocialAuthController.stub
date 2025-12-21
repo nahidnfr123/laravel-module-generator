@@ -9,7 +9,7 @@ use Laravel\Socialite\Facades\Socialite;
 
 class SocialAuthController extends Controller
 {
-    protected $socialAuthService;
+    protected SocialAuthService $socialAuthService;
 
     public function __construct(SocialAuthService $socialAuthService)
     {
@@ -18,39 +18,21 @@ class SocialAuthController extends Controller
 
     /**
      * Redirect to social provider
-     *
-     * @param string $provider
-     * @return JsonResponse
      */
     public function redirectToProvider(string $provider): JsonResponse
     {
         try {
             $this->validateProvider($provider);
+            $url = Socialite::driver($provider)->stateless()->redirect()->getTargetUrl();
 
-            $url = Socialite::driver($provider)
-                ->stateless()
-                ->redirect()
-                ->getTargetUrl();
-
-            return response()->json([
-                'success' => true,
-                'url' => $url,
-                'message' => "Redirect to {$provider} authentication"
-            ]);
+            return successResponse('Redirecting to ' . $provider . ' authentication', ['url' => $url]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid social provider or configuration error',
-                'error' => $e->getMessage()
-            ], 400);
+            return failureResponse($e->getMessage() ?? 'Invalid social provider or configuration error', 400);
         }
     }
 
     /**
      * Handle callback from social provider
-     *
-     * @param string $provider
-     * @return JsonResponse
      */
     public function handleProviderCallback(string $provider): JsonResponse
     {
@@ -61,27 +43,20 @@ class SocialAuthController extends Controller
 
             $result = $this->socialAuthService->handleSocialLogin($provider, $socialUser);
 
-            return response()->json([
-                'success' => true,
-                'message' => $result['message'],
-                'user' => $result['user'],
-                'token' => $result['token'],
-            ]);
+            return successResponse('Social authentication successful', $result);
+//            return response()->json([
+//                'success' => true,
+//                'message' => $result['message'],
+//                'user' => $result['user'],
+//                'token' => $result['token'],
+//            ]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Social authentication failed',
-                'error' => $e->getMessage()
-            ], 400);
+            return failureResponse('Social authentication failed', 400, $e->getMessage());
         }
     }
 
     /**
      * Link social account to existing user
-     *
-     * @param Request $request
-     * @param string $provider
-     * @return JsonResponse
      */
     public function linkAccount(Request $request, string $provider): JsonResponse
     {
@@ -93,25 +68,14 @@ class SocialAuthController extends Controller
 
             $this->socialAuthService->linkSocialAccount($user, $provider, $socialUser);
 
-            return response()->json([
-                'success' => true,
-                'message' => ucfirst($provider) . ' account linked successfully',
-            ]);
+            return successResponse(ucfirst($provider) . ' account linked successfully');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to link social account',
-                'error' => $e->getMessage()
-            ], 400);
+            return failureResponse('Failed to link social account', 400, $e->getMessage());
         }
     }
 
     /**
      * Unlink social account from user
-     *
-     * @param Request $request
-     * @param string $provider
-     * @return JsonResponse
      */
     public function unlinkAccount(Request $request, string $provider): JsonResponse
     {
@@ -121,40 +85,26 @@ class SocialAuthController extends Controller
             $user = $request->user();
             $this->socialAuthService->unlinkSocialAccount($user, $provider);
 
-            return response()->json([
-                'success' => true,
-                'message' => ucfirst($provider) . ' account unlinked successfully',
-            ]);
+            return successResponse(ucfirst($provider) . ' account unlinked successfully');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to unlink social account',
-                'error' => $e->getMessage()
-            ], 400);
+            return failureResponse('Failed to link social account', 400, $e->getMessage());
         }
     }
 
     /**
      * Get linked social accounts
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function getLinkedAccounts(Request $request): JsonResponse
     {
         $user = $request->user();
         $socialAccounts = $user->socialAccounts()->get(['provider', 'created_at']);
 
-        return response()->json([
-            'success' => true,
-            'accounts' => $socialAccounts,
-        ]);
+        return successResponse('Linked social accounts', $socialAccounts);
     }
 
     /**
      * Validate social provider
      *
-     * @param string $provider
      * @throws \Exception
      */
     protected function validateProvider(string $provider): void
