@@ -167,11 +167,11 @@ After generating the authentication system, follow these steps:
 Route::middleware('api')->group(base_path('routes/auth.php'));
 
 // User management routes (protected)
-Route::middleware(['api', 'auth:sanctum'])->group(base_path('routes/user.php'));
+Route::middleware(['api', 'auth:api'])->group(base_path('routes/user.php'));
 
 // Roles & Permissions routes (protected) - if generated
-Route::middleware(['api', 'auth:sanctum'])->group(base_path('routes/role.php'));
-Route::middleware(['api', 'auth:sanctum'])->group(base_path('routes/permission.php'));
+Route::middleware(['api', 'auth:api'])->group(base_path('routes/role.php'));
+Route::middleware(['api', 'auth:api'])->group(base_path('routes/permission.php'));
 ```
 
 2. **Install Laravel Sanctum** (if not already installed):

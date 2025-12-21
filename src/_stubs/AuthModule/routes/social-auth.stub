@@ -25,7 +25,7 @@ Route::prefix('auth')->group(function () {
 });
 
 // Protected routes - Manage linked accounts
-Route::middleware(['auth:sanctum'])->prefix('user/social')->group(function () {
+Route::middleware(['auth:api'])->prefix('user/social')->group(function () {
     // Get linked social accounts
     Route::get('/accounts', [SocialAuthController::class, 'getLinkedAccounts'])
         ->name('social.accounts');

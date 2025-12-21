@@ -149,10 +149,10 @@ class GenerateAuthModule extends Command
         $this->line('');
         $this->line('1. Add route files to your routes/api.php or web.php:');
         $this->line('   Route::middleware(\'api\')->group(base_path(\'routes/api/auth.php\'));');
-        $this->line('   Route::middleware([\'api\', \'auth:sanctum\'])->group(base_path(\'routes/user.php\'));');
+        $this->line('   Route::middleware([\'api\', \'auth:api\'])->group(base_path(\'routes/user.php\'));');
 
         if ($includeRoles) {
-            $this->line('   Route::middleware([\'api\', \'auth:sanctum\'])->group(base_path(\'routes/api/access-control.php\'));');
+            $this->line('   Route::middleware([\'api\', \'auth:api\'])->group(base_path(\'routes/api/access-control.php\'));');
         }
 
         if ($includeSocialAuth) {

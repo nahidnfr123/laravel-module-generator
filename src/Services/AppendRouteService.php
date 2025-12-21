@@ -56,7 +56,7 @@ class AppendRouteService
 
     private function getDefaultApiContent(): string
     {
-        return "<?php\n\nuse Illuminate\Http\Request;\nuse Illuminate\Support\Facades\Route;\n\n/*\n|--------------------------------------------------------------------------\n| API Routes\n|--------------------------------------------------------------------------\n|\n| Here is where you can register API routes for your application. These\n| routes are loaded by the RouteServiceProvider and all of them will\n| be assigned to the \"api\" middleware group. Make something great!\n|\n*/\n\nRoute::get('/user', function (Request \$request) {\n    return \$request->user();\n})->middleware('auth:sanctum');\n";
+        return "<?php\n\nuse Illuminate\Http\Request;\nuse Illuminate\Support\Facades\Route;\n\n/*\n|--------------------------------------------------------------------------\n| API Routes\n|--------------------------------------------------------------------------\n|\n| Here is where you can register API routes for your application. These\n| routes are loaded by the RouteServiceProvider and all of them will\n| be assigned to the \"api\" middleware group. Make something great!\n|\n*/\n\nRoute::get('/user', function (Request \$request) {\n    return \$request->user();\n})->middleware('auth:api');\n";
     }
 
     private function getDefaultWebContent(): string
@@ -78,7 +78,7 @@ class AppendRouteService
     //            }
     //
     //            // Create a basic api.php file with the standard Laravel structure
-    //            $defaultApiContent = "<?php\n\nuse Illuminate\Http\Request;\nuse Illuminate\Support\Facades\Route;\n\n/*\n|--------------------------------------------------------------------------\n| API Routes\n|--------------------------------------------------------------------------\n|\n| Here is where you can register API routes for your application. These\n| routes are loaded by the RouteServiceProvider and all of them will\n| be assigned to the \"api\" middleware group. Make something great!\n|\n*/\n\nRoute::get('/user', function (Request \$request) {\n    return \$request->user();\n})->middleware('auth:sanctum');\n";
+    //            $defaultApiContent = "<?php\n\nuse Illuminate\Http\Request;\nuse Illuminate\Support\Facades\Route;\n\n/*\n|--------------------------------------------------------------------------\n| API Routes\n|--------------------------------------------------------------------------\n|\n| Here is where you can register API routes for your application. These\n| routes are loaded by the RouteServiceProvider and all of them will\n| be assigned to the \"api\" middleware group. Make something great!\n|\n*/\n\nRoute::get('/user', function (Request \$request) {\n    return \$request->user();\n})->middleware('auth:api');\n";
     //
     //            File::put($apiRoutesPath, $defaultApiContent);
     //            $this->command->info('📁 Created routes/api.php file.');
