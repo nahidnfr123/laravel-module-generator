@@ -12,7 +12,7 @@ class AuthenticationService extends BaseAuthModuleService
         if ($this->apiDriver === 'sanctum') {
             $this->installSanctum();
         } else if ($this->apiDriver === 'passport') {
-            // $this->installPassport();
+             $this->installPassport();
         }
         $this->copyAuthenticationFiles();
         $this->copyUserManagementFiles();
@@ -84,27 +84,27 @@ class AuthenticationService extends BaseAuthModuleService
 
     protected function installPassport(): void
     {
-        $this->command->info('📦 Installing Laravel Passport...');
-
-        // Install package
-        $this->run('composer require laravel/passport');
-
-        // Publish Passport configuration and migrations
-        $this->command->info('📝 Publishing Passport assets...');
-        $this->run('php artisan vendor:publish --tag=passport-migrations');
-        $this->run('php artisan vendor:publish --tag=passport-config');
-
-        // Run migrations to create OAuth tables
-        $this->command->info('🔄 Running Passport migrations...');
-        $this->run('php artisan migrate --force');
-
-        // Clear cached commands/providers
-        $this->run('php artisan optimize:clear');
-
-        // Install Passport (creates encryption keys and OAuth clients)
-        // MUST use shell execution to ensure fresh application bootstrap
-        $this->command->info('🔑 Installing Passport keys and clients...');
-        $this->runShell('php artisan passport:install --force');
+//        $this->command->info('📦 Installing Laravel Passport...');
+//
+//        // Install package
+//        $this->run('composer require laravel/passport');
+//
+//        // Publish Passport configuration and migrations
+//        $this->command->info('📝 Publishing Passport assets...');
+//        $this->run('php artisan vendor:publish --tag=passport-migrations');
+//        $this->run('php artisan vendor:publish --tag=passport-config');
+//
+//        // Run migrations to create OAuth tables
+//        $this->command->info('🔄 Running Passport migrations...');
+//        $this->run('php artisan migrate --force');
+//
+//        // Clear cached commands/providers
+//        $this->run('php artisan optimize:clear');
+//
+//        // Install Passport (creates encryption keys and OAuth clients)
+//        // MUST use shell execution to ensure fresh application bootstrap
+//        $this->command->info('🔑 Installing Passport keys and clients...');
+//        $this->runShell('php artisan passport:install --force');
 
         // Update User model
         $this->updateUserModel([
