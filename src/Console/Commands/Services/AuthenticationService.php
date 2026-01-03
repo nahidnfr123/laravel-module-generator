@@ -86,8 +86,14 @@ class AuthenticationService extends BaseAuthModuleService
     {
         $this->command->info('📦 Installing Laravel Passport...');
 
+        // Install package
         $this->run('composer require laravel/passport');
-        $this->run('php artisan passport:install');
+
+        // Clear cached commands/providers
+        $this->run('php artisan optimize:clear');
+
+        // MUST be shell execution
+        $this->run('php artisan passport:install --force');
 
         $this->updateUserModel([
             [
@@ -97,6 +103,7 @@ class AuthenticationService extends BaseAuthModuleService
             ]
         ]);
     }
+
 
     protected function installSanctum(): void
     {

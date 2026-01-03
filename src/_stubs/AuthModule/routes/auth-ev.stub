@@ -20,9 +20,9 @@ Route::middleware(['api', 'cors'])->group(function () {
         });
 
         // Email verification routes
-        Route::post('email/verify', [EmailVerificationController::class, 'verifyEmail'])
+        Route::post('email/verify', [AccountVerificationController::class, 'verifyEmail'])
             ->middleware(['throttle:6,1'])->name('api.verification.verify');
-        Route::get('email/resend-verification-link', [EmailVerificationController::class, 'resendEmailVerificationLink'])
+        Route::get('email/resend-verification-link', [AccountVerificationController::class, 'resendEmailVerificationLink'])
             ->middleware(['auth:api', 'throttle:6,1']);
     });
 
@@ -36,6 +36,6 @@ Route::middleware(['api', 'cors'])->group(function () {
             Route::post('update/password', [UserController::class, 'changePassword']);
         });
         // Remove this route if access-control is generated ...
-        // Route::apiResource('users', UserController::class);
+        Route::apiResource('users', UserController::class);
     });
 });
