@@ -22,6 +22,7 @@ Route::middleware(['api', 'cors'])->group(function () {
     // Protected routes
     Route::middleware(['auth:api'])->group(function () {
         Route::get('auth/profile', [AuthController::class, 'userProfile']);
+        // Route::post('auth/refresh-token', [AuthController::class, 'refreshToken']);
         Route::post('logout', [AuthController::class, 'logout']);
         // profile routes
         Route::prefix('profile')->group(function () {
@@ -29,6 +30,6 @@ Route::middleware(['api', 'cors'])->group(function () {
             Route::post('update/password', [UserController::class, 'changePassword']);
         });
         // Remove this route if access-control is generated ...
-        // Route::apiResource('users', UserController::class);
+        Route::apiResource('users', UserController::class);
     });
 });
