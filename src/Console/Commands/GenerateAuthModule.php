@@ -92,7 +92,7 @@ class GenerateAuthModule extends Command
             $accessControlService->generate();
         }
 
-        $this->updateBootstrapForRoles($includeRoles);
+        $this->updateBootstrapForRoles($apiAuthDriver, $includeRoles);
 
         $this->newLine();
         $this->info('✅ Authentication system generated successfully!');
@@ -104,7 +104,7 @@ class GenerateAuthModule extends Command
     }
 
 
-    protected function updateBootstrapForRoles($includeRoles = false): void
+    protected function updateBootstrapForRoles($apiAuthDriver, $includeRoles = false): void
     {
         $middlewareAliases = [
             'auth' => '\App\Http\Middleware\Authenticate::class',
@@ -119,7 +119,7 @@ class GenerateAuthModule extends Command
         }
 
         $authService = new AuthenticationService($this);
-        $authService->updateBootstrapApp($middlewareAliases);
+        $authService->updateBootstrapApp($apiAuthDriver, $middlewareAliases);
     }
 
     /**
