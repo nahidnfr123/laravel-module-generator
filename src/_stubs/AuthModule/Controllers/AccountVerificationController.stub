@@ -11,7 +11,7 @@ use Illuminate\Validation\ValidationException;
 
 class AccountVerificationController extends Controller
 {
-    public function verifyEmailVerificationLink($data): void
+    public function verifyEmail($data): void
     {
         $record = EmailVerificationToken::where('token', $data['token'])
             ->where('expires_at', '>', now())
