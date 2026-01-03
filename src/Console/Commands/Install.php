@@ -180,13 +180,6 @@ YAML
             $middlewareContent = $matches[1];
             $updatedMiddlewareContent = $middlewareContent; // Start with existing content
 
-            // Add statefulApi if not exists
-            if (!str_contains($middlewareContent, '$middleware->statefulApi()')) {
-                $updatedMiddlewareContent .= "\n        \$middleware->statefulApi();"; // APPEND instead of replace
-                $modified = true;
-                $this->line('✅ Added statefulApi middleware');
-            }
-
             // Check if alias method exists
             if (!str_contains($middlewareContent, '$middleware->alias(')) {
                 // Build the alias array
