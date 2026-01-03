@@ -89,12 +89,23 @@ class AuthenticationService extends BaseAuthModuleService
         // Install package
         $this->run('composer require laravel/passport');
 
-        // Clear cached commands/providers
+        // Publish Passport configuration and migrations
+        $this->command->info('📝 Publishing Passport assets...');
+        $this->run('php artisan vendor:publish --tag=passport-migrations');
+        $this->run('php artisan vendor:publish --tag=passport-config');
+
+        // Clear cached commands/providers to register Passport commands
         $this->run('php artisan optimize:clear');
 
-        // MUST be shell execution
+        // Run migrations to create OAuth tables
+        $this->command->info('🔄 Running Passport migrations...');
+        $this->run('php artisan migrate --path=database/migrations --force');
+
+        // Install Passport (creates encryption keys and OAuth clients)
+        $this->command->info('🔑 Installing Passport keys and clients...');
         $this->run('php artisan passport:install --force');
 
+        // Update User model
         $this->updateUserModel([
             [
                 'type' => 'trait',
@@ -102,8 +113,9 @@ class AuthenticationService extends BaseAuthModuleService
                 'use_statement' => 'use Laravel\\Passport\\HasApiTokens',
             ]
         ]);
-    }
 
+        $this->command->info('✅ Laravel Passport installed successfully!');
+    }
 
     protected function installSanctum(): void
     {
