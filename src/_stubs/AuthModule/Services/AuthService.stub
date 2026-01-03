@@ -49,11 +49,7 @@ class AuthService
     {
         $user = (new UserService)->store($data);
 
-        if ($login) {
-            return $this->login($data);
-        }
-
-        return $user;
+        return $login ? $this->login($data) : $user;
     }
 
     public function resendEmailVerificationLink(): void

@@ -1,15 +1,17 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Auth;
 
 use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RefreshTokenRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Resources\UserProfileResource;
 use App\Services\Auth\PasswordService;
 use App\Services\AuthService;
 use Illuminate\Http\Request;
+use Laravel\Passport\RefreshToken;
 
 class AuthController extends Controller
 {
@@ -27,7 +29,7 @@ class AuthController extends Controller
     {
         try {
             return successResponse('Login successful', $this->authService->login($request->validated()));
-        } catch (\Exception $e) {
+        } catch (\Exception|\Throwable $e) {
             return failureResponse($e->getMessage(), $e->getCode() ?? 400);
         }
     }
@@ -36,7 +38,7 @@ class AuthController extends Controller
     {
         try {
             return successResponse('Register successful', $this->authService->register($request->validated(), false));
-        } catch (\Exception $e) {
+        } catch (\Exception|\Throwable $e) {
             return failureResponse($e->getMessage(), $e->getCode() ?? 400);
         }
     }
@@ -44,10 +46,20 @@ class AuthController extends Controller
     public function logout(Request $request): \Illuminate\Http\JsonResponse
     {
         try {
-            $request->user()?->currentAccessToken()?->delete();
+            $accessToken = $request->user()->token();
+
+            if (! $accessToken) {
+                return failureResponse('The user is not authenticated.');
+            }
+
+            RefreshToken::where('access_token_id', $accessToken->id)->update([
+                'revoked' => true,
+            ]);
+
+            $accessToken->revoke();
 
             return successResponse('Successfully logged out.');
-        } catch (\Exception $e) {
+        } catch (\Exception|\Throwable $e) {
             return failureResponse($e->getMessage(), $e->getCode() ?? 500);
         }
     }
@@ -59,13 +71,42 @@ class AuthController extends Controller
         return successResponse('User details', new UserProfileResource($user));
     }
 
+    public function verifyEmail(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $request->validate(['token' => 'required|string']);
+        try {
+            abort_if(! auth()->check(), 401, 'Unauthenticated.');
+            abort_if(auth()->user()->hasVerifiedEmail(), 403, 'Email already verified.');
+
+            $this->authService->verifyEmailVerificationLink($request);
+
+            return successResponse('Email verified successfully.');
+        } catch (\Exception|\Throwable $e) {
+            return failureResponse($e->getMessage(), $e->getCode() ?? 500);
+        }
+    }
+
+    public function resendEmailVerificationLink(): \Illuminate\Http\JsonResponse
+    {
+        try {
+            abort_if(! auth()->check(), 401, 'Unauthenticated.');
+            abort_if(auth()->user()->hasVerifiedEmail(), 403, 'Email already verified.');
+
+            $this->authService->resendEmailVerificationLink();
+
+            return successResponse('Verification link sent.');
+        } catch (\Exception|\Throwable $e) {
+            return failureResponse($e->getMessage(), $e->getCode() ?? 500);
+        }
+    }
+
     public function forgotPassword(ForgotPasswordRequest $request): \Illuminate\Http\JsonResponse
     {
         try {
             (new PasswordService)->forgetPassword($request->validated());
 
             return successResponse('If the email exists, a password reset link has been sent');
-        } catch (\Exception $e) {
+        } catch (\Exception|\Throwable $e) {
             return failureResponse($e->getMessage(), $e->getCode() ?? 400);
         }
     }
@@ -76,7 +117,16 @@ class AuthController extends Controller
             (new PasswordService)->resetPassword($request->validated());
 
             return successResponse('Password has been reset successfully.');
-        } catch (\Exception $e) {
+        } catch (\Exception|\Throwable $e) {
+            return failureResponse($e->getMessage(), $e->getCode() ?? 400);
+        }
+    }
+
+    public function refreshToken(RefreshTokenRequest $request): \Illuminate\Http\JsonResponse
+    {
+        try {
+            return successResponse('Refresh token successful', $this->authService->getAccessTokenByRefreshToken($request->validated()));
+        } catch (\Exception|\Throwable $e) {
             return failureResponse($e->getMessage(), $e->getCode() ?? 400);
         }
     }

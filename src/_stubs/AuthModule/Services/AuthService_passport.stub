@@ -2,16 +2,27 @@
 
 namespace App\Services;
 
+use App\Mail\SentMail;
 use App\Mail\VerifyEmailMail;
+use App\Models\EmailVerificationOtp;
 use App\Models\EmailVerificationToken;
 use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Random\RandomException;
+use JsonException;
+use Throwable;
 
 class AuthService
 {
+    /**
+     * @throws JsonException
+     */
     public function login($data): object
     {
         $user = User::where('email', $data['email'])->first();
@@ -25,16 +36,56 @@ class AuthService
         if (isset($user->is_active)) {
             $this->checkUserStatus($user);
         }
-        // roles
-        $role = $user?->getRoleNames();
+
+        $role = $user->getRoleNames() ?? null;
         // OPTIONAL: revoke old tokens
-        $user?->currentAccessToken()?->delete();
-        $token = $user?->createToken('user'.'Token', ['check-'.$role ?? 'user'])?->plainTextToken;
+        $user->tokens()->update(['revoked' => true]);
+
+        $response = $this->oAuthLogin([
+            'grant_type' => 'password',
+            'client_id' => config('passport.password_client_id'),
+            'client_secret' => config('passport.password_client_secret'),
+            'username' => $data['email'],
+            'password' => $data['password'],
+            'scope' => '',
+        ]);
 
         return (object) [
-            'token' => $token,
+            'token' => $response,
             'role' => $role,
         ];
+    }
+
+    /**
+     * @throws JsonException
+     */
+    public function getAccessTokenByRefreshToken($data): object
+    {
+        $response = $this->oAuthLogin([
+            'grant_type' => 'refresh_token',
+            'refresh_token' => $data['refresh_token'],
+            'client_id' => config('passport.password_client_id'),
+            'client_secret' => config('passport.password_client_secret'),
+            'scope' => '',
+        ]);
+
+        return (object) [
+            'token' => $response,
+        ];
+    }
+
+    /**
+     * @throws JsonException
+     * @throws Exception
+     */
+    public function oAuthLogin($params)
+    {
+        $request = Request::create('/oauth/token', 'POST', $params);
+        $request->headers->set('Accept', 'application/json');
+        $request->headers->set('Content-Type', 'application/x-www-form-urlencoded');
+        $response = app()->handle($request);
+
+        return json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
     }
 
     private function checkUserStatus($user): void
@@ -49,11 +100,7 @@ class AuthService
     {
         $user = (new UserService)->store($data);
 
-        if ($login) {
-            return $this->login($data);
-        }
-
-        return $user;
+        return $login ? $this->login($data) : $user;
     }
 
     public function resendEmailVerificationLink(): void

@@ -85,7 +85,7 @@ php artisan auth:generate --skip-roles         # Skip roles and permissions setu
 ### What Gets Generated
 
 #### Authentication Files
-- ✅ **AuthController** → `app/Http/Controllers/AuthController.php`
+- ✅ **AuthController** → `app/Http/Controllers/Auth/AuthController.php`
 - ✅ **AuthService** → `app/Services/AuthService.php`
 - ✅ **Login Request** → `app/Http/Requests/Auth/LoginRequest.php`
 - ✅ **Register Request** → `app/Http/Requests/Auth/RegisterRequest.php`

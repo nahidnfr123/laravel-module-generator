@@ -34,6 +34,18 @@ class GenerateAuthModule extends Command
 
         $this->newLine();
 
+        $apiAuthDriver = $this->choice(
+            'Which API authentication do you want to use?',
+            ['Passport', 'Sanctum'],
+            0
+        );
+        // Normalize value
+        $apiAuthDriver = strtolower($apiAuthDriver);
+
+        $this->info("🔐 Using {$apiAuthDriver} for API authentication.");
+
+        $this->newLine();
+
         // Ask about roles and permissions
         $includeRoles = !$this->option('skip-roles') &&
             $this->confirm('Do you want to add roles and permissions management?', true);
@@ -52,7 +64,7 @@ class GenerateAuthModule extends Command
 
         // Generate Authentication & User Management
         $authService = new AuthenticationService($this);
-        $authService->generate();
+        $authService->generate($apiAuthDriver);
 
         // Generate Email Verification if requested
         if ($includeEmailVerification) {

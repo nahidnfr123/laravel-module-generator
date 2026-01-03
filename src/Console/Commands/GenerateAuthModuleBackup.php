@@ -130,10 +130,10 @@ class GenerateAuthModuleBackup extends Command
             'resources/views/emails/reset_password_mail.blade' => 'resources/views/emails/reset_password_mail.blade.php',
 
             ...($includeEmailVerification ? [
-                'Controllers/AuthController-ev' => 'app/Http/Controllers/AuthController.php',
+                'Controllers/AuthController-ev' => 'app/Http/Controllers/Auth/AuthController.php',
                 'routes/auth-ev' => 'routes/api/auth.php',
             ] : [
-                'Controllers/AuthController' => 'app/Http/Controllers/AuthController.php',
+                'Controllers/AuthController' => 'app/Http/Controllers/Auth/AuthController.php',
                 'routes/auth' => 'routes/api/auth.php'
             ]),
 

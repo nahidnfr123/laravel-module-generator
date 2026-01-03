@@ -16,7 +16,7 @@ class SocialAuthenticationService extends BaseAuthModuleService
     protected function copySocialAuthFiles(): void
     {
         $files = [
-            'Controllers/SocialAuthController' => 'app/Http/Controllers/SocialAuthController.php',
+            'Controllers/SocialAuthController' => 'app/Http/Controllers/Auth/SocialAuthController.php',
             'Services/SocialAuthService' => 'app/Services/SocialAuthService.php',
             'routes/social-auth' => 'routes/api/social-auth.php',
             'Models/SocialAccount' => 'app/Models/SocialAccount.php',

@@ -79,7 +79,7 @@ class EmailVerificationService extends BaseAuthModuleService
         $this->command->info('📝 Copying AuthController with email verification...');
 
         $files = [
-            'Controllers/AuthController-ev' => 'app/Http/Controllers/AuthController.php',
+            'Controllers/AccountVerificationController' => 'app/Http/Controllers/Auth/AccountVerificationController.php',
             'routes/auth-ev' => 'routes/api/auth.php',
         ];
 

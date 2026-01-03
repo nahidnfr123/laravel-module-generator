@@ -1,6 +1,7 @@
 <?php
 
-use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\AccountVerificationController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,9 +20,9 @@ Route::middleware(['api', 'cors'])->group(function () {
         });
 
         // Email verification routes
-        Route::post('email/verify', [AuthController::class, 'verifyEmail'])
+        Route::post('email/verify', [EmailVerificationController::class, 'verifyEmail'])
             ->middleware(['throttle:6,1'])->name('api.verification.verify');
-        Route::get('email/resend-verification-link', [AuthController::class, 'resendEmailVerificationLink'])
+        Route::get('email/resend-verification-link', [EmailVerificationController::class, 'resendEmailVerificationLink'])
             ->middleware(['auth:api', 'throttle:6,1']);
     });
 

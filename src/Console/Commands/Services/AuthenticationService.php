@@ -4,8 +4,16 @@ namespace NahidFerdous\LaravelModuleGenerator\Console\Commands\Services;
 
 class AuthenticationService extends BaseAuthModuleService
 {
-    public function generate(): void
+    public string $apiDriver;
+
+    public function generate($apiAuthDriver): void
     {
+        $this->apiDriver = $apiAuthDriver ?? 'sanctum';
+        if ($this->apiDriver === 'sanctum') {
+            $this->installSanctum();
+        } else if ($this->apiDriver === 'passport') {
+            $this->installPassport();
+        }
         $this->copyAuthenticationFiles();
         $this->copyUserManagementFiles();
     }
@@ -23,7 +31,6 @@ class AuthenticationService extends BaseAuthModuleService
 
         $files = [
             'AuthModule.postman_collection' => $directory . '/AuthModule.postman_collection.json',
-            'Services/AuthService' => 'app/Services/AuthService.php',
             'Services/Auth/PasswordService' => 'app/Services/Auth/PasswordService.php',
 
             'Requests/LoginRequest' => 'app/Http/Requests/Auth/LoginRequest.php',
@@ -31,13 +38,25 @@ class AuthenticationService extends BaseAuthModuleService
             'Requests/ForgotPasswordRequest' => 'app/Http/Requests/Auth/ForgotPasswordRequest.php',
             'Requests/ResetPasswordRequest' => 'app/Http/Requests/Auth/ResetPasswordRequest.php',
 
-            'Controllers/AuthController' => 'app/Http/Controllers/AuthController.php',
             'routes/auth' => 'routes/api/auth.php',
 
             'Mail/PasswordResetEmail' => 'app/Mail/PasswordResetEmail.php',
             'Mail/UserAccountCreateMail' => 'app/Mail/UserAccountCreateMail.php',
             'resources/views/emails/reset_password_mail.blade' => 'resources/views/emails/reset_password_mail.blade.php',
         ];
+
+        if($this->apiDriver === 'sanctum'){
+            $files[] = [
+                'Services/AuthService' => 'app/Services/AuthService.php',
+                'Controllers/AuthController' => 'app/Http/Controllers/Auth/AuthController.php',
+            ];
+        } else if ($this->apiDriver === 'passport') {
+            $files[] = [
+                'Controllers/AuthController_ev_passport' => 'app/Http/Controllers/Auth/AuthController.php',
+                'Requests/RefreshTokenRequest' => 'app/Http/Requests/Auth/RefreshTokenRequest.php',
+                'Services/AuthService_passport' => 'app/Services/AuthService.php',
+            ];
+        }
 
         $this->copyFiles($files);
     }
@@ -61,5 +80,37 @@ class AuthenticationService extends BaseAuthModuleService
         ];
 
         $this->copyFiles($files);
+    }
+
+    protected function installPassport(): void
+    {
+        $this->command->info('📦 Installing Laravel Passport...');
+
+        $this->run('composer require laravel/passport');
+        $this->run('php artisan passport:install');
+
+        $this->updateUserModel([
+            [
+                'type' => 'trait',
+                'trait' => 'HasApiTokens',
+                'use_statement' => 'use Laravel\\Passport\\HasApiTokens',
+            ]
+        ]);
+    }
+
+    protected function installSanctum(): void
+    {
+        $this->command->info('📦 Installing Laravel Sanctum...');
+
+        $this->run('composer require laravel/sanctum');
+        $this->run('php artisan vendor:publish --provider="Laravel\\Sanctum\\SanctumServiceProvider"');
+
+        $this->updateUserModel([
+            [
+                'type' => 'trait',
+                'trait' => 'HasApiTokens',
+                'use_statement' => 'use Laravel\\Sanctum\\HasApiTokens',
+            ]
+        ]);
     }
 }
