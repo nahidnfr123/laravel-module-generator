@@ -98,7 +98,7 @@ class GenerateAuthModule extends Command
     }
 
     /**
-     * Check if database connection is working
+     * Check if the database connection is working
      */
     protected function checkDatabaseConnection(): bool
     {

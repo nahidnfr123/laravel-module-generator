@@ -47,6 +47,21 @@ abstract class BaseAuthModuleService
     }
 
     /**
+     * Run shell command directly (for commands that need fresh app bootstrap)
+     * Use this when you need Laravel to reload service providers
+     */
+    protected function runShell(string $command): void
+    {
+        $this->command->line("▶ Running: {$command}");
+
+        passthru($command, $status);
+
+        if ($status !== 0) {
+            throw new \RuntimeException("Command failed: {$command}");
+        }
+    }
+
+    /**
      * Copy files from stub to destination
      */
     protected function copyFiles(array $files): void

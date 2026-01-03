@@ -94,23 +94,24 @@ class AuthenticationService extends BaseAuthModuleService
         $this->run('php artisan vendor:publish --tag=passport-migrations');
         $this->run('php artisan vendor:publish --tag=passport-config');
 
-        // Clear cached commands/providers to register Passport commands
-        $this->run('php artisan optimize:clear');
-
         // Run migrations to create OAuth tables
         $this->command->info('🔄 Running Passport migrations...');
-        $this->run('php artisan migrate --path=database/migrations --force');
+        $this->run('php artisan migrate --force');
+
+        // Clear cached commands/providers
+        $this->run('php artisan optimize:clear');
 
         // Install Passport (creates encryption keys and OAuth clients)
+        // MUST use shell execution to ensure fresh application bootstrap
         $this->command->info('🔑 Installing Passport keys and clients...');
-        $this->run('php artisan passport:install --force');
+        $this->runShell('php artisan passport:install --force');
 
         // Update User model
         $this->updateUserModel([
             [
                 'type' => 'trait',
                 'trait' => 'HasApiTokens',
-                'use_statement' => 'use Laravel\\Passport\\HasApiTokens',
+                'use_statement' => 'use Laravel\\Passport\\HasApiTokens;',
             ]
         ]);
 
@@ -128,7 +129,7 @@ class AuthenticationService extends BaseAuthModuleService
             [
                 'type' => 'trait',
                 'trait' => 'HasApiTokens',
-                'use_statement' => 'use Laravel\\Sanctum\\HasApiTokens',
+                'use_statement' => 'use Laravel\\Sanctum\\HasApiTokens;',
             ]
         ]);
     }
