@@ -27,7 +27,7 @@ class AuthController extends Controller
     {
         try {
             return successResponse('Login successful', $this->authService->login($request->validated()));
-        } catch (\Exception|\Throwable $e) {
+        } catch (\Exception $e) {
             return failureResponse($e->getMessage(), $e->getCode() ?? 400);
         }
     }
@@ -36,7 +36,7 @@ class AuthController extends Controller
     {
         try {
             return successResponse('Register successful', $this->authService->register($request->validated(), false));
-        } catch (\Exception|\Throwable $e) {
+        } catch (\Exception $e) {
             return failureResponse($e->getMessage(), $e->getCode() ?? 400);
         }
     }
@@ -47,7 +47,7 @@ class AuthController extends Controller
             $request->user()?->currentAccessToken()?->delete();
 
             return successResponse('Successfully logged out.');
-        } catch (\Exception|\Throwable $e) {
+        } catch (\Exception $e) {
             return failureResponse($e->getMessage(), $e->getCode() ?? 500);
         }
     }
@@ -65,7 +65,7 @@ class AuthController extends Controller
             (new PasswordService)->forgetPassword($request->validated());
 
             return successResponse('If the email exists, a password reset link has been sent');
-        } catch (\Exception|\Throwable $e) {
+        } catch (\Exception $e) {
             return failureResponse($e->getMessage(), $e->getCode() ?? 400);
         }
     }
@@ -76,7 +76,7 @@ class AuthController extends Controller
             (new PasswordService)->resetPassword($request->validated());
 
             return successResponse('Password has been reset successfully.');
-        } catch (\Exception|\Throwable $e) {
+        } catch (\Exception $e) {
             return failureResponse($e->getMessage(), $e->getCode() ?? 400);
         }
     }
