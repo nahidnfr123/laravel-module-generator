@@ -52,7 +52,7 @@ class AuthenticationService extends BaseAuthModuleService
             ]);
         } elseif ($this->apiDriver === 'passport') {
             $files = array_merge($files, [
-                'Controllers/AuthController_ev_passport' => 'app/Http/Controllers/Auth/AuthController.php',
+                'Controllers/AuthController_passport' => 'app/Http/Controllers/Auth/AuthController.php',
                 'Requests/RefreshTokenRequest' => 'app/Http/Requests/Auth/RefreshTokenRequest.php',
                 'Services/AuthService_passport' => 'app/Services/AuthService.php',
             ]);
