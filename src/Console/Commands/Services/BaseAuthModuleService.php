@@ -2,6 +2,7 @@
 
 namespace NahidFerdous\LaravelModuleGenerator\Console\Commands\Services;
 
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use function app_path;
@@ -20,6 +21,29 @@ abstract class BaseAuthModuleService
         $this->command = $command;
         $this->basePath = base_path();
         $this->packageStubPath = __DIR__ . '/../../../_stubs/AuthModule';
+    }
+
+    protected function run(string $command, array $arguments = []): void
+    {
+        $this->command->line("▶ Running: {$command}");
+
+        if (str_starts_with($command, 'composer')) {
+            // Composer commands must be run via shell
+            passthru($command, $status);
+
+            if ($status !== 0) {
+                throw new \RuntimeException("Command failed: {$command}");
+            }
+
+            return;
+        }
+
+        // Artisan commands
+        Artisan::call(
+            str_replace('php artisan ', '', $command),
+            $arguments,
+            $this->command->getOutput()
+        );
     }
 
     /**

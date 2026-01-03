@@ -36,7 +36,7 @@ class GenerateAuthModule extends Command
 
         $apiAuthDriver = $this->choice(
             'Which API authentication do you want to use?',
-            ['Passport', 'Sanctum'],
+            ['Sanctum', 'Passport'],
             0
         );
         // Normalize value
