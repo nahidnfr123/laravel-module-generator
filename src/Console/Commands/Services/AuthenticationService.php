@@ -45,17 +45,17 @@ class AuthenticationService extends BaseAuthModuleService
             'resources/views/emails/reset_password_mail.blade' => 'resources/views/emails/reset_password_mail.blade.php',
         ];
 
-        if($this->apiDriver === 'sanctum'){
-            $files[] = [
+        if ($this->apiDriver === 'sanctum') {
+            $files = array_merge($files, [
                 'Services/AuthService' => 'app/Services/AuthService.php',
                 'Controllers/AuthController' => 'app/Http/Controllers/Auth/AuthController.php',
-            ];
-        } else if ($this->apiDriver === 'passport') {
-            $files[] = [
+            ]);
+        } elseif ($this->apiDriver === 'passport') {
+            $files = array_merge($files, [
                 'Controllers/AuthController_ev_passport' => 'app/Http/Controllers/Auth/AuthController.php',
                 'Requests/RefreshTokenRequest' => 'app/Http/Requests/Auth/RefreshTokenRequest.php',
                 'Services/AuthService_passport' => 'app/Services/AuthService.php',
-            ];
+            ]);
         }
 
         $this->copyFiles($files);
