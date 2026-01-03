@@ -11,6 +11,8 @@ use App\Http\Resources\UserProfileResource;
 use App\Services\Auth\PasswordService;
 use App\Services\AuthService;
 use Illuminate\Http\Request;
+use Exception;
+use Throwable;
 
 class AuthController extends Controller
 {

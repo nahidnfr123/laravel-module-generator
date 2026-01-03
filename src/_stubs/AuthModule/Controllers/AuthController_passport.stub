@@ -13,6 +13,8 @@ use App\Services\Auth\PasswordService;
 use App\Services\AuthService;
 use Illuminate\Http\Request;
 use Laravel\Passport\RefreshToken;
+use Exception;
+use Throwable;
 
 class AuthController extends Controller
 {

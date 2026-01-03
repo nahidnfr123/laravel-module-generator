@@ -37,7 +37,7 @@ class AuthService
             $this->checkUserStatus($user);
         }
 
-        $role = $user->getRoleNames() ?? null;
+        $role = $user?->getRoleNames();
         // OPTIONAL: revoke old tokens
         $user->tokens()->update(['revoked' => true]);
 

@@ -25,7 +25,7 @@ class AuthService
         if (isset($user->is_active)) {
             $this->checkUserStatus($user);
         }
-        // roles
+
         $role = $user?->getRoleNames();
         // OPTIONAL: revoke old tokens
         $user?->currentAccessToken()?->delete();

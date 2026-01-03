@@ -14,6 +14,7 @@ abstract class BaseAuthModuleService
 {
     protected Command $command;
     protected string $basePath;
+    public string $apiDriver;
     protected string $packageStubPath;
 
     public function __construct(Command $command)
@@ -190,7 +191,7 @@ abstract class BaseAuthModuleService
     /**
      * Update bootstrap/app.php with middleware
      */
-    protected function updateBootstrapApp(array $middlewareAliases = []): void
+    public function updateBootstrapApp(array $middlewareAliases = []): void
     {
         $bootstrapPath = base_path('bootstrap/app.php');
 
@@ -208,7 +209,7 @@ abstract class BaseAuthModuleService
             $middlewareContent = $matches[1];
             $updatedMiddlewareContent = $middlewareContent;
 
-            if (!str_contains($middlewareContent, '$middleware->statefulApi()')) {
+            if (($this->apiDriver === 'sanctum') && !str_contains($middlewareContent, '$middleware->statefulApi()')) {
                 $updatedMiddlewareContent = "\n        \$middleware->statefulApi();";
                 $modified = true;
                 $this->command->line('✅ Added statefulApi middleware');

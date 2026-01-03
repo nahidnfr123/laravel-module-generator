@@ -4,8 +4,6 @@ namespace NahidFerdous\LaravelModuleGenerator\Console\Commands\Services;
 
 class AuthenticationService extends BaseAuthModuleService
 {
-    public string $apiDriver;
-
     public function generate($apiAuthDriver): void
     {
         $this->apiDriver = $apiAuthDriver ?? 'sanctum';

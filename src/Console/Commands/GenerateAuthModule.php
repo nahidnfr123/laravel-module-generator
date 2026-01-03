@@ -92,6 +92,8 @@ class GenerateAuthModule extends Command
             $accessControlService->generate();
         }
 
+        $this->updateBootstrapForRoles($includeRoles);
+
         $this->newLine();
         $this->info('✅ Authentication system generated successfully!');
         $this->newLine();
@@ -99,6 +101,25 @@ class GenerateAuthModule extends Command
         $this->displayNextSteps($includeRoles, $includeEmailVerification, $includeSocialAuth);
 
         return Command::SUCCESS;
+    }
+
+
+    protected function updateBootstrapForRoles($includeRoles = false): void
+    {
+        $middlewareAliases = [
+            'auth' => '\App\Http\Middleware\Authenticate::class',
+            'cors' => 'App\Http\Middleware\Cors::class',
+        ];
+        if ($includeRoles) {
+            $middlewareAliases = array_merge($middlewareAliases, [
+                'role' => '\Spatie\Permission\Middleware\RoleMiddleware::class',
+                'permission' => '\Spatie\Permission\Middleware\PermissionMiddleware::class',
+                'role_or_permission' => '\Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class',
+            ]);
+        }
+
+        $authService = new AuthenticationService($this);
+        $authService->updateBootstrapApp($middlewareAliases);
     }
 
     /**

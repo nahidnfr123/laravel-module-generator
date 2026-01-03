@@ -16,7 +16,6 @@ class AccessControlService extends BaseAuthModuleService
         $this->copyRolesAndPermissionsFiles();
         $this->copyPermissionMigrationWithTimestamp();
         $this->updateUserModelForRoles();
-        $this->updateBootstrapForRoles();
     }
 
     protected function copyRolesAndPermissionsFiles(): void
@@ -176,18 +175,5 @@ class AccessControlService extends BaseAuthModuleService
         ];
 
         $this->updateUserModel($updates);
-    }
-
-    protected function updateBootstrapForRoles(): void
-    {
-        $middlewareAliases = [
-            'auth' => '\App\Http\Middleware\Authenticate::class',
-            'cors' => 'App\Http\Middleware\Cors::class',
-            'role' => '\Spatie\Permission\Middleware\RoleMiddleware::class',
-            'permission' => '\Spatie\Permission\Middleware\PermissionMiddleware::class',
-            'role_or_permission' => '\Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class',
-        ];
-
-        $this->updateBootstrapApp($middlewareAliases);
     }
 }
