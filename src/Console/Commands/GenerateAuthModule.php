@@ -58,7 +58,11 @@ class GenerateAuthModule extends Command
         $includeSocialAuth = $this->option('with-social-login') ||
             $this->confirm('Do you want to add social authentication?', true);
 
-        if (!$this->runRequiredCommand('install:api')) {
+        if ($this->apiDriver === 'passport') {
+            if (!$this->runRequiredCommand('install:api --passport')) {
+                return self::FAILURE;
+            }
+        } else if (!$this->runRequiredCommand('install:api')) {
             return self::FAILURE;
         }
 

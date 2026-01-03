@@ -12,7 +12,7 @@ class AuthenticationService extends BaseAuthModuleService
         if ($this->apiDriver === 'sanctum') {
             $this->installSanctum();
         } else if ($this->apiDriver === 'passport') {
-            $this->installPassport();
+            // $this->installPassport();
         }
         $this->copyAuthenticationFiles();
         $this->copyUserManagementFiles();
