@@ -28,7 +28,7 @@ class GenerateAuthModule extends Command
         $this->info('🚀 Starting Authentication & User Management Generation...');
         $this->newLine();
 
-        if (!$this->checkDatabaseConnection()) {
+        if (! $this->checkDatabaseConnection()) {
             return self::FAILURE;
         }
 
@@ -47,11 +47,11 @@ class GenerateAuthModule extends Command
         $this->newLine();
 
         // Ask about roles and permissions
-        $includeRoles = !$this->option('skip-roles') &&
+        $includeRoles = ! $this->option('skip-roles') &&
             $this->confirm('Do you want to add roles and permissions management?', true);
 
         // Ask about email verification
-        $includeEmailVerification = !$this->option('skip-email-verification') &&
+        $includeEmailVerification = ! $this->option('skip-email-verification') &&
             $this->confirm('Do you want to enable email verification?', true);
 
         // Ask about social authentication
@@ -59,10 +59,10 @@ class GenerateAuthModule extends Command
             $this->confirm('Do you want to add social authentication?', true);
 
         if ($apiAuthDriver === 'passport') {
-            if (!$this->runRequiredCommand('install:api --passport')) {
+            if (! $this->runRequiredCommand('install:api --passport')) {
                 return self::FAILURE;
             }
-        } else if (!$this->runRequiredCommand('install:api')) {
+        } elseif (! $this->runRequiredCommand('install:api')) {
             return self::FAILURE;
         }
 
@@ -78,7 +78,7 @@ class GenerateAuthModule extends Command
 
         // Generate Social Authentication if requested
         if ($includeSocialAuth) {
-            if (!$this->installSocialite()) {
+            if (! $this->installSocialite()) {
                 $this->warn('⚠️  Failed to install Laravel Socialite. You may need to install it manually.');
             }
 
@@ -102,7 +102,6 @@ class GenerateAuthModule extends Command
 
         return Command::SUCCESS;
     }
-
 
     protected function updateBootstrapForRoles($apiAuthDriver, $includeRoles = false): void
     {
@@ -132,10 +131,12 @@ class GenerateAuthModule extends Command
         try {
             \DB::connection()->getPdo();
             $this->line('✅ Database connected successfully');
+
             return true;
         } catch (\Exception $e) {
-            $this->error('❌ Database connection failed: ' . $e->getMessage());
+            $this->error('❌ Database connection failed: '.$e->getMessage());
             $this->warn('Please configure your database in .env file and ensure the database server is running');
+
             return false;
         }
     }
@@ -169,13 +170,15 @@ class GenerateAuthModule extends Command
 
                 if ($returnCode === 0) {
                     $this->line('✅ Laravel Socialite installed successfully');
+
                     return true;
                 }
             }
 
             return false;
         } catch (\Exception $e) {
-            $this->error('Failed to install Socialite: ' . $e->getMessage());
+            $this->error('Failed to install Socialite: '.$e->getMessage());
+
             return false;
         }
     }
@@ -200,7 +203,7 @@ class GenerateAuthModule extends Command
         $this->line('2. Run migrations:');
         $this->line('   php artisan migrate');
 
-        if (!$includeRoles) {
+        if (! $includeRoles) {
             $this->line('');
             $this->line('3. Install Laravel Sanctum if not already installed:');
             $this->line('   composer require laravel/sanctum');
@@ -210,7 +213,7 @@ class GenerateAuthModule extends Command
 
         $this->line('');
         $step = $includeRoles ? '3' : '4';
-        $this->line($step . '. Update your .env file with mail configuration for password reset' . ($includeEmailVerification ? ' and email verification' : ''));
+        $this->line($step.'. Update your .env file with mail configuration for password reset'.($includeEmailVerification ? ' and email verification' : ''));
         $this->line('   MAIL_MAILER=smtp');
         $this->line('   MAIL_HOST=your-mail-host');
         $this->line('   MAIL_PORT=587');
@@ -222,8 +225,8 @@ class GenerateAuthModule extends Command
 
         if ($includeSocialAuth) {
             $this->line('');
-            $nextStep = (int)$step + 1;
-            $this->line($nextStep . '. Configure social authentication providers in config/services.php:');
+            $nextStep = (int) $step + 1;
+            $this->line($nextStep.'. Configure social authentication providers in config/services.php:');
             $this->line('');
             $this->line('   \'google\' => [');
             $this->line('       \'client_id\' => env(\'GOOGLE_CLIENT_ID\'),');
@@ -262,11 +265,13 @@ class GenerateAuthModule extends Command
             $exitCode = Artisan::call($command, $arguments, $this->getOutput());
         } catch (CommandNotFoundException $e) {
             $this->error(sprintf('Command "%s" is not available in this application.', $command));
+
             return false;
         }
 
         if ($exitCode !== 0) {
             $this->error(sprintf('Command "%s" exited with code %s.', $command, $exitCode));
+
             return false;
         }
 

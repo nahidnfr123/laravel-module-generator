@@ -24,7 +24,7 @@ class GenerateAuthModuleBackup extends Command
     public function __construct()
     {
         parent::__construct();
-        $this->packageStubPath = __DIR__ . '/../../_stubs/AuthModule';
+        $this->packageStubPath = __DIR__.'/../../_stubs/AuthModule';
     }
 
     /**
@@ -38,21 +38,21 @@ class GenerateAuthModuleBackup extends Command
         $this->info('🚀 Starting Authentication & User Management Generation...');
         $this->newLine();
 
-        if (!$this->checkDatabaseConnection()) {
+        if (! $this->checkDatabaseConnection()) {
             return self::FAILURE;
         }
 
         $this->newLine();
 
         // Ask about roles and permissions
-        $includeRoles = !$this->option('skip-roles') &&
+        $includeRoles = ! $this->option('skip-roles') &&
             $this->confirm('Do you want to add roles and permissions management?', true);
 
         // Ask about email verification
-        $includeEmailVerification = !$this->option('skip-email-verification') &&
+        $includeEmailVerification = ! $this->option('skip-email-verification') &&
             $this->confirm('Do you want to enable email verification?', true);
 
-        if (!$this->runRequiredCommand('install:api')) {
+        if (! $this->runRequiredCommand('install:api')) {
             return self::FAILURE;
         }
 
@@ -94,10 +94,12 @@ class GenerateAuthModuleBackup extends Command
         try {
             \DB::connection()->getPdo();
             $this->line('✅ Database connected successfully');
+
             return true;
         } catch (\Exception $e) {
-            $this->error('❌ Database connection failed: ' . $e->getMessage());
+            $this->error('❌ Database connection failed: '.$e->getMessage());
             $this->warn('Please configure your database in .env file and ensure the database server is running');
+
             return false;
         }
     }
@@ -107,7 +109,7 @@ class GenerateAuthModuleBackup extends Command
         $path = config('module-generator.models_path');
         $directory = dirname($path); // get the directory portion of the path
 
-        if (!file_exists($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+        if (! file_exists($directory) && ! mkdir($directory, 0755, true) && ! is_dir($directory)) {
             throw new \RuntimeException(sprintf('Directory "%s" was not created', $directory));
         }
 
@@ -118,7 +120,7 @@ class GenerateAuthModuleBackup extends Command
 
         $timestamp = date('Y_m_d_His');
         $files = [
-            'AuthModule.postman_collection' => $directory . '/AuthModule.postman_collection.json',
+            'AuthModule.postman_collection' => $directory.'/AuthModule.postman_collection.json',
             'Services/AuthService' => 'app/Services/AuthService.php',
             'Services/Auth/PasswordService' => 'app/Services/Auth/PasswordService.php',
 
@@ -134,7 +136,7 @@ class GenerateAuthModuleBackup extends Command
                 'routes/auth-ev' => 'routes/api/auth.php',
             ] : [
                 'Controllers/AuthController' => 'app/Http/Controllers/Auth/AuthController.php',
-                'routes/auth' => 'routes/api/auth.php'
+                'routes/auth' => 'routes/api/auth.php',
             ]),
 
             'Mail/PasswordResetEmail' => 'app/Mail/PasswordResetEmail.php',
@@ -216,20 +218,21 @@ class GenerateAuthModuleBackup extends Command
     {
         $this->info('📝 Copying custom permission migration...');
 
-        $stubPath = $this->packageStubPath . '/migrations/add_type_to_permissions_table.stub';
+        $stubPath = $this->packageStubPath.'/migrations/add_type_to_permissions_table.stub';
 
-        if (!File::exists($stubPath)) {
-            $this->warn('⚠️  Migration stub not found: ' . $stubPath);
+        if (! File::exists($stubPath)) {
+            $this->warn('⚠️  Migration stub not found: '.$stubPath);
+
             return;
         }
 
         // Find the latest Spatie permission migration timestamp
         $migrationsPath = database_path('migrations');
-        $spatieMigrations = File::glob($migrationsPath . '/*_create_permission_tables.php');
+        $spatieMigrations = File::glob($migrationsPath.'/*_create_permission_tables.php');
 
         $timestamp = null;
 
-        if (!empty($spatieMigrations)) {
+        if (! empty($spatieMigrations)) {
             // Get the timestamp from the Spatie migration filename
             $latestMigration = end($spatieMigrations);
             $filename = basename($latestMigration);
@@ -250,21 +253,22 @@ class GenerateAuthModuleBackup extends Command
         }
 
         // If no Spatie migration found, use current timestamp
-        if (!$timestamp) {
+        if (! $timestamp) {
             $timestamp = date('Y_m_d_His');
             $this->warn('⚠️  Spatie migration not found, using current timestamp');
         }
 
         $destinationFilename = "{$timestamp}_add_type_to_permissions_table.php";
-        $destinationPath = $migrationsPath . '/' . $destinationFilename;
+        $destinationPath = $migrationsPath.'/'.$destinationFilename;
 
         // Check if migration already exists (any timestamp variant)
-        $existingMigrations = File::glob($migrationsPath . '/*_add_type_to_permissions_table.php');
+        $existingMigrations = File::glob($migrationsPath.'/*_add_type_to_permissions_table.php');
 
-        if (!empty($existingMigrations) && !$this->option('force')) {
+        if (! empty($existingMigrations) && ! $this->option('force')) {
             $existingFile = basename($existingMigrations[0]);
-            if (!$this->confirm("Migration already exists: {$existingFile}. Do you want to replace it?", false)) {
+            if (! $this->confirm("Migration already exists: {$existingFile}. Do you want to replace it?", false)) {
                 $this->line("⏭️  Skipped: {$destinationFilename}");
+
                 return;
             }
             // Remove old migration
@@ -283,21 +287,21 @@ class GenerateAuthModuleBackup extends Command
 
             // For blade files, the stub should have .blade.stub extension
             if (str_ends_with($destination, '.blade.php')) {
-                $sourcePath = $this->packageStubPath . '/' . $source . '.stub';
+                $sourcePath = $this->packageStubPath.'/'.$source.'.stub';
             } else {
-                $sourcePath = $this->packageStubPath . '/' . $source . '.stub';
+                $sourcePath = $this->packageStubPath.'/'.$source.'.stub';
             }
 
-            $destinationPath = $this->basePath . '/' . $destination;
+            $destinationPath = $this->basePath.'/'.$destination;
 
-            if (!File::exists($sourcePath)) {
+            if (! File::exists($sourcePath)) {
                 $this->warn("⚠️  Source file not found: {$sourcePath}");
 
                 continue;
             }
 
-            if (File::exists($destinationPath) && !$this->option('force')) {
-                if (!$this->confirm("File already exists: {$destination}. Do you want to replace it?", false)) {
+            if (File::exists($destinationPath) && ! $this->option('force')) {
+                if (! $this->confirm("File already exists: {$destination}. Do you want to replace it?", false)) {
                     $this->line("⏭️  Skipped: {$destination}");
 
                     continue;
@@ -305,7 +309,7 @@ class GenerateAuthModuleBackup extends Command
             }
 
             $directory = dirname($destinationPath);
-            if (!File::isDirectory($directory)) {
+            if (! File::isDirectory($directory)) {
                 File::makeDirectory($directory, 0755, true);
             }
 
@@ -327,13 +331,14 @@ class GenerateAuthModuleBackup extends Command
 
         $freshInstall = false;
 
-        if (!isset($composerJson['require']['spatie/laravel-permission'])) {
+        if (! isset($composerJson['require']['spatie/laravel-permission'])) {
             $this->info('Running: composer require spatie/laravel-permission');
             exec('composer require spatie/laravel-permission 2>&1', $output, $returnCode);
 
             if ($returnCode !== 0) {
                 $this->error('❌ Failed to install Spatie Laravel Permission');
                 $this->warn('Please run manually: composer require spatie/laravel-permission');
+
                 return;
             }
 
@@ -366,6 +371,7 @@ class GenerateAuthModuleBackup extends Command
         if ($exitCode !== 0) {
             $this->error('❌ Failed to publish Spatie resources');
             $this->line(implode("\n", $output));
+
             return;
         }
 
@@ -382,8 +388,8 @@ class GenerateAuthModuleBackup extends Command
     {
         $userModelPath = app_path('Models/User.php');
 
-        if (!File::exists($userModelPath)) {
-            $this->warn('⚠️  User model not found at: ' . $userModelPath);
+        if (! File::exists($userModelPath)) {
+            $this->warn('⚠️  User model not found at: '.$userModelPath);
 
             return;
         }
@@ -395,7 +401,7 @@ class GenerateAuthModuleBackup extends Command
 
         // Add MustVerifyEmail interface
         if ($includeEmailVerification) {
-            if (!str_contains($content, 'MustVerifyEmail')) {
+            if (! str_contains($content, 'MustVerifyEmail')) {
                 $content = str_replace(
                     'use Illuminate\Foundation\Auth\User as Authenticatable;',
                     "use Illuminate\Contracts\Auth\MustVerifyEmail;\nuse Illuminate\Foundation\Auth\User as Authenticatable;",
@@ -416,7 +422,7 @@ class GenerateAuthModuleBackup extends Command
 
         // Add HasRoles trait
         if ($includeRoles) {
-            if (!str_contains($content, 'use Spatie\Permission\Traits\HasRoles;')) {
+            if (! str_contains($content, 'use Spatie\Permission\Traits\HasRoles;')) {
                 $content = str_replace(
                     'use Illuminate\Notifications\Notifiable;',
                     "use Illuminate\Notifications\Notifiable;\nuse Spatie\Permission\Traits\HasRoles;",
@@ -426,8 +432,8 @@ class GenerateAuthModuleBackup extends Command
                 // Add trait usage in class
                 if (preg_match('/class User.*?\{.*?use ([^;]+);/s', $content, $matches)) {
                     $traits = $matches[1];
-                    if (!str_contains($traits, 'HasRoles')) {
-                        $newTraits = trim($traits) . ', HasRoles';
+                    if (! str_contains($traits, 'HasRoles')) {
+                        $newTraits = trim($traits).', HasRoles';
                         $content = str_replace(
                             "use {$traits};",
                             "use {$newTraits};",
@@ -453,7 +459,7 @@ class GenerateAuthModuleBackup extends Command
     {
         $bootstrapPath = base_path('bootstrap/app.php');
 
-        if (!File::exists($bootstrapPath)) {
+        if (! File::exists($bootstrapPath)) {
             $this->warn('⚠️  bootstrap/app.php not found');
 
             return;
@@ -470,14 +476,14 @@ class GenerateAuthModuleBackup extends Command
             $updatedMiddlewareContent = $middlewareContent;
 
             // Add statefulApi if not exists
-            if (!str_contains($middlewareContent, '$middleware->statefulApi()')) {
+            if (! str_contains($middlewareContent, '$middleware->statefulApi()')) {
                 $updatedMiddlewareContent = "\n        \$middleware->statefulApi();";
                 $modified = true;
                 $this->line('✅ Added statefulApi middleware');
             }
 
             // Check if alias method exists
-            if (!str_contains($middlewareContent, '$middleware->alias(')) {
+            if (! str_contains($middlewareContent, '$middleware->alias(')) {
                 // Build the alias array
                 $aliases = "\n        \$middleware->alias([\n";
                 $aliases .= "            'auth' => \App\Http\Middleware\Authenticate::class,";
@@ -496,7 +502,7 @@ class GenerateAuthModuleBackup extends Command
                 $this->line('✅ Added middleware aliases');
             } else {
                 // Alias exists, check and add missing ones
-                if (!str_contains($middlewareContent, "'cors'")) {
+                if (! str_contains($middlewareContent, "'cors'")) {
                     $updatedMiddlewareContent = preg_replace(
                         '/(\$middleware->alias\(\[)/s',
                         "$1\n            'cors' => App\Http\Middleware\Cors::class,",
@@ -504,7 +510,7 @@ class GenerateAuthModuleBackup extends Command
                     );
                     $modified = true;
                 }
-                if (!str_contains($middlewareContent, "'auth'")) {
+                if (! str_contains($middlewareContent, "'auth'")) {
                     $updatedMiddlewareContent = preg_replace(
                         '/(\$middleware->alias\(\[)/s',
                         "$1\n            'auth' => \App\Http\Middleware\Authenticate::class,",
@@ -514,7 +520,7 @@ class GenerateAuthModuleBackup extends Command
                 }
 
                 if ($includeRoles) {
-                    if (!str_contains($middlewareContent, "'role'")) {
+                    if (! str_contains($middlewareContent, "'role'")) {
                         $updatedMiddlewareContent = preg_replace(
                             '/(\$middleware->alias\(\[[^\]]*)/s',
                             "$1\n            'role' => \\Spatie\\Permission\\Middleware\\RoleMiddleware::class,",
@@ -522,7 +528,7 @@ class GenerateAuthModuleBackup extends Command
                         );
                         $modified = true;
                     }
-                    if (!str_contains($middlewareContent, "'permission'")) {
+                    if (! str_contains($middlewareContent, "'permission'")) {
                         $updatedMiddlewareContent = preg_replace(
                             '/(\$middleware->alias\(\[[^\]]*)/s',
                             "$1\n            'permission' => \\Spatie\\Permission\\Middleware\\PermissionMiddleware::class,",
@@ -530,7 +536,7 @@ class GenerateAuthModuleBackup extends Command
                         );
                         $modified = true;
                     }
-                    if (!str_contains($middlewareContent, "'role_or_permission'")) {
+                    if (! str_contains($middlewareContent, "'role_or_permission'")) {
                         $updatedMiddlewareContent = preg_replace(
                             '/(\$middleware->alias\(\[[^\]]*)/s',
                             "$1\n            'role_or_permission' => \\Spatie\\Permission\\Middleware\\RoleOrPermissionMiddleware::class,",
@@ -574,7 +580,7 @@ class GenerateAuthModuleBackup extends Command
         $this->line('2. Run migrations:');
         $this->line('   php artisan migrate');
 
-        if (!$includeRoles) {
+        if (! $includeRoles) {
             $this->line('');
             $this->line('3. Install Laravel Sanctum if not already installed:');
             $this->line('   composer require laravel/sanctum');
@@ -584,7 +590,7 @@ class GenerateAuthModuleBackup extends Command
 
         $this->line('');
         $step = $includeRoles ? '3' : '4';
-        $this->line($step . '. Update your .env file with mail configuration for password reset' . ($includeEmailVerification ? ' and email verification' : ''));
+        $this->line($step.'. Update your .env file with mail configuration for password reset'.($includeEmailVerification ? ' and email verification' : ''));
         $this->line('   MAIL_MAILER=smtp');
         $this->line('   MAIL_HOST=your-mail-host');
         $this->line('   MAIL_PORT=587');

@@ -130,8 +130,8 @@ Vendor:
     business_phone: string:nullable
     slug: string:unique
     description: text:nullable
-    logo: string:nullable
-    banner: string:nullable
+    logo: image:nullable
+    banner: image:nullable
     address: string:nullable
     city: string:nullable
     state: string:nullable
@@ -193,6 +193,7 @@ VendorPayout:
       model: User
 
 VendorDocument:
+  requestParent: Vendor
   fields:
     vendor_id: foreignId:vendors
     document_type: string
@@ -209,6 +210,7 @@ VendorDocument:
     vendor:
       type: belongsTo
       model: Vendor
+      makeRequest: true
     verifiedBy:
       type: belongsTo
       model: User
@@ -228,7 +230,7 @@ Category:
     name: string:unique
     slug: string:unique
     description: text:nullable
-    image: string:nullable
+    image: image:nullable
     parent_id: foreignId:categories:nullable
     is_active: boolean:default true
     display_order: integer:default 0
@@ -890,7 +892,7 @@ Page:
     slug: string:unique
     content: text:nullable
     excerpt: string:nullable
-    featured_image: string:nullable
+    featured_image: image:nullable
     meta_title: string:nullable
     meta_description: string:nullable
     meta_keywords: string:nullable

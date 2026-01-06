@@ -45,7 +45,7 @@ class GenerateControllerService
         if ($hasService) {
             $servicePath = app_path("Services/{$modelConfig['classes']['service']}.php");
 
-            if (File::exists($servicePath) && !$force) {
+            if (File::exists($servicePath) && ! $force) {
                 $this->command->warn("⚠️ Service already exists: {$modelConfig['classes']['service']}");
 
                 return;
@@ -61,7 +61,7 @@ class GenerateControllerService
         if ($hasController) {
             $controllerPath = app_path("Http/Controllers/{$modelConfig['classes']['controller']}.php");
 
-            if (File::exists($controllerPath) && !$force) {
+            if (File::exists($controllerPath) && ! $force) {
                 $this->command->warn("⚠️ Controller already exists: {$modelConfig['classes']['controller']}");
 
                 return;
@@ -80,7 +80,7 @@ class GenerateControllerService
      */
     private function hasRelationRequest(array $modelData): bool
     {
-        if (!isset($modelData['relations']) || !is_array($modelData['relations'])) {
+        if (! isset($modelData['relations']) || ! is_array($modelData['relations'])) {
             return false;
         }
 
@@ -109,14 +109,7 @@ class GenerateControllerService
         }
 
         File::ensureDirectoryExists($serviceDir);
-
-        if ($hasRelations) {
-            // Generate service with relations (custom code)
-            $content = $this->generateServiceWithRelations($modelConfig, $modelData);
-        } else {
-            // Generate service from default stub
-            $content = $this->generateServiceFromStub($modelConfig, $modelData);
-        }
+        $content = $this->generateServiceFromStub($modelConfig, $modelData);
 
         File::put($path, $content);
         $this->command->info("🔧 Service created: {$serviceClass}");
@@ -138,22 +131,19 @@ class GenerateControllerService
 
         File::ensureDirectoryExists(app_path('Http/Controllers'));
 
-        if ($hasRelations) {
-            // Generate controller with relations (custom code)
-            $content = $this->generateControllerWithRelations($modelConfig, $modelData, $hasService);
-        } elseif ($hasService) {
+        if ($hasService) {
             // Generate controller from default stub with service
             $content = $this->generateControllerFromStub($modelConfig, $modelData, true);
         } else {
             // Generate controller without service (custom code)
-            $content = $this->generateControllerWithoutService($modelConfig, $modelData);
+            $content = $this->generateLogicalController($modelConfig, $modelData);
         }
 
         File::put($path, $content);
         $this->command->info("🎮 Controller created: {$controllerClass}");
     }
 
-    public function generateImageCode($modelConfig)
+    public function generateImageCode($modelConfig): array
     {
         // Generate file upload logic
         $uploadLogicStore = FileUploadCodeGenerator::generateStoreUploadLogic(
@@ -176,7 +166,7 @@ class GenerateControllerService
         return [
             '{{ uploadLogicStore }}' => $uploadLogicStore,
             '{{ uploadLogicUpdate }}' => $uploadLogicUpdate,
-            '{{ deleteFileLogic }}' => $deleteFileLogic
+            '{{ deleteFileLogic }}' => $deleteFileLogic,
         ];
     }
 
@@ -188,24 +178,6 @@ class GenerateControllerService
         $stubPath = $this->stubPathResolver->resolveStubPath('service');
         $stubContent = File::get($stubPath);
 
-        $replacements = [
-            '{{ model }}' => $modelConfig['studlyName'],
-            '{{ variable }}' => $modelConfig['camelName'],
-            '{{ relationImports }}' => '',
-            '{{ with }}' => '',
-            '{{ repositoryUsage }}' => 'model',
-            ...$this->generateImageCode($modelConfig)
-        ];
-
-        return str_replace(array_keys($replacements), array_values($replacements), $stubContent);
-    }
-
-    /**
-     * Generate service with relations (custom code)
-     */
-    private function generateServiceWithRelations(array $modelConfig, array $modelData): string
-    {
-        $modelName = $modelConfig['studlyName'];
         $variable = $modelConfig['camelName'];
 
         $relationImports = $this->generateRelationImports($modelData);
@@ -213,77 +185,24 @@ class GenerateControllerService
         $relationStoreCode = $this->generateRelationStoreCode($modelData, $variable);
         $relationUpdateCode = $this->generateRelationUpdateCode($modelData, $variable);
 
-        $getAllQuery = "{$modelName}::paginate()";
-        $getByIdQuery = "{$modelName}::findOrFail(\$id)";
-        if ($withRelations) {
-            $getAllQuery = "{$modelName}::with([{$withRelations}])->paginate()";
-            $getByIdQuery = "{$modelName}::with([{$withRelations}])->findOrFail(\$id)";
-        }
+        $replacements = [
+            '{{ model }}' => $modelConfig['studlyName'],
+            '{{ variable }}' => $modelConfig['camelName'],
+            '{{ relationImports }}' => $relationImports,
+            '{{ with }}' => $withRelations ? "with([{$withRelations}])->" : '',
+            '{{ repositoryUsage }}' => 'model',
+            ...$this->generateImageCode($modelConfig),
+            '{{ relationalQueryStore }}' => $relationStoreCode,
+            '{{ relationalQueryUpdate }}' => $relationUpdateCode,
+        ];
 
-        return "<?php
-
-namespace App\Services;
-
-use App\Models\\{$modelName};
-{$relationImports}
-
-class {$modelName}Service
-{
-    /**
-     * Get all {$modelName} records
-     */
-    public function getAll()
-    {
-        return {$getAllQuery};
-    }
-
-    /**
-     * Get {$modelName} by ID
-     */
-    public function getById(\$id)
-    {
-        return {$getByIdQuery};
-    }
-
-    /**
-     * Create a new {$modelName}
-     */
-    public function store(array \$data)
-    {
-        \${$variable} = {$modelName}::create(\$data);
-{$relationStoreCode}
-
-        return \${$variable};
-    }
-
-    /**
-     * Update {$modelName}
-     */
-    public function update(\${$variable}, array \$data)
-    {
-        // Handle nested relations update
-        \$validatedData = \$data;
-{$relationUpdateCode}
-
-        \${$variable}->update(\$validatedData);
-
-        return \${$variable};
-    }
-
-    /**
-     * Delete {$modelName}
-     */
-    public function delete(\${$variable})
-    {
-        return \${$variable}->delete();
-    }
-}";
+        return str_replace(array_keys($replacements), array_values($replacements), $stubContent);
     }
 
     /**
      * Generate controller from default stub
      */
-    private function generateControllerFromStub(array $modelConfig, array $modelData, bool $withService): string
+    private function generateControllerFromStub(array $modelConfig): string
     {
         $stubPath = $this->stubPathResolver->resolveStubPath('controller');
         $stubContent = File::get($stubPath);
@@ -294,7 +213,7 @@ class {$modelName}Service
             '{{ variable }}' => $modelConfig['camelName'],
             '{{ modelPlural }}' => $modelConfig['pluralStudlyName'],
             '{{ route }}' => $modelConfig['tableName'],
-            ...$this->generateImageCode($modelConfig)
+            ...$this->generateImageCode($modelConfig),
         ];
 
         return str_replace(array_keys($replacements), array_values($replacements), $stubContent);
@@ -303,146 +222,33 @@ class {$modelName}Service
     /**
      * Generate controller without service (custom code)
      */
-    private function generateControllerWithoutService(array $modelConfig, array $modelData): string
+    private function generateLogicalController(array $modelConfig, array $modelData): string
     {
-        $modelName = $modelConfig['studlyName'];
+        $stubPath = $this->stubPathResolver->resolveStubPath('controller-logical');
+        $stubContent = File::get($stubPath);
+
         $variable = $modelConfig['camelName'];
-        $controllerClass = $modelConfig['classes']['controller'];
-        $tableName = $modelConfig['tableName'];
-        $modelPlural = $modelConfig['pluralStudlyName'];
 
-        return "], only: ['destroy']),
+        $relationImports = $this->generateRelationImports($modelData);
+        $withRelations = $this->generateWithRelations($modelData);
+        $relationStoreCode = $this->generateRelationStoreCode($modelData, $variable);
+        $relationUpdateCode = $this->generateRelationUpdateCode($modelData, $variable);
+
+        $replacements = [
+            '{{ class }}' => $modelConfig['classes']['controller'],
+            '{{ model }}' => $modelConfig['studlyName'],
+            '{{ variable }}' => $modelConfig['camelName'],
+            '{{ modelPlural }}' => $modelConfig['pluralStudlyName'],
+            '{{ route }}' => $modelConfig['tableName'],
+            ...$this->generateImageCode($modelConfig),
+            '{{ relationImports }}' => $relationImports,
+            '{{ with }}' => $withRelations ? "with([{$withRelations}])->" : '',
+            '{{ repositoryUsage }}' => 'model',
+            '{{ relationalQueryStore }}' => $relationStoreCode,
+            '{{ relationalQueryUpdate }}' => $relationUpdateCode,
         ];
-    }
 
-    public function index(): \Illuminate\Http\JsonResponse
-    {
-        \$data = {$modelName}::paginate();
-
-        return \$this->success('{$modelPlural} retrieved successfully', {$modelName}Collection::make(\$data));
-    }
-
-    public function store({$modelName}Request \$request): \Illuminate\Http\JsonResponse
-    {
-        try {
-            \${$variable} = {$modelName}::create(\$request->validated());
-
-            return \$this->success('{$modelName} created successfully', new {$modelName}Resource(\${$variable}));
-        } catch (\Exception \$e) {
-            return \$this->failure('{$modelName} creation failed', 500, \$e->getMessage());
-        }
-    }
-
-    public function show({$modelName} \${$variable}): \Illuminate\Http\JsonResponse
-    {
-        return \$this->success('{$modelName} retrieved successfully', new {$modelName}Resource(\${$variable}));
-    }
-
-    public function update({$modelName}Request \$request, {$modelName} \${$variable}): \Illuminate\Http\JsonResponse
-    {
-        try {
-            \${$variable}->update(\$request->validated());
-
-            return \$this->success('{$modelName} updated successfully', new {$modelName}Resource(\${$variable}));
-        } catch (\Exception \$e) {
-            return \$this->failure('{$modelName} update failed', 500, \$e->getMessage());
-        }
-    }
-
-     public function destroy({$modelName} \${$variable}): \Illuminate\Http\JsonResponse
-    {
-        try {
-             \${$variable}->delete();
-
-            return \$this->success('{$modelName} deleted successfully');
-        } catch (\Exception \$e) {
-            return \$this->failure('{$modelName} deletion failed', 500, \$e->getMessage());
-        }
-    }
-}";
-    }
-
-    /**
-     * Generate controller with relations (custom code)
-     */
-    private function generateControllerWithRelations(array $modelConfig, array $modelData, bool $hasService): string
-    {
-        $modelName = $modelConfig['studlyName'];
-        $variable = $modelConfig['camelName'];
-        $controllerClass = $modelConfig['classes']['controller'];
-        $tableName = $modelConfig['tableName'];
-        $modelPlural = $modelConfig['pluralStudlyName'];
-
-        $serviceUsage = $hasService ? 'service' : 'model';
-        $constructorParam = $hasService ? "protected {$modelName}Service \${$variable}Service" : '';
-        $constructorCode = $hasService ? "public function __construct({$constructorParam}){}" : '';
-        $serviceImport = $hasService ? "use App\\Services\\{$modelName}Service;" : '';
-
-        $indexMethod = $hasService
-            ? "\$data = \$this->{$variable}Service->getAll();"
-            : "\$data = {$modelName}::with([{$this->generateWithRelations($modelData)}])->paginate();";
-
-        $storeMethod = $hasService
-            ? "\${$variable} = \$this->{$variable}Service->store(\$request->validated());"
-            : $this->generateDirectStoreCode($modelConfig, $modelData);
-
-        $updateMethod = $hasService
-            ? "\$this->{$variable}Service->update(\$request->validated(), \${$variable});"
-            : $this->generateDirectUpdateCode($modelConfig, $modelData);
-
-        $deleteMethod = $hasService
-            ? "\$this->{$variable}Service->delete(\${$variable});"
-            : "\${$variable}->delete();";
-
-        return "], only: ['destroy']),
-        ];
-    }
-
-    public function index(): \Illuminate\Http\JsonResponse
-    {
-        {$indexMethod}
-
-        return \$this->success('{$modelPlural} retrieved successfully', {$modelName}Collection::make(\$data));
-    }
-
-    public function store({$modelName}Request \$request): \Illuminate\Http\JsonResponse
-    {
-        try {
-            {$storeMethod}
-
-            return \$this->success('{$modelName} created successfully', new {$modelName}Resource(\${$variable}));
-        } catch (\Exception \$e) {
-            return \$this->failure('{$modelName} creation failed', 500, \$e->getMessage());
-        }
-    }
-
-    public function show({$modelName} \${$variable}): \Illuminate\Http\JsonResponse
-    {
-        return \$this->success('{$modelName} retrieved successfully', new {$modelName}Resource(\${$variable}));
-    }
-
-    public function update({$modelName}Request \$request, {$modelName} \${$variable}): \Illuminate\Http\JsonResponse
-    {
-        try {
-            {$updateMethod}
-
-            return \$this->success('{$modelName} updated successfully', new {$modelName}Resource(\${$variable}));
-        } catch (\Exception \$e) {
-            return \$this->failure('{$modelName} update failed', 500, \$e->getMessage());
-        }
-    }
-
-     public function destroy({$modelName} \${$variable}): \Illuminate\Http\JsonResponse
-    {
-        try {
-             {$deleteMethod}
-
-            return \$this->success('{$modelName} deleted successfully');
-        } catch (\Exception \$e) {
-            return \$this->failure('{$modelName} deletion failed', 500, \$e->getMessage());
-        }
-    }
-}";
+        return str_replace(array_keys($replacements), array_values($replacements), $stubContent);
     }
 
     /**
@@ -450,7 +256,7 @@ class {$modelName}Service
      */
     private function generateRelationImports(array $modelData): string
     {
-        if (!isset($modelData['relations'])) {
+        if (! isset($modelData['relations'])) {
             return '';
         }
 
@@ -470,13 +276,15 @@ class {$modelName}Service
      */
     private function generateWithRelations(array $modelData): string
     {
-        if (!isset($modelData['relations'])) {
+        if (! isset($modelData['relations'])) {
             return '';
         }
 
         $relations = [];
         foreach ($modelData['relations'] as $relationName => $relationConfig) {
-            $relations[] = "'{$relationName}'";
+            if (isset($relationConfig['with']) && $relationConfig['with'] == true) {
+                $relations[] = "'{$relationName}'";
+            }
         }
 
         return implode(', ', $relations);
@@ -487,13 +295,13 @@ class {$modelName}Service
      */
     private function generateRelationStoreCode(array $modelData, string $modelVariable): string
     {
-        if (!isset($modelData['relations'])) {
+        if (! isset($modelData['relations'])) {
             return '';
         }
 
         $code = '';
         foreach ($modelData['relations'] as $relationName => $relationConfig) {
-            if (!isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
+            if (! isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
                 continue;
             }
 
@@ -508,7 +316,7 @@ class {$modelName}Service
                     // Check if this relation has nested relations
                     $nestedRelations = $this->getNestedRelations($relationConfig, $modelData);
 
-                    if (!empty($nestedRelations)) {
+                    if (! empty($nestedRelations)) {
                         $code .= "\n            foreach (\$data['{$relationKey}'] as \$relationData) {";
                         $code .= "\n                \${$relationName}Record = \${$modelVariable}->{$relationName}()->create(\$relationData);";
 
@@ -561,13 +369,13 @@ class {$modelName}Service
      */
     private function generateRelationUpdateCode(array $modelData, string $modelVariable): string
     {
-        if (!isset($modelData['relations'])) {
+        if (! isset($modelData['relations'])) {
             return '';
         }
 
         $code = '';
         foreach ($modelData['relations'] as $relationName => $relationConfig) {
-            if (!isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
+            if (! isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
                 continue;
             }
 
@@ -582,7 +390,7 @@ class {$modelName}Service
                     // Check if this relation has nested relations
                     $nestedRelations = $this->getNestedRelations($relationConfig, $modelData);
 
-                    if (!empty($nestedRelations)) {
+                    if (! empty($nestedRelations)) {
                         // For nested relations, we need to handle them more carefully
                         $code .= "\n            // Delete existing {$relationName} and their nested relations";
                         $code .= "\n            \${$modelVariable}->{$relationName}()->each(function (\$record) {";
@@ -654,7 +462,7 @@ class {$modelName}Service
     {
         $nestedRelations = [];
 
-        if (!isset($relationConfig['model'])) {
+        if (! isset($relationConfig['model'])) {
             return $nestedRelations;
         }
 
@@ -678,34 +486,6 @@ class {$modelName}Service
         return $nestedRelations;
     }
 
-    /**
-     * Generate direct store code for controller without service
-     */
-    private function generateDirectStoreCode(array $modelConfig, array $modelData): string
-    {
-        $modelName = $modelConfig['studlyName'];
-        $variable = $modelConfig['camelName'];
-
-        $code = "\${$variable} = {$modelName}::create(\$request->validated());";
-        $code .= $this->generateRelationStoreCode($modelData, $variable);
-
-        return $code;
-    }
-
-    /**
-     * Generate direct update code for controller without service
-     */
-    private function generateDirectUpdateCode(array $modelConfig, array $modelData): string
-    {
-        $variable = $modelConfig['camelName'];
-
-        $code = '$validatedData = $request->validated();';
-        $code .= $this->generateRelationUpdateCode($modelData, $variable);
-        $code .= "\n        \${$variable}->update(\$validatedData);";
-
-        return $code;
-    }
-
     private function buildModelConfiguration(string $modelName, array $modelData): array
     {
         $studlyModelName = Str::studly($modelName);
@@ -713,8 +493,8 @@ class {$modelName}Service
         // Validate generate configuration
         if (isset($modelData['generate']) && is_array($modelData['generate'])) {
             $unknownKeys = array_diff(array_keys($modelData['generate']), array_keys(self::DEFAULT_GENERATE_CONFIG));
-            if (!empty($unknownKeys)) {
-                throw new \InvalidArgumentException("Unknown generate keys for $modelName: " . implode(', ', $unknownKeys));
+            if (! empty($unknownKeys)) {
+                throw new \InvalidArgumentException("Unknown generate keys for $modelName: ".implode(', ', $unknownKeys));
             }
         }
 

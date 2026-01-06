@@ -41,9 +41,19 @@ class GenerateMigrationService
      */
     private function getMigrationPath(string $tableName): ?string
     {
-        $migrationFiles = glob(database_path("migrations/*create_{$tableName}_table.php"));
+        $pattern = database_path(
+            "migrations/*_create_{$tableName}_table.php"
+        );
 
-        return ! empty($migrationFiles) ? $migrationFiles[0] : null;
+        $files = glob($pattern);
+
+        if (empty($files)) {
+            return null;
+        }
+
+        sort($files);
+
+        return end($files);
     }
 
     public function findStubContent(): string

@@ -4,8 +4,8 @@ namespace NahidFerdous\LaravelModuleGenerator\Console\Commands\Services;
 
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+
 use function base_path;
-use function config;
 use function database_path;
 
 class AccessControlService extends BaseAuthModuleService
@@ -57,19 +57,20 @@ class AccessControlService extends BaseAuthModuleService
     {
         $this->command->info('📝 Copying custom permission migration...');
 
-        $stubPath = $this->packageStubPath . '/migrations/add_type_to_permissions_table.stub';
+        $stubPath = $this->packageStubPath.'/migrations/add_type_to_permissions_table.stub';
 
-        if (!File::exists($stubPath)) {
-            $this->command->warn('⚠️  Migration stub not found: ' . $stubPath);
+        if (! File::exists($stubPath)) {
+            $this->command->warn('⚠️  Migration stub not found: '.$stubPath);
+
             return;
         }
 
         $migrationsPath = database_path('migrations');
-        $spatieMigrations = File::glob($migrationsPath . '/*_create_permission_tables.php');
+        $spatieMigrations = File::glob($migrationsPath.'/*_create_permission_tables.php');
 
         $timestamp = null;
 
-        if (!empty($spatieMigrations)) {
+        if (! empty($spatieMigrations)) {
             $latestMigration = end($spatieMigrations);
             $filename = basename($latestMigration);
 
@@ -86,20 +87,21 @@ class AccessControlService extends BaseAuthModuleService
             }
         }
 
-        if (!$timestamp) {
+        if (! $timestamp) {
             $timestamp = date('Y_m_d_His');
             $this->command->warn('⚠️  Spatie migration not found, using current timestamp');
         }
 
         $destinationFilename = "{$timestamp}_add_type_to_permissions_table.php";
-        $destinationPath = $migrationsPath . '/' . $destinationFilename;
+        $destinationPath = $migrationsPath.'/'.$destinationFilename;
 
-        $existingMigrations = File::glob($migrationsPath . '/*_add_type_to_permissions_table.php');
+        $existingMigrations = File::glob($migrationsPath.'/*_add_type_to_permissions_table.php');
 
-        if (!empty($existingMigrations) && !$this->command->option('force')) {
+        if (! empty($existingMigrations) && ! $this->command->option('force')) {
             $existingFile = basename($existingMigrations[0]);
-            if (!$this->command->confirm("Migration already exists: {$existingFile}. Do you want to replace it?", false)) {
+            if (! $this->command->confirm("Migration already exists: {$existingFile}. Do you want to replace it?", false)) {
                 $this->command->line("⏭️  Skipped: {$destinationFilename}");
+
                 return;
             }
             File::delete($existingMigrations[0]);
@@ -118,13 +120,14 @@ class AccessControlService extends BaseAuthModuleService
 
         $freshInstall = false;
 
-        if (!isset($composerJson['require']['spatie/laravel-permission'])) {
+        if (! isset($composerJson['require']['spatie/laravel-permission'])) {
             $this->command->info('Running: composer require spatie/laravel-permission');
             exec('composer require spatie/laravel-permission 2>&1', $output, $returnCode);
 
             if ($returnCode !== 0) {
                 $this->command->error('❌ Failed to install Spatie Laravel Permission');
                 $this->command->warn('Please run manually: composer require spatie/laravel-permission');
+
                 return;
             }
 
@@ -153,6 +156,7 @@ class AccessControlService extends BaseAuthModuleService
         if ($exitCode !== 0) {
             $this->command->error('❌ Failed to publish Spatie resources');
             $this->command->line(implode("\n", $output));
+
             return;
         }
 
@@ -171,7 +175,7 @@ class AccessControlService extends BaseAuthModuleService
                 'type' => 'trait',
                 'trait' => 'HasRoles',
                 'use_statement' => 'use Spatie\Permission\Traits\HasRoles;',
-            ]
+            ],
         ];
 
         $this->updateUserModel($updates);

@@ -24,7 +24,10 @@ class GenerateModelService
      */
     public function generateModel(string $modelName, array $fields, array $relations = [], $generateConfig = []): void
     {
-        if ($generateConfig['migration'] === true) {
+        $tableName = Str::snake(Str::pluralStudly($modelName));
+        $migrationPath = $this->getMigrationPath($tableName);
+
+        if ($generateConfig['migration'] === true && ! ($migrationPath && File::exists($migrationPath))) {
             $modelName = Str::studly($modelName);
             Artisan::call('make:model', ['name' => $modelName, '--migration' => true]);
         } else {
@@ -39,11 +42,99 @@ class GenerateModelService
         }
 
         $fillableArray = $this->buildFillableArray($fields);
+        $getters = $this->buildGetter($fields);
+        $setters = $this->buildSetter($fields);
+        $casts = $this->buildCasts($fields);
         $relationshipMethods = $this->buildRelationshipMethods($relations);
 
-        $this->replaceModelWithStub($modelPath, $modelName, $fillableArray, $relationshipMethods);
+        $this->replaceModelWithStub($modelPath, $modelName, $fillableArray, $relationshipMethods,
+            $casts,
+            $getters,
+            $setters
+        );
 
         $this->command->info("🤫 Fillable fields and relationships added to {$modelName} model");
+    }
+
+    public function buildGetter(array $fields): string
+    {
+        $getters = '';
+
+        foreach ($fields as $fieldName => $definition) {
+            // Extract field type (before :)
+            $type = explode(':', $definition)[0];
+
+            if (! in_array($type, ['image', 'file'])) {
+                continue;
+            }
+
+            $methodName = 'get'.Str::studly($fieldName).'Attribute';
+
+            $getters .= <<<PHP
+
+
+    public function {$methodName}(\$value): ?string
+    {
+        return getFileUrl(\$value);
+    }
+PHP;
+        }
+
+        return $getters;
+    }
+
+    public function buildSetter($fields): string
+    {
+        return '';
+    }
+
+    public function buildCasts(array $fields): string
+    {
+        $casts = [];
+
+        foreach ($fields as $fieldName => $definition) {
+            $type = explode(':', $definition)[0];
+
+            $cast = match ($type) {
+                'json' => 'array',
+                'boolean' => 'boolean',
+                'integer' => 'integer',
+                'float',
+                'double',
+                'decimal' => 'float',
+                'date' => 'date',
+                'datetime',
+                'timestamp' => 'datetime',
+                default => null,
+            };
+
+            if ($cast) {
+                $casts[] = "'{$fieldName}' => '{$cast}'";
+            }
+        }
+
+        if (empty($casts)) {
+            return '';
+        }
+
+        return "\n        ".implode(",\n        ", $casts)."\n    ";
+    }
+
+    private function getMigrationPath(string $tableName): ?string
+    {
+        $pattern = database_path(
+            "migrations/*_create_{$tableName}_table.php"
+        );
+
+        $files = glob($pattern);
+
+        if (empty($files)) {
+            return null;
+        }
+
+        sort($files);
+
+        return end($files);
     }
 
     /**
@@ -87,8 +178,15 @@ PHP;
     /**
      * Replace model content using stub template
      */
-    private function replaceModelWithStub(string $modelPath, string $modelName, string $fillableArray, string $relationshipMethods): void
-    {
+    private function replaceModelWithStub(
+        string $modelPath,
+        string $modelName,
+        string $fillableArray,
+        string $relationshipMethods,
+        string $casts,
+        string $getters,
+        string $setters
+    ): void {
         try {
             $stubPath = $this->stubPathResolver->resolveStubPath('model');
             $stubContent = File::get($stubPath);
@@ -97,10 +195,16 @@ PHP;
                 '{{ model }}',
                 '{{ fillable }}',
                 '{{ relations }}',
+                '{{ casts }}',
+                '{{ getter }}',
+                '{{ setter }}',
             ], [
                 $modelName,
                 $fillableArray,
                 $relationshipMethods,
+                $casts,
+                $getters,
+                $setters,
             ], $stubContent);
 
             File::put($modelPath, $modelContent);

@@ -32,10 +32,11 @@ class EmailVerificationService extends BaseAuthModuleService
         $migrationPath = database_path('migrations');
 
         // Check if migration already exists by pattern matching
-        $existingMigrations = glob($migrationPath . '/*_create_email_verification_tokens_table.php');
+        $existingMigrations = glob($migrationPath.'/*_create_email_verification_tokens_table.php');
 
-        if (!empty($existingMigrations)) {
-            $this->command->line('ℹ️  Social accounts migration already exists: ' . basename($existingMigrations[0]));
+        if (! empty($existingMigrations)) {
+            $this->command->line('ℹ️  Social accounts migration already exists: '.basename($existingMigrations[0]));
+
             return;  // <-- This should stop here
         }
 
@@ -46,14 +47,14 @@ class EmailVerificationService extends BaseAuthModuleService
         $filename = "{$timestamp}_create_email_verification_tokens_table.php";
         $destination = "{$migrationPath}/{$filename}";
 
-        if (!file_exists($migrationPath) && !mkdir($migrationPath, 0755, true) && !is_dir($migrationPath)) {
+        if (! file_exists($migrationPath) && ! mkdir($migrationPath, 0755, true) && ! is_dir($migrationPath)) {
             throw new \RuntimeException(sprintf('Directory "%s" was not created', $migrationPath));
         }
 
         $stubPath = $this->getStubPath('migrations/create_email_verification_tokens_table');
 
-        if (file_exists($stubPath . '.php')) {
-            copy($stubPath . '.php', $destination);
+        if (file_exists($stubPath.'.php')) {
+            copy($stubPath.'.php', $destination);
             $this->command->line("✅ Created: {$destination}");
         } else {
             $files = [
@@ -65,12 +66,13 @@ class EmailVerificationService extends BaseAuthModuleService
 
     protected function getStubPath(string $filename): string
     {
-        return __DIR__ . "/../../_stubs/AuthModule/migrations/{$filename}.stub";
+        return __DIR__."/../../_stubs/AuthModule/migrations/{$filename}.stub";
     }
 
     protected function getMigrationPath(): string
     {
         $timestamp = date('Y_m_d_His');
+
         return "database/migrations/{$timestamp}_create_email_verification_tokens_table.php";
     }
 
@@ -95,7 +97,7 @@ class EmailVerificationService extends BaseAuthModuleService
                 'search' => 'use Illuminate\Foundation\Auth\User as Authenticatable;',
                 'replace' => "use Illuminate\Contracts\Auth\MustVerifyEmail;\nuse Illuminate\Foundation\Auth\User as Authenticatable;",
                 'class_declaration' => 'class User extends Authenticatable implements MustVerifyEmail',
-            ]
+            ],
         ];
 
         $this->updateUserModel($updates);

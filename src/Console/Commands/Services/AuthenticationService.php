@@ -9,8 +9,8 @@ class AuthenticationService extends BaseAuthModuleService
         $this->apiDriver = $apiAuthDriver ?? 'sanctum';
         if ($this->apiDriver === 'sanctum') {
             $this->installSanctum();
-        } else if ($this->apiDriver === 'passport') {
-             $this->installPassport();
+        } elseif ($this->apiDriver === 'passport') {
+            $this->installPassport();
         }
         $this->copyAuthenticationFiles();
         $this->copyUserManagementFiles();
@@ -21,14 +21,14 @@ class AuthenticationService extends BaseAuthModuleService
         $path = config('module-generator.models_path');
         $directory = dirname($path);
 
-        if (!file_exists($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+        if (! file_exists($directory) && ! mkdir($directory, 0755, true) && ! is_dir($directory)) {
             throw new \RuntimeException(sprintf('Directory "%s" was not created', $directory));
         }
 
         $this->command->info('📝 Generating Authentication files...');
 
         $files = [
-            'AuthModule.postman_collection' => $directory . '/AuthModule.postman_collection.json',
+            'AuthModule.postman_collection' => $directory.'/AuthModule.postman_collection.json',
             'Services/Auth/PasswordService' => 'app/Services/Auth/PasswordService.php',
 
             'Requests/LoginRequest' => 'app/Http/Requests/Auth/LoginRequest.php',
@@ -82,27 +82,27 @@ class AuthenticationService extends BaseAuthModuleService
 
     protected function installPassport(): void
     {
-//        $this->command->info('📦 Installing Laravel Passport...');
-//
-//        // Install package
-//        $this->run('composer require laravel/passport');
-//
-//        // Publish Passport configuration and migrations
-//        $this->command->info('📝 Publishing Passport assets...');
-//        $this->run('php artisan vendor:publish --tag=passport-migrations');
-//        $this->run('php artisan vendor:publish --tag=passport-config');
-//
-//        // Run migrations to create OAuth tables
-//        $this->command->info('🔄 Running Passport migrations...');
-//        $this->run('php artisan migrate --force');
-//
-//        // Clear cached commands/providers
-//        $this->run('php artisan optimize:clear');
-//
-//        // Install Passport (creates encryption keys and OAuth clients)
-//        // MUST use shell execution to ensure fresh application bootstrap
-//        $this->command->info('🔑 Installing Passport keys and clients...');
-//        $this->runShell('php artisan passport:install --force');
+        //        $this->command->info('📦 Installing Laravel Passport...');
+        //
+        //        // Install package
+        //        $this->run('composer require laravel/passport');
+        //
+        //        // Publish Passport configuration and migrations
+        //        $this->command->info('📝 Publishing Passport assets...');
+        //        $this->run('php artisan vendor:publish --tag=passport-migrations');
+        //        $this->run('php artisan vendor:publish --tag=passport-config');
+        //
+        //        // Run migrations to create OAuth tables
+        //        $this->command->info('🔄 Running Passport migrations...');
+        //        $this->run('php artisan migrate --force');
+        //
+        //        // Clear cached commands/providers
+        //        $this->run('php artisan optimize:clear');
+        //
+        //        // Install Passport (creates encryption keys and OAuth clients)
+        //        // MUST use shell execution to ensure fresh application bootstrap
+        //        $this->command->info('🔑 Installing Passport keys and clients...');
+        //        $this->runShell('php artisan passport:install --force');
 
         // Update User model
         $this->updateUserModel([
@@ -110,7 +110,7 @@ class AuthenticationService extends BaseAuthModuleService
                 'type' => 'trait',
                 'trait' => 'HasApiTokens',
                 'use_statement' => 'use Laravel\\Passport\\HasApiTokens;',
-            ]
+            ],
         ]);
 
         $this->command->info('✅ Laravel Passport installed successfully!');
@@ -128,7 +128,7 @@ class AuthenticationService extends BaseAuthModuleService
                 'type' => 'trait',
                 'trait' => 'HasApiTokens',
                 'use_statement' => 'use Laravel\\Sanctum\\HasApiTokens;',
-            ]
+            ],
         ]);
     }
 }

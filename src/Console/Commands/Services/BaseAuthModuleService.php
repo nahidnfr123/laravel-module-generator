@@ -2,26 +2,28 @@
 
 namespace NahidFerdous\LaravelModuleGenerator\Console\Commands\Services;
 
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+
 use function app_path;
 use function base_path;
-use function config;
-use function database_path;
 
 abstract class BaseAuthModuleService
 {
     protected Command $command;
+
     protected string $basePath;
+
     public string $apiDriver;
+
     protected string $packageStubPath;
 
     public function __construct(Command $command)
     {
         $this->command = $command;
         $this->basePath = base_path();
-        $this->packageStubPath = __DIR__ . '/../../../_stubs/AuthModule';
+        $this->packageStubPath = __DIR__.'/../../../_stubs/AuthModule';
     }
 
     protected function run(string $command, array $arguments = []): void
@@ -68,23 +70,25 @@ abstract class BaseAuthModuleService
     protected function copyFiles(array $files): void
     {
         foreach ($files as $source => $destination) {
-            $sourcePath = $this->packageStubPath . '/' . $source . '.stub';
-            $destinationPath = $this->basePath . '/' . $destination;
+            $sourcePath = $this->packageStubPath.'/'.$source.'.stub';
+            $destinationPath = $this->basePath.'/'.$destination;
 
-            if (!File::exists($sourcePath)) {
+            if (! File::exists($sourcePath)) {
                 $this->command->warn("⚠️  Source file not found: {$sourcePath}");
+
                 continue;
             }
 
-            if (File::exists($destinationPath) && !$this->command->option('force')) {
-                if (!$this->command->confirm("File already exists: {$destination}. Do you want to replace it?", false)) {
+            if (File::exists($destinationPath) && ! $this->command->option('force')) {
+                if (! $this->command->confirm("File already exists: {$destination}. Do you want to replace it?", false)) {
                     $this->command->line("⏭️  Skipped: {$destination}");
+
                     continue;
                 }
             }
 
             $directory = dirname($destinationPath);
-            if (!File::isDirectory($directory)) {
+            if (! File::isDirectory($directory)) {
                 File::makeDirectory($directory, 0755, true);
             }
 
@@ -100,8 +104,9 @@ abstract class BaseAuthModuleService
     {
         $userModelPath = app_path('Models/User.php');
 
-        if (!File::exists($userModelPath)) {
-            $this->command->warn('⚠️  User model not found at: ' . $userModelPath);
+        if (! File::exists($userModelPath)) {
+            $this->command->warn('⚠️  User model not found at: '.$userModelPath);
+
             return;
         }
 
@@ -137,7 +142,7 @@ abstract class BaseAuthModuleService
 
         switch ($update['type']) {
             case 'interface':
-                if (!str_contains($content, $update['interface'])) {
+                if (! str_contains($content, $update['interface'])) {
                     $content = str_replace(
                         $update['search'],
                         $update['replace'],
@@ -156,7 +161,7 @@ abstract class BaseAuthModuleService
                 break;
 
             case 'trait':
-                if (!str_contains($content, $update['use_statement'])) {
+                if (! str_contains($content, $update['use_statement'])) {
                     $content = str_replace(
                         'use Illuminate\Notifications\Notifiable;',
                         "use Illuminate\Notifications\Notifiable;\n{$update['use_statement']}",
@@ -165,8 +170,8 @@ abstract class BaseAuthModuleService
 
                     if (preg_match('/class User.*?\{.*?use ([^;]+);/s', $content, $matches)) {
                         $traits = $matches[1];
-                        if (!str_contains($traits, $update['trait'])) {
-                            $newTraits = trim($traits) . ', ' . $update['trait'];
+                        if (! str_contains($traits, $update['trait'])) {
+                            $newTraits = trim($traits).', '.$update['trait'];
                             $content = str_replace(
                                 "use {$traits};",
                                 "use {$newTraits};",
@@ -184,7 +189,7 @@ abstract class BaseAuthModuleService
         return [
             'content' => $content,
             'modified' => $modified,
-            'message' => $message
+            'message' => $message,
         ];
     }
 
@@ -195,8 +200,9 @@ abstract class BaseAuthModuleService
     {
         $bootstrapPath = base_path('bootstrap/app.php');
 
-        if (!File::exists($bootstrapPath)) {
+        if (! File::exists($bootstrapPath)) {
             $this->command->warn('⚠️  bootstrap/app.php not found');
+
             return;
         }
 
@@ -209,13 +215,13 @@ abstract class BaseAuthModuleService
             $middlewareContent = $matches[1];
             $updatedMiddlewareContent = $middlewareContent;
 
-            if (($apiAuthDriver === 'sanctum') && !str_contains($middlewareContent, '$middleware->statefulApi()')) {
+            if (($apiAuthDriver === 'sanctum') && ! str_contains($middlewareContent, '$middleware->statefulApi()')) {
                 $updatedMiddlewareContent = "\n        \$middleware->statefulApi();";
                 $modified = true;
                 $this->command->line('✅ Added statefulApi middleware');
             }
 
-            if (!empty($middlewareAliases)) {
+            if (! empty($middlewareAliases)) {
                 $result = $this->addMiddlewareAliases($updatedMiddlewareContent, $middlewareAliases);
                 $updatedMiddlewareContent = $result['content'];
                 $modified = $modified || $result['modified'];
@@ -243,7 +249,7 @@ abstract class BaseAuthModuleService
     {
         $modified = false;
 
-        if (!str_contains($content, '$middleware->alias(')) {
+        if (! str_contains($content, '$middleware->alias(')) {
             $aliasesStr = "\n        \$middleware->alias([\n";
             foreach ($aliases as $key => $class) {
                 $aliasesStr .= "            '{$key}' => {$class},\n";
@@ -254,7 +260,7 @@ abstract class BaseAuthModuleService
             $this->command->line('✅ Added middleware aliases');
         } else {
             foreach ($aliases as $key => $class) {
-                if (!str_contains($content, "'{$key}'")) {
+                if (! str_contains($content, "'{$key}'")) {
                     $content = preg_replace(
                         '/(\$middleware->alias\(\[[^\]]*)/s',
                         "$1\n            '{$key}' => {$class},",

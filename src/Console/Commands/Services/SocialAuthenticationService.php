@@ -29,6 +29,7 @@ class SocialAuthenticationService extends BaseAuthModuleService
     protected function getMigrationPath(): string
     {
         $timestamp = date('Y_m_d_His');
+
         return "database/migrations/{$timestamp}_create_social_accounts_table.php";
     }
 
@@ -37,10 +38,11 @@ class SocialAuthenticationService extends BaseAuthModuleService
         $migrationPath = database_path('migrations');
 
         // Check if migration already exists by pattern matching
-        $existingMigrations = glob($migrationPath . '/*_create_social_accounts_table.php');
+        $existingMigrations = glob($migrationPath.'/*_create_social_accounts_table.php');
 
-        if (!empty($existingMigrations)) {
-            $this->command->line('ℹ️  Social accounts migration already exists: ' . basename($existingMigrations[0]));
+        if (! empty($existingMigrations)) {
+            $this->command->line('ℹ️  Social accounts migration already exists: '.basename($existingMigrations[0]));
+
             return;  // <-- This should stop here
         }
 
@@ -51,14 +53,14 @@ class SocialAuthenticationService extends BaseAuthModuleService
         $filename = "{$timestamp}_create_social_accounts_table.php";
         $destination = "{$migrationPath}/{$filename}";
 
-        if (!file_exists($migrationPath) && !mkdir($migrationPath, 0755, true) && !is_dir($migrationPath)) {
+        if (! file_exists($migrationPath) && ! mkdir($migrationPath, 0755, true) && ! is_dir($migrationPath)) {
             throw new \RuntimeException(sprintf('Directory "%s" was not created', $migrationPath));
         }
 
         $stubPath = $this->getStubPath('migrations/create_social_accounts_table');
 
-        if (file_exists($stubPath . '.php')) {
-            copy($stubPath . '.php', $destination);
+        if (file_exists($stubPath.'.php')) {
+            copy($stubPath.'.php', $destination);
             $this->command->line("✅ Created: {$destination}");
         } else {
             $files = [
@@ -70,7 +72,7 @@ class SocialAuthenticationService extends BaseAuthModuleService
 
     protected function getStubPath(string $filename): string
     {
-        return __DIR__ . "/../../_stubs/AuthModule/migrations/{$filename}.stub";
+        return __DIR__."/../../_stubs/AuthModule/migrations/{$filename}.stub";
     }
 
     protected function addSocialAccountsRelationship(): void
@@ -79,8 +81,9 @@ class SocialAuthenticationService extends BaseAuthModuleService
 
         $userModelPath = app_path('Models/User.php');
 
-        if (!file_exists($userModelPath)) {
+        if (! file_exists($userModelPath)) {
             $this->command->warn('⚠️  User model not found. Please add the socialAccounts relationship manually.');
+
             return;
         }
 
@@ -89,13 +92,14 @@ class SocialAuthenticationService extends BaseAuthModuleService
         // Check if relationship already exists
         if (strpos($content, 'function socialAccounts') !== false) {
             $this->command->line('ℹ️  Social accounts relationship already exists in User model');
+
             return;
         }
 
         // Add the relationship method before the last closing brace
         $relationship = "\n    /**\n     * Get the social accounts for the user.\n     */\n    public function socialAccounts()\n    {\n        return \$this->hasMany(SocialAccount::class);\n    }\n";
 
-        $content = preg_replace('/}\s*$/', $relationship . "}\n", $content);
+        $content = preg_replace('/}\s*$/', $relationship."}\n", $content);
 
         file_put_contents($userModelPath, $content);
         $this->command->line('✅ Added socialAccounts relationship to User model');

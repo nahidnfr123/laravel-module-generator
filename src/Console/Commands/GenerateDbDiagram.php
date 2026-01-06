@@ -132,6 +132,8 @@ class GenerateDbDiagram extends Command
         return match ($laravelType) {
             'foreignId' => 'integer',
             'string' => 'string',
+            'image' => 'string',
+            'file' => 'string',
             'text' => 'text',
             'boolean' => 'boolean',
             'integer' => 'integer',

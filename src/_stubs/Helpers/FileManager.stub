@@ -1,28 +1,24 @@
 <?php
 
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
-
-if (!function_exists('uploadFile')) {
+if (! function_exists('uploadFile')) {
     /**
      * Upload a file to storage
      *
-     * @param \Illuminate\Http\UploadedFile $file
-     * @param string $folder
-     * @param string|null $name
-     * @param string $disk
-     * @return string|null
+     * @param  UploadedFile|null  $file
      */
-    function uploadFile($file, string $folder, ?string $name = null, string $disk = 'public'): ?string
+    function uploadFile(UploadedFile $file, string $folder, ?string $name = null, string $disk = 'public'): ?string
     {
-        if (!$file) {
+        if (! $file) {
             return null;
         }
 
         try {
             // Generate file name if not provided
-            if (!$name) {
+            if (! $name) {
                 $name = Str::random(20);
             }
 
@@ -30,14 +26,15 @@ if (!function_exists('uploadFile')) {
             $extension = $file->getClientOriginalExtension();
 
             // Create full file name
-            $fileName = $name . '_' . time() . '.' . $extension;
+            $fileName = $name.'_'.time().'.'.$extension;
 
             // Store file
             $path = $file->storeAs($folder, $fileName, $disk);
 
             return $path;
         } catch (\Exception $e) {
-            \Log::error('File upload error: ' . $e->getMessage());
+            \Log::error('File upload error: '.$e->getMessage());
+
             return null;
         }
     }
@@ -57,17 +54,13 @@ function updateFile($newFile, $oldFile = null, $path = 'files', $name = ''): ?st
     return uploadFile($newFile, $path, $name);
 }
 
-if (!function_exists('deleteFile')) {
+if (! function_exists('deleteFile')) {
     /**
      * Delete a file from storage
-     *
-     * @param string|null $path
-     * @param string $disk
-     * @return bool
      */
     function deleteFile(?string $path, string $disk = 'public'): bool
     {
-        if (!$path) {
+        if (! $path) {
             return false;
         }
 
@@ -75,9 +68,11 @@ if (!function_exists('deleteFile')) {
             if (Storage::disk($disk)->exists($path)) {
                 return Storage::disk($disk)->delete($path);
             }
+
             return false;
         } catch (\Exception $e) {
-            \Log::error('File deletion error: ' . $e->getMessage());
+            \Log::error('File deletion error: '.$e->getMessage());
+
             return false;
         }
     }
@@ -112,24 +107,21 @@ function deleteFiles($photos): void
     }
 }
 
-if (!function_exists('getFileUrl')) {
+if (! function_exists('getFileUrl')) {
     /**
      * Get public URL for a file
-     *
-     * @param string|null $path
-     * @param string $disk
-     * @return string|null
      */
     function getFileUrl(?string $path, string $disk = 'public'): ?string
     {
-        if (!$path) {
+        if (! $path) {
             return null;
         }
 
         try {
             return Storage::disk($disk)->url($path);
         } catch (\Exception $e) {
-            \Log::error('Get file URL error: ' . $e->getMessage());
+            \Log::error('Get file URL error: '.$e->getMessage());
+
             return null;
         }
     }
