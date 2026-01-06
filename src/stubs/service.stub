@@ -38,6 +38,5 @@ class {{ model }}Service
     public function delete(${{ variable }})
     {
         return ${{ variable }}->delete();
-        //return {{ model }}::findOrFail($id)->delete();
     }
 }
