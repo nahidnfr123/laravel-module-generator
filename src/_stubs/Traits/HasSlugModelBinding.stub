@@ -2,6 +2,7 @@
 
 namespace App\Traits;
 
+use App\Traits\HasSlug\HasSlug;
 use App\Traits\HasSlug\SlugOptions;
 
 trait HasSlugModelBinding
