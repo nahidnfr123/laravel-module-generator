@@ -52,7 +52,7 @@ User:
     email: string:unique
     email_verified_at: dateTime:nullable
     password: string
-    avatar: string:nullable
+    avatar: image:nullable
     status: boolean:default true
     created_by: foreignId:users:nullable
     updated_by: foreignId:users:nullable
@@ -65,7 +65,7 @@ Product:
     code: string:unique
     type: string
     description: text:nullable
-    image: string:nullable
+    image: image:nullable
     is_active: boolean:default true
     is_default: boolean:default false
     created_by: foreignId:users:nullable

@@ -47,6 +47,16 @@ class GenerateModuleFromYaml extends Command
         'collection' => true,
     ];
 
+    public array $defaultGenerateConfig = [
+        'model' => null,
+        'migration' => null,
+        'controller' => null,
+        'service' => null,
+        'request' => null,
+        'resource' => null,
+        'collection' => null,
+    ];
+
     public function handle()
     {
         if ($this->option('force')) {
@@ -65,7 +75,7 @@ class GenerateModuleFromYaml extends Command
         $models = $this->parseYamlFile();
 
         // Create backup unless explicitly skipped
-        if (! $this->option('skip-backup')) {
+        if (!$this->option('skip-backup')) {
             $this->currentBackupPath = $backupService->createBackup($models);
             $this->displayBackupInfo();
         }
@@ -107,7 +117,7 @@ class GenerateModuleFromYaml extends Command
         $defaultPath = config('module-generator.models_path');
         $path = $this->option('file') ?? $defaultPath;
 
-        if (! file_exists($path)) {
+        if (!file_exists($path)) {
             $this->error("YAML file not found at: $path");
             exit(CommandAlias::FAILURE);
         }
@@ -157,22 +167,14 @@ class GenerateModuleFromYaml extends Command
     {
         $studlyModelName = Str::studly($modelName);
 
-        $defaultGenerate = [
-            'model' => true,
-            'migration' => true,
-            'controller' => true,
-            'service' => true,
-            'request' => true,
-            'resource' => true,
-            'collection' => true,
-        ];
+        $defaultGenerate = $this->defaultGenerateConfig;
 
         $userGenerate = $modelData['generate'] ?? [];
 
         // Detect unknown keys
         $unknownKeys = array_diff(array_keys($userGenerate), array_keys($defaultGenerate));
-        if (! empty($unknownKeys)) {
-            throw new \InvalidArgumentException('Unknown generate keys: '.implode(', ', $unknownKeys));
+        if (!empty($unknownKeys)) {
+            throw new \InvalidArgumentException('Unknown generate keys: ' . implode(', ', $unknownKeys));
         }
 
         // Merge defaults with valid user-provided values
@@ -202,15 +204,8 @@ class GenerateModuleFromYaml extends Command
      */
     private function normalizeGenerateConfiguration($generate): array
     {
-        $defaultGenerate = [
-            'model' => true,
-            'migration' => true,
-            'controller' => true,
-            'service' => true,
-            'request' => true,
-            'resource' => true,
-            'collection' => true,
-        ];
+
+        $defaultGenerate = $this->defaultGenerateConfig;
 
         if ($generate === false) {
             return array_fill_keys(array_keys($defaultGenerate), false);
@@ -236,7 +231,7 @@ class GenerateModuleFromYaml extends Command
         // Check if model generation is enabled
         if ($generateConfig['model']) {
             $modelPath = app_path("Models/{$modelConfig['studlyName']}.php");
-            if (File::exists($modelPath) && ! $force) {
+            if (File::exists($modelPath) && !$force) {
                 $this->warn("⚠️ Model already exists: {$modelConfig['studlyName']}");
 
                 return;
@@ -267,10 +262,10 @@ class GenerateModuleFromYaml extends Command
         $migrationPattern = database_path("migrations/*create_{$modelConfig['tableName']}_table.php");
         $migrationFiles = glob($migrationPattern);
         // Delete existing migration files if they exist
-        if (! empty($migrationFiles)) {
+        if (!empty($migrationFiles)) {
             foreach ($migrationFiles as $file) {
                 File::delete($file);
-                $this->warn('⚠️ Deleted existing migration: '.basename($file));
+                $this->warn('⚠️ Deleted existing migration: ' . basename($file));
             }
         }
     }
@@ -325,11 +320,11 @@ class GenerateModuleFromYaml extends Command
     {
         $config = $this->validateAndGetConfiguration();
 
-        if (! $config['skipPostman']) {
+        if (!$config['skipPostman']) {
             $this->generatePostmanCollection($config['path']);
         }
 
-        if (! $config['skipDbDiagram']) {
+        if (!$config['skipDbDiagram']) {
             $this->generateDbDiagram($config['path']);
         }
     }
@@ -396,7 +391,7 @@ class GenerateModuleFromYaml extends Command
                 $this->warn($process->getErrorOutput());
             }
         } catch (\Exception $e) {
-            $this->warn('⚠️ Failed to run Laravel Pint: '.$e->getMessage());
+            $this->warn('⚠️ Failed to run Laravel Pint: ' . $e->getMessage());
         }
     }
 }

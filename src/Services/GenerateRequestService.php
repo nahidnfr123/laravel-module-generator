@@ -192,6 +192,15 @@ class GenerateRequestService
         $ruleSet = [$isNullable ? 'nullable' : 'required'];
 
         switch ($type) {
+            case 'image':
+                $ruleSet[] = 'image';
+                $ruleSet[] = 'mimes:jpeg,jpg,png,gif,webp,svg';
+                $ruleSet[] = 'max:2048'; // 2MB max size
+                break;
+            case 'file':
+                $ruleSet[] = 'file';
+                $ruleSet[] = 'max:10240'; // 10MB max size
+                break;
             case 'string':
             case 'text':
                 $ruleSet[] = 'string';

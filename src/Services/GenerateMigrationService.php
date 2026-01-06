@@ -121,6 +121,20 @@ class GenerateMigrationService
     }
 
     /**
+     * Map custom field types to Laravel migration column types
+     */
+    private function mapFieldType(string $type): string
+    {
+        $typeMapping = [
+            'image' => 'string',
+            'file' => 'string',
+            // Add more custom mappings as needed
+        ];
+
+        return $typeMapping[$type] ?? $type;
+    }
+
+    /**
      * Build a single column definition for migration
      */
     private function buildSingleColumnDefinition(string $name, string $definition): string
@@ -131,6 +145,9 @@ class GenerateMigrationService
         if ($type === 'foreignId') {
             return $this->buildForeignIdColumn($name, $parts);
         }
+
+        // Map custom types to Laravel migration types
+        $type = $this->mapFieldType($type);
 
         return $this->buildRegularColumn($name, $type, $parts);
     }
