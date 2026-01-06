@@ -1,20 +1,46 @@
 <?php
 
-function uploadFile($file, $path = 'files', $name = ''): ?string
-{
-    if (! $file) {
-        return null;
-    }
-    // $file_name = null;
-    if ($name) {
-        $file_name = $name.'_'.time().mt_rand().'.'.$file->getClientOriginalExtension();
-    } else {
-        $file_name = time().mt_rand().'.'.$file->getClientOriginalExtension();
-    }
-    $file->storeAs('public/'.$path.'/', $file_name);
-    //    $file->storeAs($path.'/', $file_name);
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
-    return $path.'/'.$file_name;
+
+if (!function_exists('uploadFile')) {
+    /**
+     * Upload a file to storage
+     *
+     * @param \Illuminate\Http\UploadedFile $file
+     * @param string $folder
+     * @param string|null $name
+     * @param string $disk
+     * @return string|null
+     */
+    function uploadFile($file, string $folder, ?string $name = null, string $disk = 'public'): ?string
+    {
+        if (!$file) {
+            return null;
+        }
+
+        try {
+            // Generate file name if not provided
+            if (!$name) {
+                $name = Str::random(20);
+            }
+
+            // Get file extension
+            $extension = $file->getClientOriginalExtension();
+
+            // Create full file name
+            $fileName = $name . '_' . time() . '.' . $extension;
+
+            // Store file
+            $path = $file->storeAs($folder, $fileName, $disk);
+
+            return $path;
+        } catch (\Exception $e) {
+            \Log::error('File upload error: ' . $e->getMessage());
+            return null;
+        }
+    }
 }
 
 function updateFile($newFile, $oldFile = null, $path = 'files', $name = ''): ?string
@@ -31,10 +57,29 @@ function updateFile($newFile, $oldFile = null, $path = 'files', $name = ''): ?st
     return uploadFile($newFile, $path, $name);
 }
 
-function deleteFile($photo): void
-{
-    if ($photo && file_exists(storage_path('app/public/'.$photo))) {
-        unlink(storage_path('app/public/'.$photo));
+if (!function_exists('deleteFile')) {
+    /**
+     * Delete a file from storage
+     *
+     * @param string|null $path
+     * @param string $disk
+     * @return bool
+     */
+    function deleteFile(?string $path, string $disk = 'public'): bool
+    {
+        if (!$path) {
+            return false;
+        }
+
+        try {
+            if (Storage::disk($disk)->exists($path)) {
+                return Storage::disk($disk)->delete($path);
+            }
+            return false;
+        } catch (\Exception $e) {
+            \Log::error('File deletion error: ' . $e->getMessage());
+            return false;
+        }
     }
 }
 
@@ -64,5 +109,28 @@ function deleteFiles($photos): void
 {
     foreach ($photos as $photo) {
         deleteFile($photo);
+    }
+}
+
+if (!function_exists('getFileUrl')) {
+    /**
+     * Get public URL for a file
+     *
+     * @param string|null $path
+     * @param string $disk
+     * @return string|null
+     */
+    function getFileUrl(?string $path, string $disk = 'public'): ?string
+    {
+        if (!$path) {
+            return null;
+        }
+
+        try {
+            return Storage::disk($disk)->url($path);
+        } catch (\Exception $e) {
+            \Log::error('Get file URL error: ' . $e->getMessage());
+            return null;
+        }
     }
 }

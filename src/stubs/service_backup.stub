@@ -1,0 +1,42 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\{{ model }};
+{{ relationImports }}
+
+class {{ model }}Service
+{
+    /**
+     * Get all {{ model }} records
+     */
+    public function getAll()
+    {
+        return {{ model }}::paginate();
+    }
+
+    /**
+     * Create a new {{ model }}
+     */
+    public function store(array $data)
+    {
+        return {{ model }}::create($data);
+    }
+
+    /**
+     * Update {{ model }}
+     */
+    public function update(array $data, ${{ variable }})
+    {
+        ${{ variable }}->update($data);
+        return ${{ variable }};
+    }
+
+    /**
+     * Delete {{ model }}
+     */
+    public function delete(${{ variable }})
+    {
+        return ${{ variable }}->delete();
+    }
+}

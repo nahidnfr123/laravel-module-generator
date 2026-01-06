@@ -5,6 +5,7 @@ namespace NahidFerdous\LaravelModuleGenerator\Services;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateModuleFromYaml;
+use NahidFerdous\LaravelModuleGenerator\Services\Extra\FileUploadCodeGenerator;
 
 class GenerateControllerService
 {
@@ -44,7 +45,7 @@ class GenerateControllerService
         if ($hasService) {
             $servicePath = app_path("Services/{$modelConfig['classes']['service']}.php");
 
-            if (File::exists($servicePath) && ! $force) {
+            if (File::exists($servicePath) && !$force) {
                 $this->command->warn("⚠️ Service already exists: {$modelConfig['classes']['service']}");
 
                 return;
@@ -60,7 +61,7 @@ class GenerateControllerService
         if ($hasController) {
             $controllerPath = app_path("Http/Controllers/{$modelConfig['classes']['controller']}.php");
 
-            if (File::exists($controllerPath) && ! $force) {
+            if (File::exists($controllerPath) && !$force) {
                 $this->command->warn("⚠️ Controller already exists: {$modelConfig['classes']['controller']}");
 
                 return;
@@ -79,7 +80,7 @@ class GenerateControllerService
      */
     private function hasRelationRequest(array $modelData): bool
     {
-        if (! isset($modelData['relations']) || ! is_array($modelData['relations'])) {
+        if (!isset($modelData['relations']) || !is_array($modelData['relations'])) {
             return false;
         }
 
@@ -152,6 +153,33 @@ class GenerateControllerService
         $this->command->info("🎮 Controller created: {$controllerClass}");
     }
 
+    public function generateImageCode($modelConfig)
+    {
+        // Generate file upload logic
+        $uploadLogicStore = FileUploadCodeGenerator::generateStoreUploadLogic(
+            $modelConfig['fields'],
+            $modelConfig['studlyName'],
+            $modelConfig['camelName']
+        );
+
+        $uploadLogicUpdate = FileUploadCodeGenerator::generateUpdateUploadLogic(
+            $modelConfig['fields'],
+            $modelConfig['studlyName'],
+            $modelConfig['camelName']
+        );
+
+        $deleteFileLogic = FileUploadCodeGenerator::generateDeleteFileLogic(
+            $modelConfig['fields'],
+            $modelConfig['camelName']
+        );
+
+        return [
+            '{{ uploadLogicStore }}' => $uploadLogicStore,
+            '{{ uploadLogicUpdate }}' => $uploadLogicUpdate,
+            '{{ deleteFileLogic }}' => $deleteFileLogic
+        ];
+    }
+
     /**
      * Generate service from default stub
      */
@@ -166,6 +194,7 @@ class GenerateControllerService
             '{{ relationImports }}' => '',
             '{{ with }}' => '',
             '{{ repositoryUsage }}' => 'model',
+            ...$this->generateImageCode($modelConfig)
         ];
 
         return str_replace(array_keys($replacements), array_values($replacements), $stubContent);
@@ -265,6 +294,7 @@ class {$modelName}Service
             '{{ variable }}' => $modelConfig['camelName'],
             '{{ modelPlural }}' => $modelConfig['pluralStudlyName'],
             '{{ route }}' => $modelConfig['tableName'],
+            ...$this->generateImageCode($modelConfig)
         ];
 
         return str_replace(array_keys($replacements), array_values($replacements), $stubContent);
@@ -420,7 +450,7 @@ class {$modelName}Service
      */
     private function generateRelationImports(array $modelData): string
     {
-        if (! isset($modelData['relations'])) {
+        if (!isset($modelData['relations'])) {
             return '';
         }
 
@@ -440,7 +470,7 @@ class {$modelName}Service
      */
     private function generateWithRelations(array $modelData): string
     {
-        if (! isset($modelData['relations'])) {
+        if (!isset($modelData['relations'])) {
             return '';
         }
 
@@ -457,13 +487,13 @@ class {$modelName}Service
      */
     private function generateRelationStoreCode(array $modelData, string $modelVariable): string
     {
-        if (! isset($modelData['relations'])) {
+        if (!isset($modelData['relations'])) {
             return '';
         }
 
         $code = '';
         foreach ($modelData['relations'] as $relationName => $relationConfig) {
-            if (! isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
+            if (!isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
                 continue;
             }
 
@@ -478,7 +508,7 @@ class {$modelName}Service
                     // Check if this relation has nested relations
                     $nestedRelations = $this->getNestedRelations($relationConfig, $modelData);
 
-                    if (! empty($nestedRelations)) {
+                    if (!empty($nestedRelations)) {
                         $code .= "\n            foreach (\$data['{$relationKey}'] as \$relationData) {";
                         $code .= "\n                \${$relationName}Record = \${$modelVariable}->{$relationName}()->create(\$relationData);";
 
@@ -531,13 +561,13 @@ class {$modelName}Service
      */
     private function generateRelationUpdateCode(array $modelData, string $modelVariable): string
     {
-        if (! isset($modelData['relations'])) {
+        if (!isset($modelData['relations'])) {
             return '';
         }
 
         $code = '';
         foreach ($modelData['relations'] as $relationName => $relationConfig) {
-            if (! isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
+            if (!isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
                 continue;
             }
 
@@ -552,7 +582,7 @@ class {$modelName}Service
                     // Check if this relation has nested relations
                     $nestedRelations = $this->getNestedRelations($relationConfig, $modelData);
 
-                    if (! empty($nestedRelations)) {
+                    if (!empty($nestedRelations)) {
                         // For nested relations, we need to handle them more carefully
                         $code .= "\n            // Delete existing {$relationName} and their nested relations";
                         $code .= "\n            \${$modelVariable}->{$relationName}()->each(function (\$record) {";
@@ -624,7 +654,7 @@ class {$modelName}Service
     {
         $nestedRelations = [];
 
-        if (! isset($relationConfig['model'])) {
+        if (!isset($relationConfig['model'])) {
             return $nestedRelations;
         }
 
@@ -683,8 +713,8 @@ class {$modelName}Service
         // Validate generate configuration
         if (isset($modelData['generate']) && is_array($modelData['generate'])) {
             $unknownKeys = array_diff(array_keys($modelData['generate']), array_keys(self::DEFAULT_GENERATE_CONFIG));
-            if (! empty($unknownKeys)) {
-                throw new \InvalidArgumentException("Unknown generate keys for $modelName: ".implode(', ', $unknownKeys));
+            if (!empty($unknownKeys)) {
+                throw new \InvalidArgumentException("Unknown generate keys for $modelName: " . implode(', ', $unknownKeys));
             }
         }
 
