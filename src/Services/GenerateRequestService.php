@@ -167,14 +167,14 @@ class GenerateRequestService
             }
 
             // Recursively get validation rules for nested relations
-            $nestedRules = $this->getRelationValidationRules(
-                $relatedModelName,
-                $relationConfig['type'] === 'hasMany' ? "{$fullArrayPath}.*" : $fullObjectPath
-            );
+            //            $nestedRules = $this->getRelationValidationRules(
+            //                $relatedModelName,
+            //                $relationConfig['type'] === 'hasMany' ? "{$fullArrayPath}.*" : $fullObjectPath
+            //            );
 
-            if (! empty($nestedRules)) {
-                $relationRules = array_merge($relationRules, $nestedRules);
-            }
+            //            if (! empty($nestedRules)) {
+            //                $relationRules = array_merge($relationRules, $nestedRules);
+            //            }
         }
 
         return $relationRules;

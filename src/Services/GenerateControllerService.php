@@ -180,7 +180,7 @@ class GenerateControllerService
 
         $variable = $modelConfig['camelName'];
 
-        $relationImports = $this->generateRelationImports($modelData);
+        $relationImports = $this->generateRelationImports($modelData, $modelConfig['originalName'] ?? $modelConfig['studlyName'] ?? '');
         $withRelations = $this->generateWithRelations($modelData);
         $relationStoreCode = $this->generateRelationStoreCode($modelData, $variable);
         $relationUpdateCode = $this->generateRelationUpdateCode($modelData, $variable);
@@ -229,7 +229,7 @@ class GenerateControllerService
 
         $variable = $modelConfig['camelName'];
 
-        $relationImports = $this->generateRelationImports($modelData);
+        $relationImports = $this->generateRelationImports($modelData, $modelConfig['originalName'] ?? $modelConfig['studlyName'] ?? '');
         $withRelations = $this->generateWithRelations($modelData);
         $relationStoreCode = $this->generateRelationStoreCode($modelData, $variable);
         $relationUpdateCode = $this->generateRelationUpdateCode($modelData, $variable);
@@ -254,7 +254,7 @@ class GenerateControllerService
     /**
      * Generate relation imports
      */
-    private function generateRelationImports(array $modelData): string
+    private function generateRelationImports(array $modelData, $currentModelName = ''): string
     {
         if (! isset($modelData['relations'])) {
             return '';
@@ -262,9 +262,11 @@ class GenerateControllerService
 
         $imports = [];
         foreach ($modelData['relations'] as $relationConfig) {
-            if (isset($relationConfig['makeRequest']) && $relationConfig['makeRequest'] === true) {
-                $relatedModel = $relationConfig['model'];
-                $imports[] = "use App\\Models\\{$relatedModel};";
+            if (isset($relationConfig['model']) && $currentModelName !== $relationConfig['model']) {
+                if (isset($relationConfig['makeRequest']) && $relationConfig['makeRequest'] === true) {
+                    $relatedModel = $relationConfig['model'];
+                    $imports[] = "use App\\Models\\{$relatedModel};";
+                }
             }
         }
 
