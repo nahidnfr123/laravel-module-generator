@@ -26,7 +26,8 @@ class GenerateModuleFromYaml extends Command
                            {--skip-dbdiagram : Skip DB diagram generation}
                            {--skip-backup : Skip backup creation}
                            {--postman-base-url={{base-url}} : Base URL for Postman collection}
-                           {--postman-prefix=api/v1 : API prefix for Postman collection}';
+                           {--postman-prefix=api : API prefix for Postman collection}' # api/v1, api/v2, etc.
+    ;
 
     protected $description = 'Generate Laravel module files (model, migration, controller, etc.) from a YAML file';
 

@@ -38,7 +38,7 @@ class GenerateModuleFromModelName extends Command
         );
 
         $this->generateFileFromStub(
-            app_path("Http/Controllers/v1/{$modelName}Controller.php"),
+            app_path("Http/Controllers/{$modelName}Controller.php"),
             'controller',
             [
                 '{{ class }}' => "{$modelName}Controller",
@@ -47,7 +47,7 @@ class GenerateModuleFromModelName extends Command
                 '{{ modelPlural }}' => $pluralModel,
                 '{{ route }}' => Str::snake($modelName),
             ],
-            "App\\Http\\Controllers\\v1\\{$modelName}Controller"
+            "App\\Http\\Controllers\\{$modelName}Controller"
         );
 
         $this->generateFileFromStub(
@@ -101,7 +101,7 @@ class GenerateModuleFromModelName extends Command
 
     protected function appendApiRoute(string $tableName, string $modelName): void
     {
-        $controllerClass = "App\\Http\\Controllers\\v1\\{$modelName}Controller";
+        $controllerClass = "App\\Http\\Controllers\\{$modelName}Controller";
         $apiRoutesPath = base_path('routes/api.php');
         $routeDefinition = "Route::apiResource('{$tableName}', {$controllerClass}::class);";
 
