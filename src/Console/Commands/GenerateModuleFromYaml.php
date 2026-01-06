@@ -252,7 +252,8 @@ class GenerateModuleFromYaml extends Command
         }
 
         // Check if migration generation is enabled
-        if ($generateConfig['migration'] === true || $generateConfig['migration'] === false) {
+        // if ($generateConfig['migration'] === true || $generateConfig['migration'] === false) {
+        if ($generateConfig['migration'] === false) {
             $this->deleteMigrationFile($modelConfig);
         }
         if ($generateConfig['migration'] === true) {
