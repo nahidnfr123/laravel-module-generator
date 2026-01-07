@@ -230,7 +230,7 @@ class GeneratePostmanCollection extends Command
         $modelFolder['item'][] = $this->createRequest(
             'Get '.$modelName.' by ID',
             'GET',
-            "{$this->apiPrefix}/{$resourceName}/{{id}}",
+            "{$this->apiPrefix}/{$resourceName}/:id",
             null,
             $this->generateShowResponse($modelName, $modelConfig, $nestedRelations)
         );
@@ -248,7 +248,7 @@ class GeneratePostmanCollection extends Command
         $modelFolder['item'][] = $this->createRequest(
             'Update '.$modelName,
             'POST',
-            "{$this->apiPrefix}/{$resourceName}/{{id}}",
+            "{$this->apiPrefix}/{$resourceName}/:id",
             $this->generateUpdateBody($modelConfig, $nestedRelations),
             $this->generateUpdateResponse($modelName, $modelConfig, $nestedRelations)
         );
@@ -257,7 +257,7 @@ class GeneratePostmanCollection extends Command
         $modelFolder['item'][] = $this->createRequest(
             'Delete '.$modelName,
             'DELETE',
-            "{$this->apiPrefix}/{$resourceName}/{{id}}",
+            "{$this->apiPrefix}/{$resourceName}/:id",
             null,
             $this->generateDeleteResponse()
         );
@@ -267,6 +267,7 @@ class GeneratePostmanCollection extends Command
 
     /**
      * Creates a single Postman request item.
+     * @throws \JsonException
      */
     private function createRequest(string $name, string $method, string $url, ?array $body = null, ?array $exampleResponse = null): array
     {
@@ -317,7 +318,7 @@ class GeneratePostmanCollection extends Command
                     'name' => 'Success Response',
                     'originalRequest' => $request['request'],
                     'status' => 'OK',
-                    'code' => in_array($method, ['POST']) ? 201 : 200,
+                    'code' => in_array($method, ['POST', 'PUT']) ? 201 : 200,
                     '_postman_previewlanguage' => 'json',
                     'header' => [
                         [
@@ -326,7 +327,7 @@ class GeneratePostmanCollection extends Command
                         ],
                     ],
                     'cookie' => [],
-                    'body' => json_encode($exampleResponse, JSON_PRETTY_PRINT),
+                    'body' => json_encode($exampleResponse, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT),
                 ],
             ];
         }
