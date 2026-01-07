@@ -22,7 +22,8 @@ return [
     ],
     // Postman collection settings
     'postman' => [
-        'default_base_url' => '{{base-url}}',
+        'default_base_url' => '127.0.0.1:8000',
+        // 'default_base_url' => '{{base-url}}',
         'default_prefix' => 'api',
         'output_path' => "module/postman_collection_{$randomNumber}.json",
     ],
