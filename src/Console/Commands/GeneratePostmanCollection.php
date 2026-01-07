@@ -312,25 +312,25 @@ class GeneratePostmanCollection extends Command
             ];
         }
 
-        if ($exampleResponse) {
-            $request['response'] = [
-                [
-                    'name' => 'Success Response',
-                    'originalRequest' => $request['request'],
-                    'status' => 'OK',
-                    'code' => in_array($method, ['POST', 'PUT']) ? 201 : 200,
-                    '_postman_previewlanguage' => 'json',
-                    'header' => [
-                        [
-                            'key' => 'Content-Type',
-                            'value' => 'application/json',
-                        ],
-                    ],
-                    'cookie' => [],
-                    'body' => json_encode($exampleResponse, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT),
-                ],
-            ];
-        }
+//        if ($exampleResponse) {
+//            $request['response'] = [
+//                [
+//                    'name' => 'Success Response',
+//                    'originalRequest' => $request['request'],
+//                    'status' => 'OK',
+//                    'code' => in_array($method, ['POST', 'PUT']) ? 201 : 200,
+//                    '_postman_previewlanguage' => 'json',
+//                    'header' => [
+//                        [
+//                            'key' => 'Content-Type',
+//                            'value' => 'application/json',
+//                        ],
+//                    ],
+//                    'cookie' => [],
+//                    'body' => json_encode($exampleResponse, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT),
+//                ],
+//            ];
+//        }
 
         return $request;
     }
