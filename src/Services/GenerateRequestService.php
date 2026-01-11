@@ -12,6 +12,8 @@ class GenerateRequestService
 
     private array $generateConfig;
 
+    public array $allModels;
+
     private StubPathResolverService $pathResolverService;
 
     public function __construct(GenerateModuleFromYaml $command, array $allModels, array $generateConfig)
@@ -27,7 +29,7 @@ class GenerateRequestService
      */
     public function handleRequestGeneration(array $modelConfig, bool $force): void
     {
-        if ($this->generateConfig['request']) {
+        if (in_array('request', $this->generateConfig, true)) {
             $requestPath = app_path("Http/Requests/{$modelConfig['classes']['request']}.php");
 
             if (File::exists($requestPath) && ! $force) {

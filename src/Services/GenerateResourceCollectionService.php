@@ -25,7 +25,7 @@ class GenerateResourceCollectionService
      */
     public function handleCollectionGeneration(array $modelConfig, bool $force): void
     {
-        if ($this->generateConfig['collection']) {
+        if (in_array('collection', $this->generateConfig, true)) {
             $collectionPath = app_path("Http/Resources/{$modelConfig['studlyName']}/{$modelConfig['classes']['collection']}.php");
 
             if (File::exists($collectionPath) && ! $force) {
@@ -66,7 +66,7 @@ class GenerateResourceCollectionService
      */
     public function handleResourceGeneration(array $modelConfig, bool $force): void
     {
-        if ($this->generateConfig['resource']) {
+        if (in_array('resource', $this->generateConfig, true)) {
             $resourcePath = app_path("Http/Resources/{$modelConfig['studlyName']}/{$modelConfig['classes']['resource']}.php");
 
             if (File::exists($resourcePath) && ! $force) {

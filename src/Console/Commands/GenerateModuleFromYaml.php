@@ -12,6 +12,7 @@ use NahidFerdous\LaravelModuleGenerator\Services\GenerateMigrationService;
 use NahidFerdous\LaravelModuleGenerator\Services\GenerateModelService;
 use NahidFerdous\LaravelModuleGenerator\Services\GenerateRequestService;
 use NahidFerdous\LaravelModuleGenerator\Services\GenerateResourceCollectionService;
+use NahidFerdous\LaravelModuleGenerator\Services\GenerateSeederService;
 use NahidFerdous\LaravelModuleGenerator\Services\StubPathResolverService;
 use Symfony\Component\Console\Command\Command as CommandAlias;
 use Symfony\Component\Process\Process;
@@ -36,31 +37,15 @@ class GenerateModuleFromYaml extends Command
 
     private array $parsedYamlData = [];
 
-    public array $generateConfig = [
-        'model' => true,
-        'migration' => true,
-        'controller' => true,
-        'service' => true,
-        'request' => true,
-        'resource' => true,
-        'collection' => true,
-    ];
+    public array $defaultGenerateConfig = ['model', 'migration', 'controller', 'service', 'request', 'resource', 'collection', 'seeder'];
 
-    public array $defaultGenerateConfig = [
-        'model' => true,
-        'migration' => true,
-        'controller' => true,
-        'service' => true,
-        'request' => true,
-        'resource' => true,
-        'collection' => true,
-    ];
+    public array $generateConfig = [];
 
     public function handle()
     {
         if ($this->option('force')) {
-            $confirmation = $this->ask('This command will replace existing module files and generate module files based on a YAML configuration. Do you want to proceed? (yes/no)', 'no');
-            //            $confirmation = 'yes';
+            //            $confirmation = $this->ask('This command will replace existing module files and generate module files based on a YAML configuration. Do you want to proceed? (yes/no)', 'no');
+            $confirmation = 'yes';
             if (strtolower($confirmation) !== 'yes' && strtolower($confirmation) !== 'y' && strtolower($confirmation) !== 'Y') {
                 $this->info('Command cancelled.');
 
@@ -81,6 +66,7 @@ class GenerateModuleFromYaml extends Command
         }
 
         foreach ($models as $modelName => $modelData) {
+            $this->generateConfig = [];
             $this->processModel($modelName, $modelData);
         }
 
@@ -147,9 +133,73 @@ class GenerateModuleFromYaml extends Command
     {
         $this->info("Generating files for: $modelName");
 
+        // All available generation options
+        $allGenerateOptions = $this->defaultGenerateConfig;
+
+        // Determine what to generate based on priority:
+        // 1. generate (highest priority)
+        // 2. generate_only (second priority)
+        // 3. generate_except (third priority)
+        // 4. Nothing specified = generate nothing (default)
+
+        $generateOptions = [];
+
+        // Priority 1: Check for 'generate'
+        if (isset($modelData['generate'])) {
+            if ($modelData['generate'] === 'all') {
+                $generateOptions = $allGenerateOptions;
+            } elseif (is_string($modelData['generate'])) {
+                $generateOptions = array_map('trim', explode(',', $modelData['generate']));
+            } elseif (is_array($modelData['generate'])) {
+                $generateOptions = $modelData['generate'];
+            }
+        }
+        // Priority 2: Check for 'generate_only'
+        elseif (isset($modelData['generate_only'])) {
+            if (is_string($modelData['generate_only'])) {
+                $generateOptions = array_map('trim', explode(',', $modelData['generate_only']));
+            } elseif (is_array($modelData['generate_only'])) {
+                $generateOptions = $modelData['generate_only'];
+            }
+            // Only keep valid options
+            $generateOptions = array_intersect($allGenerateOptions, $generateOptions);
+        }
+        // Priority 3: Check for 'generate_except'
+        elseif (isset($modelData['generate_except'])) {
+            // Start with all options
+            $generateOptions = $allGenerateOptions;
+
+            if (is_string($modelData['generate_except'])) {
+                $exceptOptions = array_map('trim', explode(',', $modelData['generate_except']));
+            } elseif (is_array($modelData['generate_except'])) {
+                $exceptOptions = $modelData['generate_except'];
+            } else {
+                $exceptOptions = [];
+            }
+
+            // Remove excepted items from the list
+            $generateOptions = array_diff($generateOptions, $exceptOptions);
+        }
+        // Default: If none of the above are specified, generate nothing
+        else {
+            $generateOptions = [];
+        }
+
+        // Re-index array to ensure clean numeric keys
+        $generateOptions = array_values($generateOptions);
+
+        // If nothing to generate, skip this model
+        if (empty($generateOptions)) {
+            $this->warn("⚠️ Skipping $modelName - no generation options specified");
+            $this->newLine();
+
+            return;
+        }
+
+        $modelData['generate'] = $generateOptions;
+
         $modelConfig = $this->buildModelConfiguration($modelName, $modelData);
-        // $generateConfig = $this->normalizeGenerateConfiguration($modelData['generate'] ?? true);
-        $this->generateConfig = $this->normalizeGenerateConfiguration($modelData['generate'] ?? true);
+        $this->generateConfig = array_intersect($this->defaultGenerateConfig, $generateOptions);
 
         $this->generateModelAndMigration($modelConfig);
         $this->generateOptionalFiles($modelConfig);
@@ -167,19 +217,6 @@ class GenerateModuleFromYaml extends Command
     {
         $studlyModelName = Str::studly($modelName);
 
-        $defaultGenerate = $this->defaultGenerateConfig;
-
-        $userGenerate = $modelData['generate'] ?? [];
-
-        // Detect unknown keys
-        $unknownKeys = array_diff(array_keys($userGenerate), array_keys($defaultGenerate));
-        if (! empty($unknownKeys)) {
-            throw new \InvalidArgumentException('Unknown generate keys: '.implode(', ', $unknownKeys));
-        }
-
-        // Merge defaults with valid user-provided values
-        $generate = array_merge($defaultGenerate, array_intersect_key($userGenerate, $defaultGenerate));
-
         return [
             'originalName' => $modelName,
             'studlyName' => $studlyModelName,
@@ -188,6 +225,8 @@ class GenerateModuleFromYaml extends Command
             'tableName' => Str::snake(Str::plural($studlyModelName)),
             'fields' => $modelData['fields'] ?? [],
             'relations' => $modelData['relations'] ?? [],
+            'primaryKey' => $modelData['primaryKey'] ?? 'id',
+            'softDeletes' => array_key_exists('deleted_at', $modelData['fields'] ?? []),
             'classes' => [
                 'controller' => "{$studlyModelName}Controller",
                 'service' => "{$studlyModelName}Service",
@@ -195,27 +234,8 @@ class GenerateModuleFromYaml extends Command
                 'resource' => "{$studlyModelName}Resource",
                 'request' => "{$studlyModelName}Request",
             ],
-            'generate' => $generate,
+            'generate' => $modelData['generate'],
         ];
-    }
-
-    /**
-     * Normalize the generate configuration to ensure all keys are present
-     */
-    private function normalizeGenerateConfiguration($generate): array
-    {
-
-        $defaultGenerate = $this->defaultGenerateConfig;
-
-        if ($generate === false) {
-            return array_fill_keys(array_keys($defaultGenerate), false);
-        }
-
-        if ($generate === true) {
-            return $defaultGenerate;
-        }
-
-        return array_merge($defaultGenerate, $generate);
     }
 
     /**
@@ -229,7 +249,7 @@ class GenerateModuleFromYaml extends Command
         $generateConfig = $modelConfig['generate'];
 
         // Check if model generation is enabled
-        if ($generateConfig['model']) {
+        if (in_array('model', $generateConfig, true)) {
             $modelPath = app_path("Models/{$modelConfig['studlyName']}.php");
             if (File::exists($modelPath) && ! $force) {
                 $this->warn("⚠️ Model already exists: {$modelConfig['studlyName']}");
@@ -242,63 +262,55 @@ class GenerateModuleFromYaml extends Command
                 $this->warn("⚠️ Deleted existing model: {$modelConfig['studlyName']}");
             }
 
-            (new GenerateModelService($this))
-                ->generateModel($modelConfig['studlyName'], $modelConfig['fields'], $modelConfig['relations'], $generateConfig);
+            new GenerateModelService($this)
+                ->generateModel(
+                    $modelConfig['studlyName'],
+                    $modelConfig['fields'],
+                    $modelConfig['relations'],
+                    $generateConfig,
+                    $modelConfig['primaryKey'],
+                    $modelConfig['softDeletes']
+                );
         }
-
-        // Check if migration generation is enabled
-        //        // if ($generateConfig['migration'] === true || $generateConfig['migration'] === false) {
-        //        if ($generateConfig['migration'] === false) {
-        //            $this->deleteMigrationFile($modelConfig);
-        //        }
-        if ($generateConfig['migration'] === true) {
-            (new GenerateMigrationService($this))->generateMigration($modelConfig['studlyName'], $modelConfig['fields']);
+        if (in_array('migration', $generateConfig, true)) {
+            new GenerateMigrationService($this)->generateMigration($modelConfig['studlyName'], $modelConfig['fields']);
         }
     }
-
-    //    protected function deleteMigrationFile($modelConfig)
-    //    {
-    //        $migrationPattern = database_path("migrations/*create_{$modelConfig['tableName']}_table.php");
-    //        $migrationFiles = glob($migrationPattern);
-    //        // Delete existing migration files if they exist
-    //        if (! empty($migrationFiles)) {
-    //            foreach ($migrationFiles as $file) {
-    //                File::delete($file);
-    //                $this->warn('⚠️ Deleted existing migration: '.basename($file));
-    //            }
-    //        }
-    //    }
 
     /**
      * Generate optional files based on configuration
      */
     private function generateOptionalFiles(array $modelConfig): void
     {
-        // Use the model-specific generate config instead of the global one
+        // Use the model-specific generated config instead of the global one
         $generateConfig = $modelConfig['generate'];
         $force = $this->option('force');
 
-        if ($generateConfig['request']) {
-            (new GenerateRequestService($this, $this->parseYamlFile(), $generateConfig))
+        if (in_array('request', $generateConfig, true)) {
+            new GenerateRequestService($this, $this->parseYamlFile(), $generateConfig)
                 ->handleRequestGeneration($modelConfig, $force);
         }
 
         $resourceCollectionService = new GenerateResourceCollectionService($this, $generateConfig);
-        if ($generateConfig['collection']) {
+        if (in_array('collection', $generateConfig, true)) {
             $resourceCollectionService->handleCollectionGeneration($modelConfig, $force);
         }
-        if ($generateConfig['resource']) {
+        if (in_array('resource', $generateConfig, true)) {
             $resourceCollectionService->handleResourceGeneration($modelConfig, $force);
         }
 
-        if ($generateConfig['service'] || $generateConfig['controller']) {
+        if (in_array('service', $generateConfig, true) && in_array('controller', $generateConfig, true)) {
             $modelData = $this->getCurrentModelData($modelConfig['originalName']);
             $controllerService = new GenerateControllerService($this, $this->parsedYamlData);
             $controllerService->generateControllerAndService($modelConfig, $modelData, $force);
         }
 
-        if ($generateConfig['controller']) {
-            (new AppendRouteService($this))->appendRoute($modelConfig['tableName'], $modelConfig['classes']['controller']);
+        if (in_array('controller', $generateConfig, true)) {
+            new AppendRouteService($this)->appendRoute($modelConfig['tableName'], $modelConfig['classes']['controller']);
+        }
+
+        if (in_array('seeder', $generateConfig, true)) {
+            new GenerateSeederService($this)->generateSeeder($modelConfig['studlyName'], $modelConfig['fields'], $force);
         }
     }
 
@@ -347,7 +359,7 @@ class GenerateModuleFromYaml extends Command
 
         if ($result === CommandAlias::SUCCESS) {
             $this->newLine();
-            // $this->info('🥵 Postman collection generated successfully!');
+            // $this->info('🥵 a Postman collection generated successfully!');
         } else {
             $this->warn('⚠️ Failed to generate Postman collection');
         }

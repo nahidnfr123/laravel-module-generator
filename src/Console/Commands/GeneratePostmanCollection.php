@@ -27,25 +27,13 @@ class GeneratePostmanCollection extends Command
      */
     protected $description = 'Generate Postman collection from YAML schema';
 
-    /**
-     * @var string
-     */
-    private $baseUrl;
+    private string $baseUrl;
 
-    /**
-     * @var string
-     */
-    private $apiPrefix;
+    private string $apiPrefix;
 
-    /**
-     * @var array
-     */
-    private $collection;
+    private array $collection;
 
-    /**
-     * @var array
-     */
-    private $fullSchema;
+    private array $fullSchema;
 
     /**
      * Execute the console command.
@@ -147,7 +135,59 @@ class GeneratePostmanCollection extends Command
      */
     private function shouldGenerateController(array $modelConfig): bool
     {
-        return ! isset($modelConfig['generate']['controller']) || $modelConfig['generate']['controller'] !== false;
+        // New format: check generate_except
+        if (isset($modelConfig['generate_except'])) {
+            $exceptions = is_array($modelConfig['generate_except'])
+                ? $modelConfig['generate_except']
+                : explode(',', str_replace(' ', '', $modelConfig['generate_except']));
+
+            return ! in_array('controller', array_map('trim', $exceptions), true);
+        }
+
+        // Old format: check generate.controller
+        if (isset($modelConfig['generate']['controller'])) {
+            return $modelConfig['generate']['controller'] !== false;
+        }
+
+        // Default: generate controller
+        return true;
+    }
+
+    /**
+     * Parses relations from the new compact format into a normalized structure.
+     */
+    private function parseRelations(array $modelConfig): array
+    {
+        $relations = [];
+
+        if (! isset($modelConfig['relations'])) {
+            return $relations;
+        }
+
+        foreach ($modelConfig['relations'] as $relationType => $relationString) {
+            if (! is_string($relationString)) {
+                continue;
+            }
+
+            // Split by comma to get individual relations
+            $relationParts = array_map('trim', explode(',', $relationString));
+
+            foreach ($relationParts as $relationPart) {
+                // Parse "Model:functionName" format
+                if (strpos($relationPart, ':') !== false) {
+                    [$model, $functionName] = explode(':', $relationPart, 2);
+                    $model = trim($model);
+                    $functionName = trim($functionName);
+
+                    $relations[$functionName] = [
+                        'type' => $relationType,
+                        'model' => $model,
+                    ];
+                }
+            }
+        }
+
+        return $relations;
     }
 
     /**
@@ -157,14 +197,18 @@ class GeneratePostmanCollection extends Command
     private function getRequestableRelations(array $modelConfig): array
     {
         $requestableRelations = [];
+        $parsedRelations = $this->parseRelations($modelConfig);
 
-        if (! isset($modelConfig['relations'])) {
-            return $requestableRelations;
+        // Get make_requests list
+        $makeRequests = [];
+        if (isset($modelConfig['make_requests'])) {
+            $makeRequests = is_array($modelConfig['make_requests'])
+                ? $modelConfig['make_requests']
+                : array_map('trim', explode(',', $modelConfig['make_requests']));
         }
 
-        foreach ($modelConfig['relations'] as $relationName => $relationConfig) {
-            if (isset($relationConfig['makeRequest']) &&
-                $relationConfig['makeRequest'] === true &&
+        foreach ($parsedRelations as $relationName => $relationConfig) {
+            if (in_array($relationName, $makeRequests, true) &&
                 in_array($relationConfig['type'], ['hasMany', 'hasOne'])) {
                 $requestableRelations[$relationName] = $relationConfig;
             }
@@ -236,12 +280,14 @@ class GeneratePostmanCollection extends Command
         );
 
         // Store Resource
+        $hasFiles = $this->hasFileFields($modelConfig, $nestedRelations);
         $modelFolder['item'][] = $this->createRequest(
             'Create '.$modelName,
             'POST',
             "{$this->apiPrefix}/{$resourceName}",
             $this->generateCreateBody($modelConfig, $nestedRelations),
-            $this->generateCreateResponse($modelName, $modelConfig, $nestedRelations)
+            $this->generateCreateResponse($modelName, $modelConfig, $nestedRelations),
+            $hasFiles
         );
 
         // Update Resource
@@ -250,7 +296,8 @@ class GeneratePostmanCollection extends Command
             'POST',
             "{$this->apiPrefix}/{$resourceName}/:id",
             $this->generateUpdateBody($modelConfig, $nestedRelations),
-            $this->generateUpdateResponse($modelName, $modelConfig, $nestedRelations)
+            $this->generateUpdateResponse($modelName, $modelConfig, $nestedRelations),
+            $hasFiles
         );
 
         // Delete Resource
@@ -267,31 +314,38 @@ class GeneratePostmanCollection extends Command
 
     /**
      * Creates a single Postman request item.
+     *
      * @throws \JsonException
      */
-    private function createRequest(string $name, string $method, string $url, ?array $body = null, ?array $exampleResponse = null): array
+    private function createRequest(string $name, string $method, string $url, ?array $body = null, ?array $exampleResponse = null, bool $hasFiles = false): array
     {
+        $headers = [
+            [
+                'key' => 'Accept',
+                'value' => 'application/json',
+                'type' => 'text',
+            ],
+            [
+                'key' => 'Authorization',
+                'value' => 'Bearer {{token}}',
+                'type' => 'text',
+            ],
+        ];
+
+        // Only add Content-Type for JSON requests
+        if (! $hasFiles) {
+            $headers[] = [
+                'key' => 'Content-Type',
+                'value' => 'application/json',
+                'type' => 'text',
+            ];
+        }
+
         $request = [
             'name' => $name,
             'request' => [
                 'method' => $method,
-                'header' => [
-                    [
-                        'key' => 'Accept',
-                        'value' => 'application/json',
-                        'type' => 'text',
-                    ],
-                    [
-                        'key' => 'Content-Type',
-                        'value' => 'application/json',
-                        'type' => 'text',
-                    ],
-                    [
-                        'key' => 'Authorization',
-                        'value' => 'Bearer {{token}}',
-                        'type' => 'text',
-                    ],
-                ],
+                'header' => $headers,
                 'url' => [
                     'raw' => '{{baseUrl}}/'.$url,
                     'host' => ['{{baseUrl}}'],
@@ -301,38 +355,102 @@ class GeneratePostmanCollection extends Command
         ];
 
         if ($body) {
-            $request['request']['body'] = [
-                'mode' => 'raw',
-                'raw' => json_encode($body, JSON_PRETTY_PRINT),
-                'options' => [
-                    'raw' => [
-                        'language' => 'json',
+            if ($hasFiles) {
+                // Generate form-data body
+                $request['request']['body'] = [
+                    'mode' => 'formdata',
+                    'formdata' => $this->convertToFormData($body),
+                ];
+            } else {
+                // Generate raw JSON body
+                $request['request']['body'] = [
+                    'mode' => 'raw',
+                    'raw' => json_encode($body, JSON_PRETTY_PRINT),
+                    'options' => [
+                        'raw' => [
+                            'language' => 'json',
+                        ],
                     ],
-                ],
-            ];
+                ];
+            }
         }
 
-//        if ($exampleResponse) {
-//            $request['response'] = [
-//                [
-//                    'name' => 'Success Response',
-//                    'originalRequest' => $request['request'],
-//                    'status' => 'OK',
-//                    'code' => in_array($method, ['POST', 'PUT']) ? 201 : 200,
-//                    '_postman_previewlanguage' => 'json',
-//                    'header' => [
-//                        [
-//                            'key' => 'Content-Type',
-//                            'value' => 'application/json',
-//                        ],
-//                    ],
-//                    'cookie' => [],
-//                    'body' => json_encode($exampleResponse, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT),
-//                ],
-//            ];
-//        }
-
         return $request;
+    }
+
+    /**
+     * Converts a body array to Postman form-data format.
+     */
+    private function convertToFormData(array $body, string $prefix = ''): array
+    {
+        $formData = [];
+
+        foreach ($body as $key => $value) {
+            $fieldKey = $prefix ? "{$prefix}[{$key}]" : $key;
+
+            if (is_array($value)) {
+                // Handle nested arrays recursively
+                if (array_keys($value) === range(0, count($value) - 1)) {
+                    // Indexed array - handle each item
+                    foreach ($value as $index => $item) {
+                        if (is_array($item)) {
+                            $nestedFormData = $this->convertToFormData($item, "{$fieldKey}[{$index}]");
+                            $formData = array_merge($formData, $nestedFormData);
+                        } else {
+                            $formData[] = [
+                                'key' => "{$fieldKey}[{$index}]",
+                                'value' => (string) $item,
+                                'type' => 'text',
+                            ];
+                        }
+                    }
+                } else {
+                    // Associative array - recurse
+                    $nestedFormData = $this->convertToFormData($value, $fieldKey);
+                    $formData = array_merge($formData, $nestedFormData);
+                }
+            } elseif ($value === null) {
+                // Handle null values
+                $formData[] = [
+                    'key' => $fieldKey,
+                    'value' => '',
+                    'type' => 'text',
+                ];
+            } else {
+                $formData[] = [
+                    'key' => $fieldKey,
+                    'value' => (string) $value,
+                    'type' => 'text',
+                ];
+            }
+        }
+
+        return $formData;
+    }
+
+    /**
+     * Checks if the model config has any file or image fields.
+     */
+    private function hasFileFields(array $modelConfig, array $nestedRelations = []): bool
+    {
+        // Check main model fields
+        if (isset($modelConfig['fields'])) {
+            foreach ($modelConfig['fields'] as $fieldName => $fieldType) {
+                $baseType = explode(':', $fieldType)[0];
+                if (in_array($baseType, ['file', 'image'])) {
+                    return true;
+                }
+            }
+        }
+
+        // Check nested relations recursively
+        return array_any($nestedRelations, fn ($relationData) => $this->hasFileFields($relationData['model_config'], $relationData['nested']));
+        //        foreach ($nestedRelations as $relationData) {
+        //            if ($this->hasFileFields($relationData['model_config'], $relationData['nested'])) {
+        //                return true;
+        //            }
+        //        }
+        //        return false;
     }
 
     /**
@@ -354,9 +472,7 @@ class GeneratePostmanCollection extends Command
         }
 
         // Add nested relations data
-        $body = array_merge($body, $this->generateNestedRelationsBody($nestedRelations));
-
-        return $body;
+        return array_merge($body, $this->generateNestedRelationsBody($nestedRelations));
     }
 
     /**
@@ -372,7 +488,7 @@ class GeneratePostmanCollection extends Command
     }
 
     /**
-     * Generates nested relations body data recursively.
+     * Generates nested relation body data recursively.
      */
     private function generateNestedRelationsBody(array $nestedRelations): array
     {
@@ -394,7 +510,7 @@ class GeneratePostmanCollection extends Command
                 $relationBody = array_merge($relationBody, $deeperNestedBody);
             }
 
-            // For hasMany/hasOne relations, wrap hasMany in array
+            // For hasMany/hasOne relations, wrap hasMany in an array
             if ($relationConfig['type'] === 'hasMany') {
                 $body[$fieldName] = [$relationBody];
             } else {
@@ -406,7 +522,7 @@ class GeneratePostmanCollection extends Command
     }
 
     /**
-     * Generates nested relations response data recursively.
+     * Generates nested relation response data recursively.
      */
     private function generateNestedRelationsResponse(array $nestedRelations): array
     {
@@ -486,12 +602,12 @@ class GeneratePostmanCollection extends Command
         return match ($baseType) {
             'string' => 'example_'.$fieldName,
             'text' => 'This is an example '.$fieldName.' content.',
-            'boolean' => str_contains($fieldType, 'default true') ? true : false,
+            'boolean' => str_contains($fieldType, 'default true'),
             'integer', 'foreignId' => 1,
             'double', 'decimal' => 10.50,
             'date' => now()->format('Y-m-d'),
-            'dateTime' => now()->format('Y-m-d H:i:s'),
-            'timestamp' => now()->format('Y-m-d H:i:s'),
+            'dateTime', 'timestamp' => now()->format('Y-m-d H:i:s'),
+            'file', 'image' => null,
             default => str_contains($fieldType, 'nullable') ? null : 'example_value',
         };
     }
@@ -570,7 +686,7 @@ class GeneratePostmanCollection extends Command
 
         foreach ($modelConfig['fields'] as $fieldName => $fieldType) {
             if ($fieldName === 'deleted_at') {
-                continue; // Skip soft delete field in normal responses
+                continue; // Skip the soft delete field in normal responses
             }
             $record[$fieldName] = $this->generateExampleValue($fieldName, $fieldType);
         }
@@ -579,31 +695,37 @@ class GeneratePostmanCollection extends Command
         $record['updated_at'] = now()->format('Y-m-d H:i:s');
 
         // Add explicit relations (belongsTo relations without makeRequest)
-        if (isset($modelConfig['relations'])) {
-            foreach ($modelConfig['relations'] as $relationName => $relationConfig) {
-                if ($relationConfig['type'] === 'belongsTo' &&
-                    (! isset($relationConfig['makeRequest']) || ! $relationConfig['makeRequest'])) {
-                    $record[$relationName] = [
-                        'id' => 1,
-                        'name' => 'Related '.$relationConfig['model'],
-                    ];
-                }
+        $parsedRelations = $this->parseRelations($modelConfig);
+        $makeRequests = [];
+        if (isset($modelConfig['make_requests'])) {
+            $makeRequests = is_array($modelConfig['make_requests'])
+                ? $modelConfig['make_requests']
+                : array_map('trim', explode(',', $modelConfig['make_requests']));
+        }
+
+        foreach ($parsedRelations as $relationName => $relationConfig) {
+            if ($relationConfig['type'] === 'belongsTo' && ! in_array($relationName, $makeRequests, true)) {
+                $record[$relationName] = [
+                    'id' => 1,
+                    'name' => 'Related '.$relationConfig['model'],
+                ];
             }
         }
 
         // Add nested relations in response (recursively)
         $nestedResponseData = $this->generateNestedRelationsResponse($nestedRelations);
-        $record = array_merge($record, $nestedResponseData);
 
-        return $record;
+        return array_merge($record, $nestedResponseData);
     }
 
     /**
      * Saves the generated Postman collection to a JSON file.
+     *
+     * @throws \JsonException
      */
     private function savePostmanCollection(string $outputFile): void
     {
-        $jsonOutput = json_encode($this->collection, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $jsonOutput = json_encode($this->collection, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         File::put($outputFile, $jsonOutput);
 
         $this->newLine();

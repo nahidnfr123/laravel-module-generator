@@ -19,6 +19,8 @@ return [
         'request' => 'request.stub',
         'collection' => 'collection.stub',
         'resource' => 'resource.stub',
+        'factory' => 'factory.stub',
+        'seeder' => 'seeder.stub',
     ],
     // Postman collection settings
     'postman' => [

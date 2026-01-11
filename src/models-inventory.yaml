@@ -79,6 +79,15 @@ Branch:
 #      model: User
 
 Category:
+  generate:
+    model: true
+    migration: true
+    controller: true
+    service: true
+    request: true
+    resource: true
+    collection: true
+    seeder: false
   fields:
     name: string:unique
     code: string:unique
@@ -89,15 +98,22 @@ Category:
     created_by: foreignId:users:nullable
     updated_by: foreignId:users:nullable
   relations:
-    parent:
+    parent: # relation function name
+      type: belongsTo # relation type
+      model: Category # related model name
+    children: # relation function name
+      type: belongsTo # relation type
+      model: Category # related model name
+      makeRequest: true
+    creator: # relation function name
+      type: belongsTo # relation type
+      model: User # related model name
+    updater:
       type: belongsTo
-      model: Category
-#    creator:
-#      type: belongsTo
-#      model: User
-#    updater:
-#      type: belongsTo
-#      model: User
+      model: User
+    products:
+      type: hasMany # relation type
+      model: Product # related model name
 
 Brand:
   fields:

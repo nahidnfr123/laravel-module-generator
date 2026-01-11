@@ -20,14 +20,14 @@ class GenerateModelService
     }
 
     /**
-     * Generate model file with fillable fields and relationships
+     * Generate a model file with fillable fields and relationships
      */
-    public function generateModel(string $modelName, array $fields, array $relations = [], $generateConfig = []): void
+    public function generateModel(string $modelName, array $fields, array $relations = [], $generateConfig = [], string $primaryKey = 'id', bool $softDeletes = false): void
     {
         $tableName = Str::snake(Str::pluralStudly($modelName));
         $migrationPath = $this->getMigrationPath($tableName);
 
-        if ($generateConfig['migration'] === true && ! ($migrationPath && File::exists($migrationPath))) {
+        if (in_array('migration', $generateConfig, true) && ! ($migrationPath && File::exists($migrationPath))) {
             $modelName = Str::studly($modelName);
             Artisan::call('make:model', ['name' => $modelName, '--migration' => true]);
         } else {
@@ -50,7 +50,10 @@ class GenerateModelService
         $this->replaceModelWithStub($modelPath, $modelName, $fillableArray, $relationshipMethods,
             $casts,
             $getters,
-            $setters
+            $setters,
+            $primaryKey,
+            $softDeletes,
+            $generateConfig
         );
 
         $this->command->info("🤫 Fillable fields and relationships added to {$modelName} model");
@@ -138,7 +141,7 @@ PHP;
     }
 
     /**
-     * Build fillable array string for model
+     * Build a fillable array string for a model
      */
     private function buildFillableArray(array $fields): string
     {
@@ -148,7 +151,7 @@ PHP;
     }
 
     /**
-     * Build relationship methods for model
+     * Build relationship methods for a model
      */
     private function buildRelationshipMethods(array $relations): string
     {
@@ -157,22 +160,179 @@ PHP;
         }
 
         $relationshipMethods = '';
-        foreach ($relations as $relationName => $meta) {
-            $relationName = Str::camel($relationName);
-            $type = $meta['type'];
-            $relatedModel = $meta['model'];
 
-            $relationshipMethods .= <<<PHP
+        foreach ($relations as $relationType => $relatedModels) {
+            $relationType = Str::camel($relationType);
 
+            // Parse the related models (can be comma-separated)
+            $models = is_array($relatedModels) ? $relatedModels : array_map('trim', explode(',', $relatedModels));
 
-    public function {$relationName}()
-    {
-        return \$this->{$type}({$relatedModel}::class);
-    }
-PHP;
+            foreach ($models as $modelDefinition) {
+                $modelDefinition = trim($modelDefinition);
+
+                // Parse model name and optional method name
+                // Format: ModelName:methodName or just ModelName
+                $parts = explode(':', $modelDefinition);
+                $relatedModel = trim($parts[0]);
+                $methodName = isset($parts[1]) ? trim($parts[1]) : null;
+
+                // Generate a method name if not provided
+                if (! $methodName) {
+                    $methodName = $this->generateMethodName($relationType, $relatedModel);
+                }
+
+                $relationshipMethods .= $this->buildRelationshipMethod($relationType, $relatedModel, $methodName);
+            }
         }
 
         return $relationshipMethods;
+    }
+
+    private function generateMethodName(string $relationType, string $relatedModel): string
+    {
+        return match ($relationType) {
+            'hasOne', 'belongsTo', 'morphOne', 'morphTo' => Str::camel($relatedModel),
+            'hasMany', 'belongsToMany', 'hasManyThrough', 'morphMany', 'morphToMany', 'morphedByMany' => Str::camel(Str::plural($relatedModel)),
+            default => Str::camel($relatedModel),
+        };
+    }
+
+    private function buildRelationshipMethod(string $relationType, string $relatedModel, string $methodName): string
+    {
+        $modelClass = $relatedModel;
+
+        switch ($relationType) {
+            case 'hasOne':
+                return <<<PHP
+
+
+    public function {$methodName}(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return \$this->hasOne({$modelClass}::class);
+    }
+PHP;
+
+            case 'hasMany':
+                return <<<PHP
+
+
+    public function {$methodName}(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return \$this->hasMany({$modelClass}::class);
+    }
+PHP;
+
+            case 'belongsTo':
+                $foreignKey = Str::snake($relatedModel).'_id';
+
+                return <<<PHP
+
+
+    public function {$methodName}(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return \$this->belongsTo({$modelClass}::class);
+    }
+PHP;
+
+            case 'belongsToMany':
+                return <<<PHP
+
+
+    public function {$methodName}(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return \$this->belongsToMany({$modelClass}::class);
+    }
+PHP;
+
+            case 'hasOneThrough':
+                return <<<PHP
+
+
+    public function {$methodName}(): \Illuminate\Database\Eloquent\Relations\HasOneThrough
+    {
+        return \$this->hasOneThrough({$modelClass}::class, Through::class);
+    }
+PHP;
+
+            case 'hasManyThrough':
+                return <<<PHP
+
+
+    public function {$methodName}(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
+    {
+        return \$this->hasManyThrough({$modelClass}::class, Through::class);
+    }
+PHP;
+
+            case 'morphOne':
+                $morphName = Str::snake($methodName);
+
+                return <<<PHP
+
+
+    public function {$methodName}(): \Illuminate\Database\Eloquent\Relations\MorphOne
+    {
+        return \$this->morphOne({$modelClass}::class, '{$morphName}');
+    }
+PHP;
+
+            case 'morphMany':
+                $morphName = Str::singular(Str::snake($methodName));
+
+                return <<<PHP
+
+
+    public function {$methodName}(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return \$this->morphMany({$modelClass}::class, '{$morphName}');
+    }
+PHP;
+
+            case 'morphTo':
+                return <<<PHP
+
+
+    public function {$methodName}(): \Illuminate\Database\Eloquent\Relations\MorphTo
+    {
+        return \$this->morphTo();
+    }
+PHP;
+
+            case 'morphToMany':
+                $morphName = Str::snake($methodName);
+
+                return <<<PHP
+
+
+    public function {$methodName}(): \Illuminate\Database\Eloquent\Relations\MorphToMany
+    {
+        return \$this->morphToMany({$modelClass}::class, '{$morphName}');
+    }
+PHP;
+
+            case 'morphedByMany':
+                $morphName = Str::snake($methodName);
+
+                return <<<PHP
+
+
+    public function {$methodName}(): \Illuminate\Database\Eloquent\Relations\MorphedByMany
+    {
+        return \$this->morphedByMany({$modelClass}::class, '{$morphName}');
+    }
+PHP;
+
+            default:
+                // Fallback for custom or unknown relationship types
+                return <<<PHP
+
+
+    public function {$methodName}()
+    {
+        return \$this->{$relationType}({$modelClass}::class);
+    }
+PHP;
+        }
     }
 
     /**
@@ -185,11 +345,53 @@ PHP;
         string $relationshipMethods,
         string $casts,
         string $getters,
-        string $setters
+        string $setters,
+        string $primaryKey = 'id',
+        bool $softDeletes = false,
+        $generateConfig = []
     ): void {
         try {
             $stubPath = $this->stubPathResolver->resolveStubPath('model');
             $stubContent = File::get($stubPath);
+
+            // Build use statements
+            $useStatements = [];
+
+            if ($softDeletes) {
+                $useStatements[] = "use Illuminate\Database\Eloquent\SoftDeletes;";
+            }
+
+            if (in_array('seeder', $generateConfig, true)) {
+                $useStatements[] = "use Illuminate\Database\Eloquent\Factories\HasFactory;";
+            }
+
+            $useStatementsString = ! empty($useStatements) ? implode("\n", $useStatements)."\n" : '';
+
+            // Build traits
+            $traits = [];
+
+            if (in_array('seeder', $generateConfig, true)) {
+                $traits[] = 'HasFactory';
+            }
+
+            if ($softDeletes) {
+                $traits[] = 'SoftDeletes';
+            }
+
+            $traitsString = ! empty($traits) ? "\n    use ".implode(', ', $traits).';' : '';
+
+            // Build primary key configuration
+            $primaryKeyConfig = '';
+            if ($primaryKey !== 'id') {
+                $primaryKeyConfig = "\n    protected \$primaryKey = '{$primaryKey}';";
+                // Check if it's a UUID or non-incrementing key
+                if ($primaryKey === 'uuid' || ! str_ends_with($primaryKey, '_id')) {
+                    $primaryKeyConfig .= "\n    public \$incrementing = false;";
+                    if ($primaryKey === 'uuid') {
+                        $primaryKeyConfig .= "\n    protected \$keyType = 'string';";
+                    }
+                }
+            }
 
             $modelContent = str_replace([
                 '{{ model }}',
@@ -198,6 +400,9 @@ PHP;
                 '{{ casts }}',
                 '{{ getter }}',
                 '{{ setter }}',
+                '{{ use_statements }}',
+                '{{ traits }}',
+                '{{ primary_key }}',
             ], [
                 $modelName,
                 $fillableArray,
@@ -205,6 +410,9 @@ PHP;
                 $casts,
                 $getters,
                 $setters,
+                $useStatementsString,
+                $traitsString,
+                $primaryKeyConfig,
             ], $stubContent);
 
             File::put($modelPath, $modelContent);

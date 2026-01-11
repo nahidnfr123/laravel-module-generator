@@ -39,7 +39,6 @@ class GenerateDbDiagram extends Command
         $outputFilePath = $this->option('output') ?: $config['dbdiagram']['output_path'];
 
         $this->info("Reading YAML schema from: {$yamlFilePath}");
-        // $this->info("Output will be saved to: {$outputFilePath}");
 
         if (! file_exists($yamlFilePath)) {
             $this->error("File not found: $yamlFilePath");
@@ -49,8 +48,8 @@ class GenerateDbDiagram extends Command
 
         // Ensure output directory exists
         $outputDir = dirname($outputFilePath);
-        if (! is_dir($outputDir)) {
-            mkdir($outputDir, 0755, true);
+        if (! is_dir($outputDir) && ! mkdir($outputDir, 0755, true) && ! is_dir($outputDir)) {
+            throw new \RuntimeException(sprintf('Directory "%s" was not created', $outputDir));
         }
 
         $schema = Yaml::parseFile($yamlFilePath);
@@ -101,6 +100,7 @@ class GenerateDbDiagram extends Command
 
     /**
      * Parses a single field definition from the YAML schema.
+     * Now supports both old array format and new string format.
      */
     protected function parseField(string $fieldName, array|string $fieldDefinition): string
     {
@@ -108,17 +108,34 @@ class GenerateDbDiagram extends Command
         $modifiersNote = '';
 
         if (is_string($fieldDefinition)) {
-            [$fieldType, $modifiers] = explode(':', $fieldDefinition, 2) + [null, null];
+            // New format: "string:unique" or "foreignId:categories:nullable"
+            $parts = explode(':', $fieldDefinition);
+            $fieldType = $parts[0];
             $type = $this->mapFieldType($fieldType);
-            if ($modifiers && str_contains($modifiers, 'nullable')) {
+
+            // Check for nullable modifier
+            if (in_array('nullable', $parts)) {
                 $modifiersNote .= ' [note: "nullable"]';
             }
+
+            // Check for unique modifier
+            if (in_array('unique', $parts)) {
+                $modifiersNote .= ' [note: "unique"]';
+            }
+
+            // Check for the default value
+            foreach ($parts as $part) {
+                if (str_starts_with($part, 'default ')) {
+                    $defaultValue = substr($part, 8);
+                    $modifiersNote .= ' [note: "default: '.$defaultValue.'"]';
+                }
+            }
         } elseif (is_array($fieldDefinition)) {
+            // Old format: array with 'type', 'nullable', etc.
             $type = $this->mapFieldType($fieldDefinition['type'] ?? 'string');
             if (isset($fieldDefinition['nullable']) && $fieldDefinition['nullable']) {
                 $modifiersNote .= ' [note: "nullable"]';
             }
-            // You could add more attribute parsing here if needed (e.g., default values)
         }
 
         return "  $fieldName $type$modifiersNote\n";
@@ -130,20 +147,60 @@ class GenerateDbDiagram extends Command
     protected function mapFieldType(?string $laravelType): string
     {
         return match ($laravelType) {
-            'foreignId' => 'integer',
-            'string' => 'string',
-            'image' => 'string',
-            'file' => 'string',
+            'foreignId', 'integer' => 'integer',
             'text' => 'text',
             'boolean' => 'boolean',
-            'integer' => 'integer',
             'double' => 'double',
             'decimal' => 'decimal',
             'date' => 'date',
-            'dateTime', 'timestamp' => 'datetime',
-            'softDeletes' => 'datetime',
+            'dateTime', 'timestamp', 'softDeletes' => 'datetime',
             default => 'string',
         };
+    }
+
+    /**
+     * Parses relations from the new compact format into normalized structure.
+     */
+    protected function parseRelations(array $tableDefinition): array
+    {
+        $relations = [];
+
+        if (! isset($tableDefinition['relations'])) {
+            return $relations;
+        }
+
+        // Check if it's the old format (array with relation names as keys)
+        $firstRelation = reset($tableDefinition['relations']);
+        if (is_array($firstRelation) && isset($firstRelation['type'])) {
+            // Old format
+            return $tableDefinition['relations'];
+        }
+
+        // New format: parse compact relation strings
+        foreach ($tableDefinition['relations'] as $relationType => $relationString) {
+            if (! is_string($relationString)) {
+                continue;
+            }
+
+            // Split by comma to get individual relations
+            $relationParts = array_map('trim', explode(',', $relationString));
+
+            foreach ($relationParts as $relationPart) {
+                // Parse "Model:functionName" format
+                if (str_contains($relationPart, ':')) {
+                    [$model, $functionName] = explode(':', $relationPart, 2);
+                    $model = trim($model);
+                    $functionName = trim($functionName);
+
+                    $relations[$functionName] = [
+                        'type' => $relationType,
+                        'model' => $model,
+                    ];
+                }
+            }
+        }
+
+        return $relations;
     }
 
     /**
@@ -152,7 +209,9 @@ class GenerateDbDiagram extends Command
     protected function generateRelationships(string $tableName, array $tableDefinition): string
     {
         $output = '';
-        foreach ($tableDefinition['relations'] ?? [] as $relationName => $relation) {
+        $relations = $this->parseRelations($tableDefinition);
+
+        foreach ($relations as $relationName => $relation) {
             $output .= $this->parseRelation($tableName, $relationName, $relation);
         }
 
@@ -167,13 +226,14 @@ class GenerateDbDiagram extends Command
         $columnOverrides = [
             'creator' => 'created_by',
             'updater' => 'updated_by',
+            'parent' => 'parent_id',
         ];
 
         // camelCase to snake_case conversion for foreign key
         $foreignKey = $columnOverrides[$relationName] ?? (Str::snake($relationName).'_id');
         $fromTableName = Str::snake(Str::pluralStudly($fromTable));
 
-        if ($relation['type'] === 'belongsTo') {
+        if (isset($relation['type']) && $relation['type'] === 'belongsTo') {
             $targetModel = $relation['model'];
             $targetTableName = Str::snake(Str::pluralStudly($targetModel));
 
