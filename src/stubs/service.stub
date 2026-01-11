@@ -20,10 +20,8 @@ class {{ model }}Service
      * Create a new {{ model }}
      */
     public function store(array $data)
-    {
-{{ uploadLogicStore }}
-        ${{ variable }} = {{ model }}::create($data);
-        {{ relationalQueryStore }}
+    {{{ uploadLogicStore }}
+        ${{ variable }} = {{ model }}::create($data);{{ relationalQueryStore }}
 
         return ${{ variable }};
     }
@@ -32,10 +30,8 @@ class {{ model }}Service
      * Update {{ model }}
      */
     public function update(array $data, ${{ variable }})
-    {
-{{ uploadLogicUpdate }}
-        ${{ variable }}->update($data);
-        {{ relationalQueryUpdate }}
+    {{{ uploadLogicUpdate }}
+        ${{ variable }}->update($data);   {{ relationalQueryUpdate }}
 
         return ${{ variable }};
     }
@@ -44,8 +40,7 @@ class {{ model }}Service
      * Delete {{ model }}
      */
     public function delete(${{ variable }})
-    {
-{{ deleteFileLogic }}
+    {{{ deleteFileLogic }}
         return ${{ variable }}->delete();
     }
 }

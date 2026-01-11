@@ -8,7 +8,6 @@ use App\Http\Resources\{{ model }}\{{ model }}Collection;
 use App\Http\Resources\{{ model }}\{{ model }}Resource;
 use App\Models\{{ model }};
 use App\Services\{{ model }}Service;
-use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;

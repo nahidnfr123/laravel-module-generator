@@ -3,9 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-
+{{ use_statements }}
 class {{ model }} extends Model
-{
+{{{ traits }}{{ primary_key }}
+
     protected $fillable = [
         {{ fillable }}
     ];
