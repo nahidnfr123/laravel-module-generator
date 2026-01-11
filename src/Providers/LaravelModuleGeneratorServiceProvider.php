@@ -8,6 +8,7 @@ use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateDbDiagram;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateModuleFromModelName;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateModuleFromYaml;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\GeneratePostmanCollection;
+use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateYamlFromDbDiagram;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\Install;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\ModuleRollback;
 
@@ -28,6 +29,7 @@ class LaravelModuleGeneratorServiceProvider extends ServiceProvider
                 GenerateModuleFromYaml::class,
                 GeneratePostmanCollection::class,
                 GenerateDbDiagram::class,
+                GenerateYamlFromDbDiagram::class,
                 ModuleRollback::class,
             ]);
 
