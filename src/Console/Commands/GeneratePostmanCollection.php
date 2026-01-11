@@ -199,12 +199,12 @@ class GeneratePostmanCollection extends Command
         $requestableRelations = [];
         $parsedRelations = $this->parseRelations($modelConfig);
 
-        // Get make_requests list
+        // Get nested_requests list
         $makeRequests = [];
-        if (isset($modelConfig['make_requests'])) {
-            $makeRequests = is_array($modelConfig['make_requests'])
-                ? $modelConfig['make_requests']
-                : array_map('trim', explode(',', $modelConfig['make_requests']));
+        if (isset($modelConfig['nested_requests'])) {
+            $makeRequests = is_array($modelConfig['nested_requests'])
+                ? $modelConfig['nested_requests']
+                : array_map('trim', explode(',', $modelConfig['nested_requests']));
         }
 
         foreach ($parsedRelations as $relationName => $relationConfig) {
@@ -697,10 +697,10 @@ class GeneratePostmanCollection extends Command
         // Add explicit relations (belongsTo relations without makeRequest)
         $parsedRelations = $this->parseRelations($modelConfig);
         $makeRequests = [];
-        if (isset($modelConfig['make_requests'])) {
-            $makeRequests = is_array($modelConfig['make_requests'])
-                ? $modelConfig['make_requests']
-                : array_map('trim', explode(',', $modelConfig['make_requests']));
+        if (isset($modelConfig['nested_requests'])) {
+            $makeRequests = is_array($modelConfig['nested_requests'])
+                ? $modelConfig['nested_requests']
+                : array_map('trim', explode(',', $modelConfig['nested_requests']));
         }
 
         foreach ($parsedRelations as $relationName => $relationConfig) {

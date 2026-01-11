@@ -225,7 +225,7 @@ Product:
     belongsTo: Vendor, Category, Brand, User:creator, User:updater
     hasMany: Review, ProductVariant:variants, PriceHistory, ProductImage:images, Wishlist, OrderItem, Inventory
     belongsToMany: ProductAttribute
-  make_requests: variants, images
+  nested_requests: variants, images
 
 ProductImage:
   generate_except: seeder
