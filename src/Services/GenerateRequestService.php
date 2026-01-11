@@ -43,7 +43,7 @@ class GenerateRequestService
                 $this->command->warn("⚠️ Deleted existing request: {$modelConfig['classes']['request']}");
             }
 
-            $this->generateRequest($modelConfig['studlyName'], $modelConfig['fields']);
+            $this->generateRequest($modelConfig['studlyName'], $modelConfig['fields'], $modelConfig['originalName']);
         }
     }
 
@@ -52,7 +52,6 @@ class GenerateRequestService
      */
     protected function generateRequest(string $modelName, array $fields, ?string $originalModelName = null): void
     {
-        // If originalModelName is not provided, use modelName (backward compatibility)
         $originalModelName = $originalModelName ?? $modelName;
 
         $requestClass = "{$modelName}Request";
@@ -65,7 +64,6 @@ class GenerateRequestService
             return;
         }
 
-        // Get validation rules including nested relations with makeRequest: true
         $rulesFormatted = $this->buildValidationRulesWithRelations($originalModelName, $fields);
         $this->createRequestFile($stubPath, $requestPath, $modelName, $rulesFormatted);
 
@@ -73,7 +71,7 @@ class GenerateRequestService
     }
 
     /**
-     * Build validation rules for request including nested relations with makeRequest: true
+     * Build validation rules for request including nested relations
      */
     private function buildValidationRulesWithRelations(string $modelName, array $fields): string
     {
@@ -84,7 +82,7 @@ class GenerateRequestService
             $rules[$name] = $this->generateFieldValidationRule($name, $definition);
         }
 
-        // Add validation rules for relations with makeRequest: true
+        // Add validation rules for nested relations
         $relationRules = $this->getRelationValidationRules($modelName);
         if (! empty($relationRules)) {
             $rules = array_merge($rules, $relationRules);
@@ -94,92 +92,166 @@ class GenerateRequestService
     }
 
     /**
-     * Get validation rules for relations marked with makeRequest: true
+     * Get validation rules for nested relations
      */
     private function getRelationValidationRules(string $modelName, string $prefix = ''): array
     {
-        $models = $this->allModels;
         $relationRules = [];
 
-        // Check if current model has relations defined
-        if (! isset($models[$modelName]['relations'])) {
+        // Find the current model data
+        $currentModelData = null;
+        $currentModelKey = null;
+
+        foreach ($this->allModels as $key => $data) {
+            if (Str::studly($key) === $modelName) {
+                $currentModelData = $data;
+                $currentModelKey = $key;
+                break;
+            }
+        }
+
+        if (! $currentModelData || ! isset($currentModelData['nested_requests'])) {
             return $relationRules;
         }
 
-        $relations = $models[$modelName]['relations'];
+        // Get nested request relations
+        $nestedRequests = is_array($currentModelData['nested_requests'])
+            ? $currentModelData['nested_requests']
+            : array_map('trim', explode(',', $currentModelData['nested_requests']));
 
-        foreach ($relations as $relationName => $relationConfig) {
-            // Skip if makeRequest is not true
-            if (! isset($relationConfig['makeRequest']) || $relationConfig['makeRequest'] !== true) {
+        // Parse relations from new structure
+        $relations = $this->parseRelations($currentModelData['relations'] ?? []);
+
+        foreach ($nestedRequests as $relationName) {
+            $relationName = trim($relationName);
+
+            // Find the relation configuration
+            $relationConfig = null;
+            foreach ($relations as $relName => $relConfig) {
+                if ($relName === $relationName) {
+                    $relationConfig = $relConfig;
+                    break;
+                }
+            }
+
+            if (! $relationConfig) {
+                $this->command->warn("⚠️ Nested request relation '{$relationName}' not found in relations for {$modelName}");
+
                 continue;
             }
 
-            // Only process hasMany and hasOne relations (not belongsTo)
+            // Only process hasMany and hasOne relations
             if (! in_array($relationConfig['type'], ['hasMany', 'hasOne'])) {
+                $this->command->warn("⚠️ Nested request '{$relationName}' must be hasMany or hasOne relation");
+
                 continue;
             }
 
             $relatedModelName = $relationConfig['model'];
 
-            // Check if related model exists in YAML
-            if (! isset($models[$relatedModelName])) {
+            // Find related model data
+            $relatedModelData = null;
+            foreach ($this->allModels as $key => $data) {
+                if (Str::studly($key) === $relatedModelName) {
+                    $relatedModelData = $data;
+                    break;
+                }
+            }
+
+            if (! $relatedModelData) {
                 $this->command->warn("⚠️ Related model '{$relatedModelName}' not found in YAML configuration");
 
                 continue;
             }
 
-            $relatedModelData = $models[$relatedModelName];
-
-            // Generate the array name based on relation type
+            // Generate validation rules based on relation type
             if ($relationConfig['type'] === 'hasMany') {
-                $arrayName = Str::snake($relationName); // Use the relation name directly
+                $arrayName = Str::snake($relationName);
                 $currentPrefix = $prefix ? $prefix.'.' : '';
                 $fullArrayPath = $currentPrefix.$arrayName;
 
-                // Add validation for the array itself
                 $relationRules[$fullArrayPath] = 'nullable|array';
                 $relationRules["{$fullArrayPath}.*"] = 'required|array';
 
+                // Add field validations
+                if (isset($relatedModelData['fields'])) {
+                    foreach ($relatedModelData['fields'] as $fieldName => $fieldDefinition) {
+                        // Skip foreign key to parent
+                        $parentForeignKey = Str::snake($currentModelKey).'_id';
+                        if ($fieldName === $parentForeignKey) {
+                            continue;
+                        }
+
+                        $validationRule = $this->generateFieldValidationRule($fieldName, $fieldDefinition);
+                        $relationRules["{$fullArrayPath}.*.{$fieldName}"] = $validationRule;
+                    }
+                }
             } else { // hasOne
                 $objectName = Str::snake($relationName);
                 $currentPrefix = $prefix ? $prefix.'.' : '';
                 $fullObjectPath = $currentPrefix.$objectName;
 
-                // Add validation for the object itself
                 $relationRules[$fullObjectPath] = 'nullable|array';
-            }
 
-            // Add validation for each field in the related model
-            if (isset($relatedModelData['fields'])) {
-                foreach ($relatedModelData['fields'] as $fieldName => $fieldDefinition) {
-                    // Skip foreign key fields that reference the parent
-                    $parentForeignKey = Str::snake($modelName).'_id';
-                    if ($fieldName === $parentForeignKey) {
-                        continue;
-                    }
+                // Add field validations
+                if (isset($relatedModelData['fields'])) {
+                    foreach ($relatedModelData['fields'] as $fieldName => $fieldDefinition) {
+                        $parentForeignKey = Str::snake($currentModelKey).'_id';
+                        if ($fieldName === $parentForeignKey) {
+                            continue;
+                        }
 
-                    $validationRule = $this->generateFieldValidationRule($fieldName, $fieldDefinition);
-
-                    if ($relationConfig['type'] === 'hasMany') {
-                        $relationRules["{$fullArrayPath}.*.{$fieldName}"] = $validationRule;
-                    } else { // hasOne
+                        $validationRule = $this->generateFieldValidationRule($fieldName, $fieldDefinition);
                         $relationRules["{$fullObjectPath}.{$fieldName}"] = $validationRule;
                     }
                 }
             }
-
-            // Recursively get validation rules for nested relations
-            //            $nestedRules = $this->getRelationValidationRules(
-            //                $relatedModelName,
-            //                $relationConfig['type'] === 'hasMany' ? "{$fullArrayPath}.*" : $fullObjectPath
-            //            );
-
-            //            if (! empty($nestedRules)) {
-            //                $relationRules = array_merge($relationRules, $nestedRules);
-            //            }
         }
 
         return $relationRules;
+    }
+
+    /**
+     * Parse relations from new YAML structure
+     */
+    private function parseRelations(array $relationsData): array
+    {
+        $relations = [];
+
+        foreach ($relationsData as $relationType => $relationsList) {
+            if (! is_string($relationsList)) {
+                continue;
+            }
+
+            // Split by comma to get individual relations
+            $relationItems = array_map('trim', explode(',', $relationsList));
+
+            foreach ($relationItems as $relationDefinition) {
+                // Parse "Model:relationName" format or just "Model"
+                $parts = explode(':', trim($relationDefinition));
+                $model = trim($parts[0]);
+
+                if (isset($parts[1])) {
+                    $name = trim($parts[1]);
+                } else {
+                    // Default name based on relation type
+                    if ($relationType === 'hasMany') {
+                        $name = Str::camel(Str::plural($model));
+                    } elseif ($relationType === 'belongsToMany') {
+                        $name = Str::camel(Str::plural($model));
+                    } else {
+                        $name = Str::camel($model);
+                    }
+                }
+
+                $relations[$name] = [
+                    'type' => $relationType,
+                    'model' => $model,
+                ];
+            }
+        }
+
+        return $relations;
     }
 
     /**
@@ -197,11 +269,11 @@ class GenerateRequestService
             case 'image':
                 $ruleSet[] = 'image';
                 $ruleSet[] = 'mimes:jpeg,jpg,png,gif,webp,svg';
-                $ruleSet[] = 'max:2048'; // 2MB max size
+                $ruleSet[] = 'max:2048';
                 break;
             case 'file':
                 $ruleSet[] = 'file';
-                $ruleSet[] = 'max:10240'; // 10MB max size
+                $ruleSet[] = 'max:10240';
                 break;
             case 'string':
             case 'text':
@@ -221,6 +293,9 @@ class GenerateRequestService
             case 'dateTime':
             case 'timestamp':
                 $ruleSet[] = 'date';
+                break;
+            case 'json':
+                $ruleSet[] = 'array';
                 break;
             case 'foreignId':
                 $relatedTable = $parts[0] ?? Str::snake(Str::pluralStudly(Str::beforeLast($name, '_id')));
@@ -263,7 +338,6 @@ class GenerateRequestService
             $stub
         );
 
-        // Ensure the directory exists
         $directory = dirname($requestPath);
         if (! File::exists($directory)) {
             File::makeDirectory($directory, 0755, true);

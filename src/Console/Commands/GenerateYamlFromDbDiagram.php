@@ -289,7 +289,7 @@ class GenerateYamlFromDbDiagram extends Command
         }
 
         // Add a default value if present
-        if (!empty($fieldInfo['default'])) {
+        if (! empty($fieldInfo['default'])) {
             $defaultValue = $fieldInfo['default'];
             $parts[] = 'default '.$defaultValue;
         }
@@ -369,8 +369,8 @@ class GenerateYamlFromDbDiagram extends Command
         $specialCases = [
             'created_by' => 'creator',
             'updated_by' => 'updater',
-            'verified_by_id' => 'verifiedBy',
-            'changed_by_id' => 'changedBy',
+            //            'verified_by_id' => 'verifiedBy',
+            //            'changed_by_id' => 'changedBy',
         ];
 
         if (isset($specialCases[$columnName])) {
@@ -418,7 +418,7 @@ class GenerateYamlFromDbDiagram extends Command
                 $formatted[] = $relation['model'].':'.$relation['name'];
             }
 
-            if (!empty($formatted)) {
+            if (! empty($formatted)) {
                 $compacted[$type] = implode(', ', $formatted);
             }
         }

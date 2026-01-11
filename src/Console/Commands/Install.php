@@ -100,20 +100,114 @@ class Install extends Command
 # Define your models here. Example:
 
 User:
-  generate:
-    model: false
-    migration: false
-    controller: false
-    service: false
-    request: false
-    resource: false
-    collection: false
+  generate_only: seeder
   fields:
     name: string
-    username: string:nullable
     email: string:unique
     email_verified_at: dateTime:nullable
     password: string
+    avatar: image:nullable
+    status: boolean:default true
+    last_login_at: timestamp:nullable
+
+Category:
+  generate_except: seeder
+  fields:
+    name: string:unique
+    slug: string:unique
+    description: text:nullable
+    image: image:nullable
+    parent_id: foreignId:categories:nullable
+    is_active: boolean:default true
+    display_order: integer:default 0
+    seo_title: string:nullable
+    seo_description: string:nullable
+    seo_keywords: string:nullable
+    created_by: foreignId:users:nullable
+    updated_by: foreignId:users:nullable
+  relations:
+    belongsTo: Category:parent, User:creator, User:updater
+    hasMany: Category:children, Product:products
+  nested_requests: children
+
+Product:
+  generate_except: seeder
+  fields:
+    vendor_id: foreignId:vendors:nullable
+    category_id: foreignId:categories
+    brand_id: foreignId:brands:nullable
+    name: string
+    slug: string:unique
+    sku: string:unique
+    description: text:nullable
+    short_description: string:nullable
+    price: double:default 0
+    cost_price: double:default 0
+    compare_price: double:default 0
+    quantity: integer:default 0
+    is_active: boolean:default true
+    is_featured: boolean:default false
+    rating: double:default 0
+    total_reviews: integer:default 0
+    weight: double:nullable
+    dimensions: string:nullable
+    seo_title: string:nullable
+    seo_description: string:nullable
+    seo_keywords: string:nullable
+    meta_data: json:nullable
+    created_by: foreignId:users:nullable
+    updated_by: foreignId:users:nullable
+    deleted_at: dateTime:nullable
+  relations:
+    belongsTo: Vendor, Category, Brand, User:creator, User:updater
+    hasMany: Review, ProductVariant:variants, ProductImage:images
+    belongsToMany: ProductAttribute
+  nested_requests: variants, images
+
+ProductImage:
+  generate_except: seeder
+  fields:
+    product_id: foreignId:products
+    image_url: image
+    alt_text: string:nullable
+    display_order: integer:default 0
+    is_thumbnail: boolean:default false
+    created_by: foreignId:users:nullable
+    updated_by: foreignId:users:nullable
+  relations:
+    belongsTo: Product, User:creator, User:updater
+
+ProductVariant:
+  generate_except: seeder
+  fields:
+    product_id: foreignId:products
+    sku: string:unique
+    name: string
+    price: double:nullable
+    cost_price: double:nullable
+    quantity: integer:default 0
+    attributes_data: json:nullable
+    image_id: foreignId:product_images:nullable
+    is_active: boolean:default true
+    created_by: foreignId:users:nullable
+    updated_by: foreignId:users:nullable
+  relations:
+    belongsTo: Product, ProductImage:image, User:creator, User:updater
+
+ProductAttributeValue:
+  generate_except: seeder
+  fields:
+    attribute_id: foreignId:product_attributes
+    value: string
+    slug: string
+    display_order: integer:default 0
+    created_by: foreignId:users:nullable
+    updated_by: foreignId:users:nullable
+  relations:
+    belongsTo: ProductAttribute:attribute, User:creator, User:updater
+  unique:
+    - [product_attribute_id, value]
+
 
 YAML
             );

@@ -194,7 +194,6 @@ Brand:
     hasMany: Product:products
 
 Product:
-  primaryKey: uuid
   generate: all
   fields:
     vendor_id: foreignId:vendors:nullable

@@ -44,8 +44,8 @@ class GenerateModuleFromYaml extends Command
     public function handle()
     {
         if ($this->option('force')) {
-            //            $confirmation = $this->ask('This command will replace existing module files and generate module files based on a YAML configuration. Do you want to proceed? (yes/no)', 'no');
-            $confirmation = 'yes';
+            $confirmation = $this->ask('This command will replace existing module files and generate module files based on a YAML configuration. Do you want to proceed? (yes/no)', 'no');
+            //            $confirmation = 'yes';
             if (strtolower($confirmation) !== 'yes' && strtolower($confirmation) !== 'y' && strtolower($confirmation) !== 'Y') {
                 $this->info('Command cancelled.');
 
@@ -153,8 +153,7 @@ class GenerateModuleFromYaml extends Command
             } elseif (is_array($modelData['generate'])) {
                 $generateOptions = $modelData['generate'];
             }
-        }
-        // Priority 2: Check for 'generate_only'
+        } // Priority 2: Check for 'generate_only'
         elseif (isset($modelData['generate_only'])) {
             if (is_string($modelData['generate_only'])) {
                 $generateOptions = array_map('trim', explode(',', $modelData['generate_only']));
@@ -163,8 +162,7 @@ class GenerateModuleFromYaml extends Command
             }
             // Only keep valid options
             $generateOptions = array_intersect($allGenerateOptions, $generateOptions);
-        }
-        // Priority 3: Check for 'generate_except'
+        } // Priority 3: Check for 'generate_except'
         elseif (isset($modelData['generate_except'])) {
             // Start with all options
             $generateOptions = $allGenerateOptions;
@@ -179,8 +177,7 @@ class GenerateModuleFromYaml extends Command
 
             // Remove excepted items from the list
             $generateOptions = array_diff($generateOptions, $exceptOptions);
-        }
-        // Default: If none of the above are specified, generate nothing
+        } // Default: If none of the above are specified, generate nothing
         else {
             $generateOptions = [];
         }
