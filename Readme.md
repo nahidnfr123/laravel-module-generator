@@ -271,7 +271,6 @@ Unit:
             model: User
 
 UnitConversion:
-    requestParent: Unit
     fields:
         from_unit_id: foreignId:units
         to_unit_id: foreignId:units
