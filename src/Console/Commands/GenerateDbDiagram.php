@@ -100,7 +100,7 @@ class GenerateDbDiagram extends Command
 
     /**
      * Parses a single field definition from the YAML schema.
-     * Now supports both old array format and new string format.
+     * Now supports both the old array format and the new string format.
      */
     protected function parseField(string $fieldName, array|string $fieldDefinition): string
     {
@@ -159,7 +159,7 @@ class GenerateDbDiagram extends Command
     }
 
     /**
-     * Parses relations from the new compact format into normalized structure.
+     * Parses relations from the new compact format into a normalized structure.
      */
     protected function parseRelations(array $tableDefinition): array
     {

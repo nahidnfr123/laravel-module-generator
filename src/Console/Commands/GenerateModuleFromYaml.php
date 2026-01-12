@@ -259,7 +259,7 @@ class GenerateModuleFromYaml extends Command
                 $this->warn("⚠️ Deleted existing model: {$modelConfig['studlyName']}");
             }
 
-            new GenerateModelService($this)
+            (new GenerateModelService($this))
                 ->generateModel(
                     $modelConfig['studlyName'],
                     $modelConfig['fields'],
@@ -270,7 +270,7 @@ class GenerateModuleFromYaml extends Command
                 );
         }
         if (in_array('migration', $generateConfig, true)) {
-            new GenerateMigrationService($this)->generateMigration($modelConfig['studlyName'], $modelConfig['fields']);
+            (new GenerateMigrationService($this))->generateMigration($modelConfig['studlyName'], $modelConfig['fields']);
         }
     }
 
@@ -284,7 +284,7 @@ class GenerateModuleFromYaml extends Command
         $force = $this->option('force');
 
         if (in_array('request', $generateConfig, true)) {
-            new GenerateRequestService($this, $this->parseYamlFile(), $generateConfig)
+            (new GenerateRequestService($this, $this->parseYamlFile(), $generateConfig))
                 ->handleRequestGeneration($modelConfig, $force);
         }
 
@@ -303,11 +303,11 @@ class GenerateModuleFromYaml extends Command
         }
 
         if (in_array('controller', $generateConfig, true)) {
-            new AppendRouteService($this)->appendRoute($modelConfig['tableName'], $modelConfig['classes']['controller']);
+            (new AppendRouteService($this))->appendRoute($modelConfig['tableName'], $modelConfig['classes']['controller']);
         }
 
         if (in_array('seeder', $generateConfig, true)) {
-            new GenerateSeederService($this)->generateSeeder($modelConfig['studlyName'], $modelConfig['fields'], $force);
+            (new GenerateSeederService($this))->generateSeeder($modelConfig['studlyName'], $modelConfig['fields'], $force);
         }
     }
 

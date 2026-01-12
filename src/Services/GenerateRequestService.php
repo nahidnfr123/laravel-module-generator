@@ -119,7 +119,7 @@ class GenerateRequestService
             ? $currentModelData['nested_requests']
             : array_map('trim', explode(',', $currentModelData['nested_requests']));
 
-        // Parse relations from new structure
+        // Parse relations from a new structure
         $relations = $this->parseRelations($currentModelData['relations'] ?? []);
 
         foreach ($nestedRequests as $relationName) {
@@ -212,7 +212,7 @@ class GenerateRequestService
     }
 
     /**
-     * Parse relations from new YAML structure
+     * Parse relations from the new YAML structure
      */
     private function parseRelations(array $relationsData): array
     {
