@@ -315,7 +315,6 @@ class GeneratePostmanCollection extends Command
     /**
      * Creates a single Postman request item.
      *
-     * @throws \JsonException
      */
     private function createRequest(string $name, string $method, string $url, ?array $body = null, ?array $exampleResponse = null, bool $hasFiles = false): array
     {
