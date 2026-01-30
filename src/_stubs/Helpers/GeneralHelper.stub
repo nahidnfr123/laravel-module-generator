@@ -57,11 +57,14 @@ if (! function_exists('perPage')) {
     function perPage($perPage = 25): int
     {
         $perPage = (int) request('per_page', $perPage);
-        if (getAllData()) {
-            $perPage = 100000000;
-        } // get all data
+        $maxPerPage = 1000;  // Define a reasonable maximum limit
 
-        return $perPage;
+        // Avoid fetching too many records
+        if (getAllData()) {
+            $perPage = $maxPerPage;
+        }
+
+        return min($perPage, $maxPerPage);  // Ensure it's not larger than the max limit
     }
 }
 
