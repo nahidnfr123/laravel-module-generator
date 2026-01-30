@@ -54,7 +54,7 @@ if (! function_exists('inProduction')) {
 }
 
 if (! function_exists('perPage')) {
-    function perPage($perPage = 20): int
+    function perPage($perPage = 25): int
     {
         $perPage = (int) request('per_page', $perPage);
         if (getAllData()) {
@@ -75,7 +75,7 @@ if (! function_exists('getAllData')) {
 if (! function_exists('getOrPaginate')) {
     function getOrPaginate($data)
     {
-        $perPage = request()->get('per_page', 10);
+        $perPage = request()->get('per_page', 25);
         getAllData() ? $data = $data->get() : $data = $data->paginate($perPage);
 
         return $data;
