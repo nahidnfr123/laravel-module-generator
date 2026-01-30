@@ -76,9 +76,9 @@ if (! function_exists('getAllData')) {
 }
 
 if (! function_exists('getOrPaginate')) {
-    function getOrPaginate($data)
+    function getOrPaginate($data, $per_page = 25)
     {
-        $perPage = request()->get('per_page', 25);
+        $perPage = request()->get('per_page', $per_page);
         getAllData() ? $data = $data->get() : $data = $data->paginate($perPage);
 
         return $data;
