@@ -1,10 +1,10 @@
 # Laravel Module Generator
 
-A developer-friendly Laravel package to generate complete modules (Model, Migration, Controller, Service, Resource, Collection, Form Request, and Routes) from a single YAML configuration file. Now includes **Authentication & User Management**, **Postman collection generation**, and **DB diagram export** for streamlined API development and documentation.
+## 📖 Introduction
 
----
+A developer-friendly Laravel package to generate complete modules (Model, Migration, Controller, Service, Resource, Collection, Form Request, and Routes) from a single YAML configuration file. Now includes **Authentication (Sanctum & Passport) & User Management**, **Postman collection generation**, and **DB diagram export** for streamlined API development and documentation.
 
-## ✨ Features
+### ✨ Features
 
 - Generate full Laravel modules from YAML configuration
 - **🆕 Built-in Authentication & User Management**
@@ -28,7 +28,8 @@ A developer-friendly Laravel package to generate complete modules (Model, Migrat
 - Smart fillable and relationship handling
 - Designed for rapid development and prototyping
 
----
+
+
 
 ## 🚀 Installation
 
@@ -38,7 +39,7 @@ Install the package via Composer:
 composer require nahid-ferdous/laravel-module-generator --dev
 ```
 
-### 📦 Service Provider
+### Setup
 
 Generate required files and configurations:
 
@@ -46,30 +47,46 @@ Generate required files and configurations:
 php artisan module-generator:install
 ```
 
-## 📂 Optional: Publish Config & Stubs
-
-You may publish the configuration and stub files to customize them. If you don't publish them, the package will use its built-in defaults automatically.
+Or force install if you've already executed the command:
 
 ```bash
-# Publish configuration file
+php artisan module-generator:install --force
+```
+
+### What Gets Generated
+
+- **Useful Traits** → `app/Traits/`
+- **Global Exception Handler** → `app/Exceptions/ExceptionHandler.php`
+- **Helper Functions** → `app/Helpers/`
+- **Middleware** (CORS & Auth) → `app/Http/Middleware/`
+- **Configuration** → `module/modules.yaml`
+
+### Optional: Publish Config & Stubs
+
+Customize the package defaults by publishing configuration and stubs:
+
+```bash
+# Publish configuration
 php artisan vendor:publish --tag=module-generator-config
 
-# Publish stub files for customization
+# Publish stubs for customization
 php artisan vendor:publish --tag=module-generator-stubs
 ```
 
-This will publish:
+This creates:
+- `config/module-generator.php`
+- `module/stub/` directory
 
-- **Config**: `config/module-generator.php`
-- **Stubs**: `module/stub/`
 
----
+
 
 ## 🔐 Authentication & User Management
 
-### Generate Authentication System
+> **Prerequisites:** Configure your `.env` DB connection before generating the authentication module.
 
-Generate a complete authentication and user management system with a single command:
+### Generate Auth System
+
+Create a complete authentication system with a single command:
 
 ```bash
 php artisan auth:generate
@@ -78,132 +95,145 @@ php artisan auth:generate
 **Available Options:**
 
 ```bash
-php artisan auth:generate --force              # Overwrite existing files without confirmation
-php artisan auth:generate --skip-roles         # Skip roles and permissions setup
+php artisan auth:generate --force                      # Overwrite existing files
+php artisan auth:generate --skip-roles                 # Skip roles & permissions
+php artisan auth:generate --skip-email-verification    # Skip email verification
+php artisan auth:generate --with-social-login          # Include social auth
 ```
 
 ### What Gets Generated
 
-#### Authentication Files
-- ✅ **AuthController** → `app/Http/Controllers/Auth/AuthController.php`
-- ✅ **AuthService** → `app/Services/AuthService.php`
-- ✅ **Login Request** → `app/Http/Requests/Auth/LoginRequest.php`
-- ✅ **Register Request** → `app/Http/Requests/Auth/RegisterRequest.php`
-- ✅ **Forgot Password Request** → `app/Http/Requests/Auth/ForgotPasswordRequest.php`
-- ✅ **Reset Password Request** → `app/Http/Requests/Auth/ResetPasswordRequest.php`
-- ✅ **Auth Routes** → `routes/auth.php`
+**Authentication Files:**
+- AuthController & AuthService
+- Login, Register, Password Reset Requests
+- Email Verification (optional)
+- Auth Routes
 
-#### User Management Files
-- ✅ **UserController** → `app/Http/Controllers/UserController.php`
-- ✅ **UserService** → `app/Services/UserService.php`
-- ✅ **Store User Request** → `app/Http/Requests/User/StoreUserRequest.php`
-- ✅ **Update User Request** → `app/Http/Requests/User/UpdateUserRequest.php`
-- ✅ **User Resource** → `app/Http/Resources/UserResource.php`
-- ✅ **User Collection** → `app/Http/Resources/UserCollection.php`
-- ✅ **User Routes** → `routes/user.php`
+**User Management Files:**
+- UserController & UserService
+- User Requests, Resources & Collections
 
-#### Roles & Permissions Files (Optional)
-- ✅ **RoleController** → `app/Http/Controllers/RoleController.php`
-- ✅ **PermissionController** → `app/Http/Controllers/PermissionController.php`
-- ✅ **RoleService** → `app/Services/RoleService.php`
-- ✅ **PermissionService** → `app/Services/PermissionService.php`
-- ✅ **Role Requests** → `app/Http/Requests/Role/`
-- ✅ **Permission Requests** → `app/Http/Requests/Permission/`
-- ✅ **Role Resources** → `app/Http/Resources/`
-- ✅ **Permission Resources** → `app/Http/Resources/`
-- ✅ **Role Routes** → `routes/role.php`
-- ✅ **Permission Routes** → `routes/permission.php`
-- ✅ **Spatie Package** → Automatically installed
+**Roles & Permissions (optional):**
+- RoleController & PermissionController
+- Role & Permission Services
+- Spatie Laravel Permissions (auto-installed)
+- Permission & User Seeders
 
-### Authentication Endpoints
+**Social Authentication (optional):**
+- SocialAuthController
+- Laravel Socialite (auto-installed)
 
-The generated authentication system includes:
+### API Endpoints
 
+**Authentication:**
 ```
-POST   /api/register          # Register new user
-POST   /api/login             # Login user
-POST   /api/logout            # Logout user
-POST   /api/forgot-password   # Send password reset link
-POST   /api/reset-password    # Reset password
-GET    /api/me                # Get authenticated user
-PUT    /api/profile           # Update user profile
+POST   /api/register                              # Register new user
+POST   /api/login                                 # Login user
+POST   /api/logout                                # Logout user
+POST   /api/password/forgot                       # Send reset link
+POST   /api/password/reset                        # Reset password
+GET    /api/profile                               # Get user profile
+PUT    /api/profile                               # Update profile
+POST   /api/email/verify                          # Verify email (optional)
+POST   /api/email/resend-verification-link        # Resend verification (optional)
 ```
 
-### User Management Endpoints
-
+**User Management:**
 ```
 GET    /api/users             # List all users
-POST   /api/users             # Create new user
+POST   /api/users             # Create user
 GET    /api/users/{id}        # Get user details
 PUT    /api/users/{id}        # Update user
 DELETE /api/users/{id}        # Delete user
 ```
 
-### Roles & Permissions Endpoints (Optional)
-
+**Roles & Permissions:**
 ```
-GET    /api/roles             # List all roles
+GET    /api/roles             # List roles
 POST   /api/roles             # Create role
-GET    /api/roles/{id}        # Get role details
+GET    /api/roles/{id}        # Get role
 PUT    /api/roles/{id}        # Update role
 DELETE /api/roles/{id}        # Delete role
-POST   /api/roles/{id}/permissions  # Assign permissions to role
-
-GET    /api/permissions       # List all permissions
+GET    /api/permissions       # List permissions
 POST   /api/permissions       # Create permission
-GET    /api/permissions/{id}  # Get permission details
+GET    /api/permissions/{id}  # Get permission
 PUT    /api/permissions/{id}  # Update permission
 DELETE /api/permissions/{id}  # Delete permission
+POST   /api/assign-permission-to-role   # Assign permissions to role
+POST   /api/assign-permission-to-user   # Assign permissions to user
+```
+
+**Social Authentication:**
+```
+GET    /api/auth/social/{provider}           # Redirect to provider
+GET    /api/auth/social/{provider}/callback  # Handle callback
 ```
 
 ### Setup Instructions
 
-After generating the authentication system, follow these steps:
+#### 1. Choose Authentication Guard (Sanctum or Passport)
 
-1. **Register Routes** in `routes/api.php`:
-
-```php
-// Authentication routes (public)
-Route::middleware('api')->group(base_path('routes/auth.php'));
-
-// User management routes (protected)
-Route::middleware(['api', 'auth:api'])->group(base_path('routes/user.php'));
-
-// Roles & Permissions routes (protected) - if generated
-Route::middleware(['api', 'auth:api'])->group(base_path('routes/role.php'));
-Route::middleware(['api', 'auth:api'])->group(base_path('routes/permission.php'));
-```
-
-2. **Install Laravel Sanctum** (if not already installed):
-
+**Sanctum (Recommended for Single-Page Apps):**
 ```bash
 composer require laravel/sanctum
 php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider"
 php artisan migrate
 ```
 
-3. **Update User Model** (for roles & permissions):
+Update `bootstrap/app.php`:
+```php
+->withMiddleware(function (Middleware $middleware): void {
+    $middleware->statefulApi();
+})
+```
 
+**Passport (For Third-Party Clients):**
+```bash
+composer require laravel/passport
+php artisan vendor:publish --tag=passport-migrations
+php artisan vendor:publish --tag=passport-config
+php artisan migrate
+php artisan passport:client --personal
+```
+
+#### 2. Update User Model
+
+**For Sanctum:**
+```php
+use Laravel\Sanctum\HasApiTokens;
+
+class User extends Authenticatable
+{
+    use HasApiTokens, HasFactory, Notifiable;
+}
+```
+
+**For Passport:**
+```php
+use Laravel\Passport\HasApiTokens;
+
+class User extends Authenticatable
+{
+    use HasApiTokens, HasFactory, Notifiable;
+}
+```
+
+**For Roles & Permissions:**
 ```php
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles;
-    
-    // ... rest of your model
+    use HasRoles, HasFactory, Notifiable;
 }
 ```
 
-4. **Run Migrations**:
+#### 3. Update Configuration Files
 
-```bash
-php artisan migrate
-```
-
-5. **Configure Mail** in `.env` for password reset:
-
+**`.env`:**
 ```env
+AUTH_GUARD='api'
+FRONTEND_URL=http://localhost:5173
 MAIL_MAILER=smtp
 MAIL_HOST=smtp.mailtrap.io
 MAIL_PORT=2525
@@ -214,214 +244,553 @@ MAIL_FROM_ADDRESS=noreply@yourapp.com
 MAIL_FROM_NAME="${APP_NAME}"
 ```
 
-### File Replacement Handling
-
-When generating authentication files, if a file already exists:
-- You'll be prompted to confirm replacement
-- Use `--force` flag to automatically overwrite all files
-- Skip files individually when prompted
-
----
-
-## 🛠️ Usage
-
-### 1. Create Your YAML Configuration
-
-Create a YAML file at the default path: `module/models.yaml`
-
-Define your models with their fields, validation rules, and relationships:
-
-**Example: `module/models.yaml`**
-
-```yaml
-User:
-    # all the generatable modules are false, 
-    # so the user model only generates the Postman collection and dbdiagram files
-    generate:
-        model: false
-        migration: false
-        controller: true
-        service: true
-        request: true
-        resource: true
-        collection: true
-    fields:
-        name: string
-        email: string:unique
-        email_verified_at: dateTime:nullable
-        password: string
-        avatar: string:nullable
-        status: boolean:default true
-        last_login_at: timestamp:nullable
-
-Unit:
-    fields:
-        name: string:unique
-        code: string:nullable
-        description: string
-        is_active: boolean:default true
-        created_by: foreignId:users:nullable
-        updated_by: foreignId:users:nullable
-    relations:
-        creator:
-            type: belongsTo
-            model: User
-        updater:
-            type: belongsTo
-            model: User
-
-UnitConversion:
-    fields:
-        from_unit_id: foreignId:units
-        to_unit_id: foreignId:units
-        multiplier: double:default 1
-    relations:
-        from_unit:
-            type: belongsTo
-            model: Unit
-        to_unit:
-            type: belongsTo
-            model: Unit
-    unique:
-        - [ from_unit_id, to_unit_id ]
+**`config/auth.php`:**
+```php
+'guards' => [
+    'api' => [
+        'driver' => 'sanctum',  // or 'passport'
+        'provider' => 'users',
+        'hash' => false,
+    ],
+],
 ```
 
-### 2. Generate Your Complete Module
+#### 4. Register Routes
 
-Generate the complete module structure with all features:
+Update `routes/api.php`:
+```php
+require __DIR__.'/api/auth.php';              // Authentication routes
+require __DIR__.'/api/access-control.php';    // Roles & permissions (if generated)
+require __DIR__.'/api/social-auth.php';       // Social auth (if generated)
+```
+
+#### 5. Configure Social Providers (Optional)
+
+Update `config/services.php`:
+```php
+'google' => [
+    'client_id' => env('GOOGLE_CLIENT_ID'),
+    'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+    'redirect' => env('GOOGLE_CALLBACK_URL'),
+],
+'facebook' => [
+    'client_id' => env('FACEBOOK_CLIENT_ID'),
+    'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
+    'redirect' => env('FACEBOOK_CALLBACK_URL'),
+],
+'github' => [
+    'client_id' => env('GITHUB_CLIENT_ID'),
+    'client_secret' => env('GITHUB_CLIENT_SECRET'),
+    'redirect' => env('GITHUB_CALLBACK_URL'),
+],
+```
+
+#### 6. Seed Initial Data
+
+`database/seeders/DatabaseSeeder.php`:
+```php
+public function run()
+{
+    $this->call([
+        PermissionSeeder::class,
+        UserTableSeeder::class,
+    ]);
+}
+```
+
+Run:
+```bash
+php artisan migrate
+php artisan db:seed
+```
+
+
+
+## 🛠️ Module Generation from YAML
+
+### Quick Start
+
+Generate a complete module set (Model, Migration, Controller, Service, Resource, Collection, Form Request, Routes) from a single YAML file.
 
 ```bash
 php artisan module:generate
 ```
 
-**Available Options:**
+**Default YAML location:** `module/models.yaml`
 
+**Use custom file:**
 ```bash
-php artisan module:generate --force                                    # Overwrite existing files
-php artisan module:generate --file=custom/path/models.yaml            # Use custom YAML file
-php artisan module:generate --skip-postman                            # Skip Postman collection generation
-php artisan module:generate --skip-dbdiagram                          # Skip DB diagram generation
-php artisan module:generate --skip-backup                             # Skip Code Backup generation
-php artisan module:generate --postman-base-url=https://api.myapp.com  # Custom API base URL
-php artisan module:generate --postman-prefix=api/v2                   # Custom API prefix
+php artisan module:generate --file=custom/path/models.yaml
 ```
 
-### 3. Generate Individual Components
+### YAML Configuration Guide
 
-You can also generate specific components separately:
+#### Minimal Example
 
-#### Generate Authentication System
-
-```bash
-php artisan auth:generate
-php artisan auth:generate --force
-php artisan auth:generate --skip-roles
+```yaml
+Product:
+  fields:
+    name: string:unique
+    code: string:unique
+    description: text:nullable
+    is_active: boolean:default true
+  relations:
+    belongsTo: User:creator
 ```
 
-#### Generate Postman Collection Only
+#### Complete Example
 
-```bash
-php artisan postman:generate
-php artisan postman:generate --file=custom/models.yaml
-php artisan postman:generate --base-url=https://api.myapp.com --prefix=api/v1
+```yaml
+User:
+  generate_only: seeder
+  fields:
+    name: string
+    email: string:unique
+    email_verified_at: dateTime:nullable
+    password: string
+    avatar: image:nullable
+    status: boolean:default true
+    last_login_at: timestamp:nullable
+
+Category:
+  generate_except: seeder
+  fields:
+    name: string:unique
+    slug: string:unique
+    description: text:nullable
+    image: image:nullable
+    parent_id: foreignId:categories:nullable
+    is_active: boolean:default true
+    display_order: integer:default 0
+    seo_title: string:nullable
+    seo_description: string:nullable
+    seo_keywords: string:nullable
+    created_by: foreignId:users:nullable
+    updated_by: foreignId:users:nullable
+  relations:
+    belongsTo: Category:parent, User:creator, User:updater
+    hasMany: Category:children, Product:products
+  nested_requests: children
+
+Product:
+  generate: all
+  fields:
+    vendor_id: foreignId:vendors:nullable
+    category_id: foreignId:categories
+    brand_id: foreignId:brands:nullable
+    name: string
+    slug: string:unique
+    sku: string:unique
+    description: text:nullable
+    short_description: string:nullable
+    price: double:default 0
+    cost_price: double:default 0
+    compare_price: double:default 0
+    quantity: integer:default 0
+    is_active: boolean:default true
+    is_featured: boolean:default false
+    rating: double:default 0
+    total_reviews: integer:default 0
+    weight: double:nullable
+    dimensions: string:nullable
+    seo_title: string:nullable
+    seo_description: string:nullable
+    seo_keywords: string:nullable
+    meta_data: json:nullable
+    created_by: foreignId:users:nullable
+    updated_by: foreignId:users:nullable
+    deleted_at: dateTime:nullable
+  relations:
+    belongsTo: Vendor, Category, Brand, User:creator, User:updater
+    hasMany: Review, ProductVariant:variants, ProductImage:images
+    belongsToMany: ProductAttribute
+  nested_requests: variants, images
+
+ProductImage:
+  generate_only: model, migration, seeder, service
+  fields:
+    product_id: foreignId:products
+    image_url: image
+    alt_text: string:nullable
+    display_order: integer:default 0
+    is_thumbnail: boolean:default false
+    created_by: foreignId:users:nullable
+    updated_by: foreignId:users:nullable
+  relations:
+    belongsTo: Product, User:creator, User:updater
+
+ProductVariant:
+  generate: all
+  fields:
+    product_id: foreignId:products
+    sku: string:unique
+    name: string
+    price: double:nullable
+    cost_price: double:nullable
+    quantity: integer:default 0
+    attributes_data: json:nullable
+    image_id: foreignId:product_images:nullable
+    is_active: boolean:default true
+    created_by: foreignId:users:nullable
+    updated_by: foreignId:users:nullable
+  relations:
+    belongsTo: Product, ProductImage:image, User:creator, User:updater
+
+ProductAttributeValue:
+  generate: all
+  fields:
+    attribute_id: foreignId:product_attributes
+    value: string
+    slug: string
+    display_order: integer:default 0
+    created_by: foreignId:users:nullable
+    updated_by: foreignId:users:nullable
+  relations:
+    belongsTo: ProductAttribute:attribute, User:creator, User:updater
+  unique:
+    - [product_attribute_id, value]
 ```
 
-#### Generate DB Diagram Only
+### Generation Commands
 
+#### Main Command: `module:generate`
+
+Generate complete API modules from YAML schema.
+
+**Signature:**
+```bash
+php artisan module:generate
+    {--file= : Path to YAML file (default: module/models.yaml)}
+    {--force : Overwrite files without prompting}
+    {--skip-backup : Skip creating backups}
+    {--skip-postman : Skip Postman collection}
+    {--skip-dbdiagram : Skip DB diagram}
+    {--postman-base-url= : Base URL for Postman}
+    {--postman-prefix= : API prefix for Postman}
+```
+
+**Examples:**
+```bash
+# Generate with defaults
+php artisan module:generate
+
+# Force overwrite existing files
+php artisan module:generate --force
+
+# Custom file and Postman settings
+php artisan module:generate \
+  --file=schemas/products.yaml \
+  --postman-base-url=https://api.myapp.com \
+  --postman-prefix=api/v2
+
+# Skip Postman and DBML generation
+php artisan module:generate --skip-postman --skip-dbdiagram
+```
+
+#### Database Diagram: `dbdiagram:generate`
+
+Export your YAML schema as DBML for visualization.
+
+**Signature:**
 ```bash
 php artisan dbdiagram:generate
-php artisan dbdiagram:generate --file=custom/models.yaml --output=custom/database.dbml
+    {--file= : Path to YAML file}
+    {--output= : Output DBML file path}
 ```
 
-#### Backup Existing Files While Generating
-
+**Examples:**
 ```bash
-# Generate with backup (default)
-php artisan module:generate --file=models.yaml
+# Generate with defaults
+php artisan dbdiagram:generate
 
-# Generate without backup
-php artisan module:generate --file=models.yaml --skip-backup
+# Custom output location
+php artisan dbdiagram:generate --output=docs/schema.dbml
+```
 
+Use [dbdiagram.io](https://dbdiagram.io) to visualize and export diagrams.
+
+#### Postman Collection: `postman:generate`
+
+Generate a Postman collection for API testing.
+
+**Signature:**
+```bash
+php artisan postman:generate
+    {--file= : Path to YAML file}
+    {--base-url= : Base URL for API}
+    {--prefix= : API prefix}
+    {--output= : Output file path}
+```
+
+**Examples:**
+```bash
+# Generate with defaults
+php artisan postman:generate
+
+# Custom base URL and prefix
+php artisan postman:generate \
+  --base-url=https://api.myapp.com \
+  --prefix=api/v2
+```
+
+#### DBML to YAML: `dbdiagram:import`
+
+Convert existing DBML files to YAML format.
+
+**Signature:**
+```bash
+php artisan dbdiagram:import
+    {--file= : Input DBML file}
+    {--output= : Output YAML file}
+```
+
+**Workflow:**
+1. Design schema at [dbdiagram.io](https://dbdiagram.io)
+2. Export DBML
+3. Save to `.dbml` file
+4. Run import command
+5. Review and use generated YAML
+
+#### Rollback: `module:rollback`
+
+Restore to a previous generation state using automatic backups.
+
+**Signature:**
+```bash
+php artisan module:rollback
+    {--backup= : Specific backup timestamp}
+    {--list : List available backups}
+    {--cleanup : Remove old backups}
+```
+
+**Examples:**
+```bash
 # List available backups
 php artisan module:rollback --list
 
-# Rollback to latest backup  
+# Rollback to most recent backup
 php artisan module:rollback
 
 # Rollback to specific backup
-php artisan module:rollback --backup=2025-01-15_14-30-22
+php artisan module:rollback --backup=2024-01-15_143022
 
 # Clean up old backups
 php artisan module:rollback --cleanup
 ```
 
----
+### YAML Field Types & Modifiers
 
-## 🚀 Complete Workflow Example
+**Supported Types:**
+- String: `string`, `text`, `longText`
+- Numeric: `integer`, `bigInteger`, `double`, `float`, `decimal`
+- Boolean: `boolean`
+- Date/Time: `date`, `dateTime`, `timestamp`, `time`
+- Files: `image`, `file` (auto-handles uploads)
+- JSON: `json`
+- Enum: `enum`
+- Foreign Keys: `foreignId:table_name`
+- Soft Deletes: `deleted_at: dateTime:nullable`
 
-Here's a complete workflow from YAML to production-ready API with authentication:
+**Common Modifiers:**
+- `nullable` — Column can be null
+- `unique` — Add unique constraint
+- `default <value>` — Set default value
+
+**Field Examples:**
+```yaml
+fields:
+  name: string
+  email: string:unique
+  description: text:nullable
+  avatar: image:nullable
+  is_active: boolean:default true
+  price: double:default 0
+  user_id: foreignId:users
+  parent_id: foreignId:categories:nullable
+  published_at: dateTime:nullable
+  deleted_at: dateTime:nullable
+  meta_data: json:nullable
+  slug: string:unique:nullable
+```
+
+### Relationships
+
+**Format:** `relationType: Model:functionName, Model:functionName`
+
+**Supported Types:**
+- `belongsTo` — Many-to-one
+- `hasMany` — One-to-many
+- `hasOne` — One-to-one
+- `belongsToMany` — Many-to-many
+
+**Examples:**
+```yaml
+relations:
+  belongsTo: User:creator, User:updater, Category:parent
+  hasMany: Category:children, Product:products
+  hasOne: Profile
+  belongsToMany: Tag, Category
+```
+
+**Special Mapping:**
+- `creator` → `created_by` field
+- `updater` → `updated_by` field
+- `parent` → `parent_id` field
+
+### Generation Control
+
+
+
+
+**Control Options:**
+- `generate: all` — Generate all components
+- `generate_only: model, migration` — Only these components
+- `generate_except: seeder` — All except these
+- `nested_requests: variants, images` — Include in Postman bodies
+
+**Valid Components:**
+`model`, `migration`, `controller`, `service`, `request`, `resource`, `collection`, `seeder`
+
+**Compound Unique Constraints:**
+```yaml
+ProductAttribute:
+  fields:
+    product_id: foreignId:products
+    attribute_id: foreignId:attributes
+  unique:
+    - [product_id, attribute_id]
+```
+
+### Output Locations
+
+- Models: `app/Models/`
+- Migrations: `database/migrations/`
+- Controllers: `app/Http/Controllers/`
+- Services: `app/Services/`
+- Requests: `app/Http/Requests/`
+- Resources: `app/Http/Resources/`
+- Collections: `app/Http/Resources/`
+- Seeders: `database/seeders/`
+- Routes: Appended to `routes/api.php`
+- Postman: `module/postman_collection.json`
+- DBML: `module/dbdiagram.dbml`
+- Backups: `module/backups/{timestamp}/`
+
+### Troubleshooting
+
+**Auth Module Conflicts:**
+If you ran `auth:generate` previously, set `User.generate_only: seeder` in YAML to avoid overwriting custom auth code.
+
+**Migration Issues:**
+Use new migrations to alter existing tables rather than editing previously-applied migrations.
+
+**Foreign Key Naming:**
+Ensure `foreignId:table` values match your actual table names.
+
+**File Uploads:**
+Models with `image` or `file` fields automatically generate form-data Postman requests.
+
+**Version Control:**
+Keep your YAML schema in Git and use branches before running `--force` to make rollbacks easier.
+
+## 🚀 Complete Workflow
+
+From installation to production-ready API:
+
+### 1. Generate Authentication (Optional)
 
 ```bash
-# 1. Generate authentication system
 php artisan auth:generate
+```
 
-# 2. Create your YAML schema
-vim module/models.yaml
+### 2. Create YAML Schema
 
-# 3. Generate everything at once
-php artisan module:generate --force
+Create or edit `module/models.yaml` with your models and fields.
 
-# 4. Run migrations
+### 3. Review Generated Files
+
+```bash
+php artisan module:generate
+```
+
+Review output before running `--force`.
+
+### 4. Apply Migrations
+
+```bash
 php artisan migrate
+```
 
-# 5. Import Postman collection for testing
-# File: module/postman_collection.json
+### 5. Test with Postman
 
-# 6. Visualize database schema
-# Copy module/dbdiagram.dbml to dbdiagram.io
+Import `module/postman_collection.json` into Postman and test endpoints.
 
-# 7. Start developing!
+### 6. Visualize Database
+
+Copy DBML output to [dbdiagram.io](https://dbdiagram.io) for visualization.
+
+### 7. Local Testing
+
+```bash
 php artisan serve
+```
+
+### 8. Deploy
+
+Commit changes and deploy:
+
+```bash
+git add .
+git commit -m "Generate API modules from YAML"
+git push origin feature/api-modules
 ```
 
 ---
 
+---
+
+Following this workflow will help you safely move from YAML schemas to fully-functional API endpoints.
+
+## ✨ Features Summary
+
+- ✅ Generate complete Laravel modules from YAML
+- ✅ Authentication & User Management (Sanctum & Passport)
+- ✅ Roles & Permissions (Spatie Integration)
+- ✅ Social Authentication (OAuth)
+- ✅ Postman collection generation
+- ✅ Database diagram export (DBML)
+- ✅ Automatic backups & rollback support
+- ✅ Customizable stubs
+- ✅ Smart fillable and relationship handling
+- ✅ File upload handling for image/file fields
+
 ## 🚀 Roadmap
 
-- [x] ~~Postman collection generation~~
-- [x] ~~Database diagram export~~
-- [x] ~~Authentication & User Management~~
-- [x] ~~Roles & Permissions (Spatie Integration)~~
-- [ ] Support for additional relationship types
 - [ ] GUI for YAML configuration
-- [ ] Custom validation rule generation
-- [ ] Support for nested resources
 - [ ] OpenAPI/Swagger documentation generation
 - [ ] Insomnia collection export
 - [ ] GraphQL schema generation
 - [ ] Two-Factor Authentication (2FA)
-- [ ] Social Authentication (OAuth)
+- [ ] Additional relationship types
 
----
+## 📝 Recent Updates
 
-## 📈 Recent Updates
+### v1.3.00
+- ✅ IMPROVED: YAML file structure and options
+- ✅ NEW: Database to Models YAML conversion
 
-### v1.1.0
+### v1.2.50
+- ✅ NEW: Passport support added
+- ✅ IMPROVED: Better error handling and user feedback
 
-- ✅ **NEW**: Authentication system generation
-- ✅ **NEW**: User management system
-- ✅ **NEW**: Roles & Permissions with Spatie integration
-- ✅ **NEW**: File replacement confirmation
-- ✅ **IMPROVED**: Better command structure and options
+### v1.2.0
+- ✅ NEW: Authentication system generation
+- ✅ NEW: User management system
+- ✅ NEW: Roles & Permissions with Spatie integration
 
 ### v1.0.10
+- ✅ NEW: Postman collection generation
+- ✅ NEW: Database diagram export
+- ✅ NEW: Selective component generation
 
-- ✅ **NEW**: Postman collection generation
-- ✅ **NEW**: Database diagram export (dbdiagram.io compatible)
-- ✅ **NEW**: Selective component generation
-- ✅ **IMPROVED**: Enhanced command options and flexibility
-- ✅ **IMPROVED**: Better error handling and user feedback
-
----
-
-*Happy coding! 🎉*
+Happy generating! 🎉
