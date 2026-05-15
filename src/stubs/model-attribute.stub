@@ -4,12 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 {{ use_statements }}
+
+#[Fillable([
+        {{ fillable }}
+    ])]
 class {{ model }} extends Model
 {{{ traits }}{{ primary_key }}
-
-    protected $fillable = [
-        {{ fillable }}
-    ];
 
     protected function casts(): array
     {

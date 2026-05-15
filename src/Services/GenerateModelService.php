@@ -13,10 +13,13 @@ class GenerateModelService
 
     private StubPathResolverService $stubPathResolver;
 
-    public function __construct(OutputInterface $command)
+    private bool $useModelAttributes;
+
+    public function __construct(OutputInterface $command, ?bool $useModelAttributes = null)
     {
         $this->command = $command;
         $this->stubPathResolver = new StubPathResolverService;
+        $this->useModelAttributes = $useModelAttributes ?? config('module-generator.model_style') === 'attributes';
     }
 
     /**
@@ -113,7 +116,9 @@ PHP;
             return '';
         }
 
-        return "\n        ".implode(",\n        ", $casts)."\n    ";
+        $closingIndent = $this->useModelAttributes ? "\n        " : "\n    ";
+
+        return "\n        ".implode(",\n        ", $casts).$closingIndent;
     }
 
     private function getMigrationPath(string $tableName): ?string
@@ -343,11 +348,16 @@ PHP;
         $generateConfig = []
     ): void {
         try {
-            $stubPath = $this->stubPathResolver->resolveStubPath('model');
+            $stubKey = $this->useModelAttributes ? 'model-attribute' : 'model';
+            $stubPath = $this->stubPathResolver->resolveStubPath($stubKey);
             $stubContent = File::get($stubPath);
 
             // Build use statements
             $useStatements = [];
+
+            if ($this->useModelAttributes) {
+                $useStatements[] = "use Illuminate\Database\Eloquent\Attributes\Fillable;";
+            }
 
             if ($softDeletes) {
                 $useStatements[] = "use Illuminate\Database\Eloquent\SoftDeletes;";
@@ -375,12 +385,21 @@ PHP;
             // Build primary key configuration
             $primaryKeyConfig = '';
             if ($primaryKey !== 'id') {
-                $primaryKeyConfig = "\n    protected \$primaryKey = '{$primaryKey}';";
-                // Check if it's a UUID or non-incrementing key
-                if ($primaryKey === 'uuid' || ! str_ends_with($primaryKey, '_id')) {
-                    $primaryKeyConfig .= "\n    public \$incrementing = false;";
-                    if ($primaryKey === 'uuid') {
-                        $primaryKeyConfig .= "\n    protected \$keyType = 'string';";
+                if ($this->useModelAttributes) {
+                    $primaryKeyConfig = "\n\n    protected string \$primaryKey = '{$primaryKey}';";
+                    if ($primaryKey === 'uuid' || ! str_ends_with($primaryKey, '_id')) {
+                        $primaryKeyConfig .= "\n    public bool \$incrementing = false;";
+                        if ($primaryKey === 'uuid') {
+                            $primaryKeyConfig .= "\n    protected string \$keyType = 'string';";
+                        }
+                    }
+                } else {
+                    $primaryKeyConfig = "\n    protected \$primaryKey = '{$primaryKey}';";
+                    if ($primaryKey === 'uuid' || ! str_ends_with($primaryKey, '_id')) {
+                        $primaryKeyConfig .= "\n    public \$incrementing = false;";
+                        if ($primaryKey === 'uuid') {
+                            $primaryKeyConfig .= "\n    protected \$keyType = 'string';";
+                        }
                     }
                 }
             }
@@ -421,13 +440,24 @@ PHP;
     {
         $modelContent = File::get($modelPath);
 
-        $fillableArray = "protected \$fillable = [\n        {$fillableFields},\n    ];";
+        if ($this->useModelAttributes) {
+            $fillableAttribute = "#[Fillable([\n        {$fillableFields},\n    ])]";
+            $castsMethod = "\n    protected function casts(): array\n    {\n        return [];\n    }";
 
-        $modelContent = preg_replace(
-            '/(class\s+'.$modelName.'\s+extends\s+Model\s*\{)/',
-            "$1\n\n    {$fillableArray}\n{$relationshipMethods}\n",
-            $modelContent
-        );
+            $modelContent = preg_replace(
+                '/(class\s+'.$modelName.'\s+extends\s+Model\s*\{)/',
+                "$1\n\n{$fillableAttribute}\n{$castsMethod}\n{$relationshipMethods}\n",
+                $modelContent
+            );
+        } else {
+            $fillableArray = "protected \$fillable = [\n        {$fillableFields},\n    ];";
+
+            $modelContent = preg_replace(
+                '/(class\s+'.$modelName.'\s+extends\s+Model\s*\{)/',
+                "$1\n\n    {$fillableArray}\n{$relationshipMethods}\n",
+                $modelContent
+            );
+        }
 
         File::put($modelPath, $modelContent);
     }

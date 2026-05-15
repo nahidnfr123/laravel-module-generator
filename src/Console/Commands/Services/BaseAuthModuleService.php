@@ -77,8 +77,19 @@ abstract class BaseAuthModuleService
      */
     protected function copyFiles(array $files): void
     {
+        $useModelAttributes = config('module-generator.model_style') === 'attributes';
+
         foreach ($files as $source => $destination) {
             $sourcePath = $this->packageStubPath.'/'.$source.'.stub';
+
+            // Prefer attribute-style stubs for models when configured
+            if ($useModelAttributes && str_starts_with($source, 'Models/')) {
+                $attributeSource = $this->packageStubPath.'/'.str_replace('Models/', 'Models-attribute/', $source).'.stub';
+                if (File::exists($attributeSource)) {
+                    $sourcePath = $attributeSource;
+                }
+            }
+
             $destinationPath = $this->basePath.'/'.$destination;
 
             if (! File::exists($sourcePath)) {
