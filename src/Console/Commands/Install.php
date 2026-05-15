@@ -5,6 +5,7 @@ namespace NahidFerdous\LaravelModuleGenerator\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Support\Facades\File;
+use Symfony\Component\Process\Process;
 use Symfony\Component\Yaml\Yaml;
 
 class Install extends Command
@@ -26,14 +27,7 @@ class Install extends Command
 
     protected $basePath;
 
-    /**
-     * Execute the console command.
-     *
-     * @return int
-     *
-     * @throws \JsonException
-     */
-    public function handle()
+    public function handle(): int
     {
         $this->basePath = base_path();
 
@@ -42,20 +36,6 @@ class Install extends Command
         $this->copyDefaultFiles();
         $this->updateBootstrapApp();
         $this->updateComposerJson();
-
-        //        $authConfirm = $this->ask('Would you like to generate the Auth Module with login, register, forget-password, reset-password, profile? (yes/no)', 'no');
-        //        if (strtolower($authConfirm) === 'yes') {
-        //            $this->call('module:generate-auth');
-        //        } else {
-        //            $this->info('Skipped generating Auth Module.');
-        //        }
-        //
-        //        $rolesAndPermissionsConfirm = $this->ask('Would you like to generate the Roles and Permissions Module with Spatie laravel-permission? (yes/no)', 'no');
-        //        if (strtolower($rolesAndPermissionsConfirm) === 'yes') {
-        //            $this->call('module:generate-roles');
-        //        } else {
-        //            $this->info('Skipped generating Auth Module.');
-        //        }
     }
 
     protected function copyDefaultFiles(): void
@@ -267,6 +247,7 @@ YAML
 
         $content = File::get($bootstrapPath);
         $modified = false;
+        $appNamespace = app()->getNamespace();
 
         // Handle withMiddleware section
         if (preg_match('/->withMiddleware\(function\s*\(Middleware\s+\$middleware\)\s*:\s*void\s*\{(.*?)\}\)/s', $content, $matches)) {
@@ -277,8 +258,8 @@ YAML
             if (! str_contains($middlewareContent, '$middleware->alias(')) {
                 // Build the alias array
                 $aliases = "\n        \$middleware->alias([\n";
-                $aliases .= "            'auth' => \\App\\Http\\Middleware\\Authenticate::class,\n";
-                $aliases .= "            'cors' => \\App\\Http\\Middleware\\Cors::class,\n";
+                $aliases .= "            'auth' => \\{$appNamespace}Http\\Middleware\\Authenticate::class,\n";
+                $aliases .= "            'cors' => \\{$appNamespace}Http\\Middleware\\Cors::class,\n";
                 $aliases .= '        ]);';
                 $updatedMiddlewareContent .= $aliases;
                 $modified = true;
@@ -288,7 +269,7 @@ YAML
                 if (! str_contains($middlewareContent, "'cors'")) {
                     $updatedMiddlewareContent = preg_replace(
                         '/(\$middleware->alias\(\[\s*\n)/s',
-                        "$1            'cors' => \\App\\Http\\Middleware\\Cors::class,\n",
+                        "$1            'cors' => \\{$appNamespace}Http\\Middleware\\Cors::class,\n",
                         $updatedMiddlewareContent
                     );
                     $modified = true;
@@ -297,7 +278,7 @@ YAML
                 if (! str_contains($middlewareContent, "'auth'")) {
                     $updatedMiddlewareContent = preg_replace(
                         '/(\$middleware->alias\(\[\s*\n)/s',
-                        "$1            'auth' => \\App\\Http\\Middleware\\Authenticate::class,\n",
+                        "$1            'auth' => \\{$appNamespace}Http\\Middleware\\Authenticate::class,\n",
                         $updatedMiddlewareContent
                     );
                     $modified = true;
@@ -319,7 +300,7 @@ YAML
 
             // Check if an exception handler already exists
             if (! str_contains($exceptionsContent, 'ExceptionHandler::handle')) {
-                $updatedExceptionsContent = "\n        \\App\\Exceptions\\ExceptionHandler::handle(\$exceptions);";
+                $updatedExceptionsContent = "\n        \\{$appNamespace}Exceptions\\ExceptionHandler::handle(\$exceptions);";
 
                 $content = preg_replace(
                     '/->withExceptions\(function\s*\(Exceptions\s+\$exceptions\)\s*:\s*void\s*\{.*?\}\)/s',
@@ -392,9 +373,11 @@ YAML
 
             // Run composer dump-autoload
             $this->info('Running composer dump-autoload...');
-            exec('composer dump-autoload 2>&1', $output, $returnCode);
+            $process = Process::fromShellCommandline('composer dump-autoload');
+            $process->setTimeout(null);
+            $process->run();
 
-            if ($returnCode === 0) {
+            if ($process->isSuccessful()) {
                 $this->info('✅ Autoload files regenerated');
             } else {
                 $this->warn('⚠️  Failed to run composer dump-autoload automatically');

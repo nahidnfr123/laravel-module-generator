@@ -4,15 +4,18 @@ namespace NahidFerdous\LaravelModuleGenerator\Services;
 
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
-use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateModuleFromYaml;
+use NahidFerdous\LaravelModuleGenerator\Concerns\HandlesFileGeneration;
+use NahidFerdous\LaravelModuleGenerator\Contracts\OutputInterface;
 
 class GenerateSeederService
 {
-    private GenerateModuleFromYaml $command;
+    use HandlesFileGeneration;
+
+    private OutputInterface $command;
 
     private StubPathResolverService $pathResolverService;
 
-    public function __construct(GenerateModuleFromYaml $command)
+    public function __construct(OutputInterface $command)
     {
         $this->command = $command;
         $this->pathResolverService = new StubPathResolverService;
@@ -28,16 +31,8 @@ class GenerateSeederService
 
         // Then generate seeder
         $seederPath = database_path("seeders/{$modelName}Seeder.php");
-
-        if (File::exists($seederPath) && ! $force) {
-            $this->command->warn("⚠️ Seeder already exists: {$modelName}Seeder");
-
+        if (! $this->guardAgainstExisting($seederPath, "Seeder {$modelName}Seeder", $force)) {
             return;
-        }
-
-        if (File::exists($seederPath)) {
-            File::delete($seederPath);
-            $this->command->warn("⚠️ Deleted existing seeder: {$modelName}Seeder");
         }
 
         $stubPath = $this->pathResolverService->resolveStubPath('seeder');
@@ -62,16 +57,8 @@ class GenerateSeederService
     private function generateFactory(string $modelName, array $fields, bool $force = false): void
     {
         $factoryPath = database_path("factories/{$modelName}Factory.php");
-
-        if (File::exists($factoryPath) && ! $force) {
-            $this->command->warn("⚠️ Factory already exists: {$modelName}Factory");
-
+        if (! $this->guardAgainstExisting($factoryPath, "Factory {$modelName}Factory", $force)) {
             return;
-        }
-
-        if (File::exists($factoryPath)) {
-            File::delete($factoryPath);
-            $this->command->warn("⚠️ Deleted existing factory: {$modelName}Factory");
         }
 
         $stubPath = $this->pathResolverService->resolveStubPath('factory');
@@ -183,7 +170,7 @@ class GenerateSeederService
                 $relatedTable = $modifiers[0];
                 $modelName = Str::studly(Str::singular($relatedTable));
 
-                return "\\App\\Models\\{$modelName}::factory()";
+                return '\\' . app()->getNamespace() . "Models\\{$modelName}::factory()";
             }
 
             return '1';

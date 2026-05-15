@@ -4,19 +4,22 @@ namespace NahidFerdous\LaravelModuleGenerator\Services;
 
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
-use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateModuleFromYaml;
+use NahidFerdous\LaravelModuleGenerator\Concerns\HandlesFileGeneration;
+use NahidFerdous\LaravelModuleGenerator\Contracts\OutputInterface;
 
 class GenerateRequestService
 {
-    private GenerateModuleFromYaml $command;
+    use HandlesFileGeneration;
+
+    private OutputInterface $command;
 
     private array $generateConfig;
 
-    public array $allModels;
+    private array $allModels;
 
     private StubPathResolverService $pathResolverService;
 
-    public function __construct(GenerateModuleFromYaml $command, array $allModels, array $generateConfig)
+    public function __construct(OutputInterface $command, array $allModels, array $generateConfig)
     {
         $this->command = $command;
         $this->allModels = $allModels;
@@ -31,19 +34,9 @@ class GenerateRequestService
     {
         if (in_array('request', $this->generateConfig, true)) {
             $requestPath = app_path("Http/Requests/{$modelConfig['classes']['request']}.php");
-
-            if (File::exists($requestPath) && ! $force) {
-                $this->command->warn("⚠️ Request already exists: {$modelConfig['classes']['request']}");
-
-                return;
+            if ($this->guardAgainstExisting($requestPath, "Request {$modelConfig['classes']['request']}", $force)) {
+                $this->generateRequest($modelConfig['studlyName'], $modelConfig['fields'], $modelConfig['originalName']);
             }
-
-            if (File::exists($requestPath)) {
-                File::delete($requestPath);
-                $this->command->warn("⚠️ Deleted existing request: {$modelConfig['classes']['request']}");
-            }
-
-            $this->generateRequest($modelConfig['studlyName'], $modelConfig['fields'], $modelConfig['originalName']);
         }
     }
 
@@ -120,7 +113,7 @@ class GenerateRequestService
             : array_map('trim', explode(',', $currentModelData['nested_requests']));
 
         // Parse relations from a new structure
-        $relations = $this->parseRelations($currentModelData['relations'] ?? []);
+        $relations = (new RelationParserService)->parse($currentModelData['relations'] ?? []);
 
         foreach ($nestedRequests as $relationName) {
             $relationName = trim($relationName);
@@ -214,46 +207,6 @@ class GenerateRequestService
     /**
      * Parse relations from the new YAML structure
      */
-    private function parseRelations(array $relationsData): array
-    {
-        $relations = [];
-
-        foreach ($relationsData as $relationType => $relationsList) {
-            if (! is_string($relationsList)) {
-                continue;
-            }
-
-            // Split by comma to get individual relations
-            $relationItems = array_map('trim', explode(',', $relationsList));
-
-            foreach ($relationItems as $relationDefinition) {
-                // Parse "Model:relationName" format or just "Model"
-                $parts = explode(':', trim($relationDefinition));
-                $model = trim($parts[0]);
-
-                if (isset($parts[1])) {
-                    $name = trim($parts[1]);
-                } else {
-                    // Default name based on relation type
-                    if ($relationType === 'hasMany') {
-                        $name = Str::camel(Str::plural($model));
-                    } elseif ($relationType === 'belongsToMany') {
-                        $name = Str::camel(Str::plural($model));
-                    } else {
-                        $name = Str::camel($model);
-                    }
-                }
-
-                $relations[$name] = [
-                    'type' => $relationType,
-                    'model' => $model,
-                ];
-            }
-        }
-
-        return $relations;
-    }
-
     /**
      * Generate validation rule for a single field
      */

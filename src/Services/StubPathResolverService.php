@@ -2,8 +2,6 @@
 
 namespace NahidFerdous\LaravelModuleGenerator\Services;
 
-use Illuminate\Support\Facades\File;
-
 class StubPathResolverService
 {
     /**
@@ -16,18 +14,7 @@ class StubPathResolverService
             throw new \RuntimeException('Module generator stubs configuration not found.');
         }
 
-        //        // Map new stub keys to files
-        //        $stubMap = [
-        //            'controller-without-service-relations' => 'controller-without-service-relations.stub',
-        //            'controller-without-service' => 'controller-without-service.stub',
-        //            'controller-with-relations' => 'controller-with-relations.stub',
-        //
-        //            'service-repository-relations' => 'service-repository-relations.stub',
-        //            'service-relations' => 'service-relations.stub',
-        //            'service-repository' => 'service-repository.stub',
-        //        ];
-
-        $stubFile = $stubMap[$stubKey] ?? ($config['stubs'][$stubKey] ?? null);
+        $stubFile = $config['stubs'][$stubKey] ?? null;
 
         if (! $stubFile) {
             throw new \InvalidArgumentException("Stub not defined for key: {$stubKey}");

@@ -2,22 +2,22 @@
 
 namespace NahidFerdous\LaravelModuleGenerator\Services;
 
-use Illuminate\Console\Command;
+use NahidFerdous\LaravelModuleGenerator\Contracts\OutputInterface;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
 class BackupService
 {
-    private Command $command;
+    private OutputInterface $command;
 
     private string $backupPath;
 
     private ?string $currentSessionPath = null;
 
-    public function __construct(Command $command)
+    public function __construct(OutputInterface $command)
     {
         $this->command = $command;
-        $this->backupPath = config('module-generator.backup_path', storage_path('app/backups'));
+        $this->backupPath = config('module-generator.backup_path', storage_path('app/module-backups'));
     }
 
     /**

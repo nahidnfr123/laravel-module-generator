@@ -4,15 +4,15 @@ namespace NahidFerdous\LaravelModuleGenerator\Services;
 
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
-use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateModuleFromYaml;
+use NahidFerdous\LaravelModuleGenerator\Contracts\OutputInterface;
 
 class GenerateMigrationService
 {
-    private GenerateModuleFromYaml $command;
+    private OutputInterface $command;
 
     private StubPathResolverService $stubPathResolver;
 
-    public function __construct(GenerateModuleFromYaml $command)
+    public function __construct(OutputInterface $command)
     {
         $this->command = $command;
         $this->stubPathResolver = new StubPathResolverService;

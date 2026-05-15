@@ -4,10 +4,11 @@ namespace NahidFerdous\LaravelModuleGenerator\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
+use NahidFerdous\LaravelModuleGenerator\Contracts\OutputInterface;
 use NahidFerdous\LaravelModuleGenerator\Services\BackupService;
-use Symfony\Component\Console\Command\Command as CommandAlias;
 
-class ModuleRollback extends Command
+
+class ModuleRollback extends Command implements OutputInterface
 {
     protected $signature = 'module:rollback
                            {--backup= : Specific backup timestamp to rollback to}
@@ -18,7 +19,7 @@ class ModuleRollback extends Command
 
     private BackupService $backupService;
 
-    public function handle()
+    public function handle(): int
     {
         $this->backupService = new BackupService($this);
 
@@ -43,7 +44,7 @@ class ModuleRollback extends Command
         if (empty($backups)) {
             $this->info('No backups found.');
 
-            return CommandAlias::SUCCESS;
+            return self::SUCCESS;
         }
 
         $this->info('Available backups:');
@@ -63,7 +64,7 @@ class ModuleRollback extends Command
 
         $this->table($headers, $rows);
 
-        return CommandAlias::SUCCESS;
+        return self::SUCCESS;
     }
 
     /**
@@ -76,7 +77,7 @@ class ModuleRollback extends Command
         if ($keepCount < 0) {
             $this->error('Must keep at least 0 backup.');
 
-            return CommandAlias::FAILURE;
+            return self::FAILURE;
         }
 
         $deleted = $this->backupService->cleanupOldBackups($keepCount);
@@ -87,7 +88,7 @@ class ModuleRollback extends Command
             $this->info('No old backups to clean up.');
         }
 
-        return CommandAlias::SUCCESS;
+        return self::SUCCESS;
     }
 
     /**
@@ -103,14 +104,14 @@ class ModuleRollback extends Command
             if (! $backupPath) {
                 $this->error('No backups found. Cannot rollback.');
 
-                return CommandAlias::FAILURE;
+                return self::FAILURE;
             }
 
             $timestamp = basename($backupPath);
             if (! $this->confirm("Rollback to latest backup ({$timestamp})?")) {
                 $this->info('Rollback cancelled.');
 
-                return CommandAlias::SUCCESS;
+                return self::SUCCESS;
             }
         }
 
@@ -119,7 +120,7 @@ class ModuleRollback extends Command
         if (! $manifest) {
             $this->error('Invalid backup or missing manifest file.');
 
-            return CommandAlias::FAILURE;
+            return self::FAILURE;
         }
 
         $this->info('🔄 Starting rollback process...');
@@ -131,7 +132,7 @@ class ModuleRollback extends Command
         $this->info("📦 Restored {$restored} files");
         $this->info("🗑️ Removed {$deleted} generated files");
 
-        return CommandAlias::SUCCESS;
+        return self::SUCCESS;
     }
 
     /**

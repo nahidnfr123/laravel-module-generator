@@ -5,6 +5,7 @@ namespace NahidFerdous\LaravelModuleGenerator\Console\Commands\Services;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Symfony\Component\Process\Process;
 
 use function app_path;
 use function base_path;
@@ -31,10 +32,13 @@ abstract class BaseAuthModuleService
         $this->command->line("▶ Running: {$command}");
 
         if (str_starts_with($command, 'composer')) {
-            // Composer commands must be run via shell
-            passthru($command, $status);
+            $process = Process::fromShellCommandline($command);
+            $process->setTimeout(null);
+            $process->run(function ($type, $buffer) {
+                $this->command->line($buffer);
+            });
 
-            if ($status !== 0) {
+            if (! $process->isSuccessful()) {
                 throw new \RuntimeException("Command failed: {$command}");
             }
 
@@ -57,9 +61,13 @@ abstract class BaseAuthModuleService
     {
         $this->command->line("▶ Running: {$command}");
 
-        passthru($command, $status);
+        $process = Process::fromShellCommandline($command);
+        $process->setTimeout(null);
+        $process->run(function ($type, $buffer) {
+            $this->command->line($buffer);
+        });
 
-        if ($status !== 0) {
+        if (! $process->isSuccessful()) {
             throw new \RuntimeException("Command failed: {$command}");
         }
     }

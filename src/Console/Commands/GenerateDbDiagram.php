@@ -4,6 +4,7 @@ namespace NahidFerdous\LaravelModuleGenerator\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
+use NahidFerdous\LaravelModuleGenerator\Services\RelationParserService;
 use Symfony\Component\Yaml\Yaml;
 
 class GenerateDbDiagram extends Command
@@ -24,12 +25,7 @@ class GenerateDbDiagram extends Command
      */
     protected $description = 'Generate dbdiagram.io syntax (DBML) from YAML schema';
 
-    /**
-     * Execute the console command.
-     *
-     * @return int
-     */
-    public function handle()
+    public function handle(): int
     {
         // Get config values
         $config = config('module-generator');
@@ -43,7 +39,7 @@ class GenerateDbDiagram extends Command
         if (! file_exists($yamlFilePath)) {
             $this->error("File not found: $yamlFilePath");
 
-            return Command::FAILURE;
+            return self::FAILURE;
         }
 
         // Ensure output directory exists
@@ -69,7 +65,7 @@ class GenerateDbDiagram extends Command
         $this->info('🎯 DB diagram generated successfully at: '.$outputFilePath);
         $this->info('📊 Generated tables for '.count($schema).' models');
 
-        return Command::SUCCESS;
+        return self::SUCCESS;
     }
 
     /**
@@ -163,44 +159,17 @@ class GenerateDbDiagram extends Command
      */
     protected function parseRelations(array $tableDefinition): array
     {
-        $relations = [];
-
         if (! isset($tableDefinition['relations'])) {
-            return $relations;
+            return [];
         }
 
         // Check if it's the old format (array with relation names as keys)
         $firstRelation = reset($tableDefinition['relations']);
         if (is_array($firstRelation) && isset($firstRelation['type'])) {
-            // Old format
             return $tableDefinition['relations'];
         }
 
-        // New format: parse compact relation strings
-        foreach ($tableDefinition['relations'] as $relationType => $relationString) {
-            if (! is_string($relationString)) {
-                continue;
-            }
-
-            // Split by comma to get individual relations
-            $relationParts = array_map('trim', explode(',', $relationString));
-
-            foreach ($relationParts as $relationPart) {
-                // Parse "Model:functionName" format
-                if (str_contains($relationPart, ':')) {
-                    [$model, $functionName] = explode(':', $relationPart, 2);
-                    $model = trim($model);
-                    $functionName = trim($functionName);
-
-                    $relations[$functionName] = [
-                        'type' => $relationType,
-                        'model' => $model,
-                    ];
-                }
-            }
-        }
-
-        return $relations;
+        return (new RelationParserService)->parse($tableDefinition['relations']);
     }
 
     /**

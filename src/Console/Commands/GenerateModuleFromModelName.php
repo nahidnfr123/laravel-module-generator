@@ -18,6 +18,7 @@ class GenerateModuleFromModelName extends Command
         $modelVar = Str::camel($modelName);
         $pluralModel = Str::pluralStudly($modelName);
         $tableName = Str::snake(Str::plural($modelName));
+        $appNamespace = app()->getNamespace();
 
         // Step 0: Migration
         $this->createMigration($tableName);
@@ -34,7 +35,7 @@ class GenerateModuleFromModelName extends Command
             app_path("Services/{$modelName}Service.php"),
             'service',
             ['{{ model }}' => $modelName, '{{ variable }}' => $modelVar],
-            "App\\Services\\{$modelName}Service"
+            $appNamespace . "Services\\{$modelName}Service"
         );
 
         $this->generateFileFromStub(
@@ -47,21 +48,21 @@ class GenerateModuleFromModelName extends Command
                 '{{ modelPlural }}' => $pluralModel,
                 '{{ route }}' => Str::snake($modelName),
             ],
-            "App\\Http\\Controllers\\{$modelName}Controller"
+            $appNamespace . "Http\\Controllers\\{$modelName}Controller"
         );
 
         $this->generateFileFromStub(
             app_path("Http/Resources/{$modelName}/{$modelName}Collection.php"),
             'collection',
             ['{{model}}' => $modelName, '{{modelVar}}' => $modelVar],
-            "App\\Http\\Resources\\{$modelName}\\{$modelName}Collection"
+            $appNamespace . "Http\\Resources\\{$modelName}\\{$modelName}Collection"
         );
 
         // Step 6: Resource
         $resourcePath = app_path("Http/Resources/{$modelName}/{$modelName}Resource.php");
         if (! File::exists($resourcePath)) {
             $this->call('make:resource', ['name' => "{$modelName}/{$modelName}Resource"]);
-            $this->info("Resource created: App\\Http\\Resources\\{$modelName}\\{$modelName}Resource");
+            $this->info("Resource created: " . $appNamespace . "Http\\Resources\\{$modelName}\\{$modelName}Resource");
         } else {
             $this->warn("Resource already exists: {$resourcePath}");
         }
@@ -69,7 +70,7 @@ class GenerateModuleFromModelName extends Command
         // Step 7: Append API Route
         $this->appendApiRoute($tableName, $modelName);
 
-        return 0;
+        return self::SUCCESS;
     }
 
     protected function createMigration(string $tableName): void
@@ -101,7 +102,7 @@ class GenerateModuleFromModelName extends Command
 
     protected function appendApiRoute(string $tableName, string $modelName): void
     {
-        $controllerClass = "App\\Http\\Controllers\\{$modelName}Controller";
+        $controllerClass = app()->getNamespace() . "Http\\Controllers\\{$modelName}Controller";
         $apiRoutesPath = base_path('routes/api.php');
         $routeDefinition = "Route::apiResource('{$tableName}', {$controllerClass}::class);";
 

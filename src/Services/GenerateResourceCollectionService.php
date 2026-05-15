@@ -3,17 +3,20 @@
 namespace NahidFerdous\LaravelModuleGenerator\Services;
 
 use Illuminate\Support\Facades\File;
-use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateModuleFromYaml;
+use NahidFerdous\LaravelModuleGenerator\Concerns\HandlesFileGeneration;
+use NahidFerdous\LaravelModuleGenerator\Contracts\OutputInterface;
 
 class GenerateResourceCollectionService
 {
-    private GenerateModuleFromYaml $command;
+    use HandlesFileGeneration;
+
+    private OutputInterface $command;
 
     private array $generateConfig;
 
     private StubPathResolverService $pathResolverService;
 
-    public function __construct(GenerateModuleFromYaml $command, array $generateConfig)
+    public function __construct(OutputInterface $command, array $generateConfig)
     {
         $this->command = $command;
         $this->generateConfig = $generateConfig;
@@ -27,18 +30,9 @@ class GenerateResourceCollectionService
     {
         if (in_array('collection', $this->generateConfig, true)) {
             $collectionPath = app_path("Http/Resources/{$modelConfig['studlyName']}/{$modelConfig['classes']['collection']}.php");
-
-            if (File::exists($collectionPath) && ! $force) {
-                $this->command->warn("⚠️ Collection already exists: {$modelConfig['classes']['collection']}");
-
-                return;
+            if ($this->guardAgainstExisting($collectionPath, "Collection {$modelConfig['classes']['collection']}", $force)) {
+                $this->generateCollection($modelConfig['studlyName'], $modelConfig['classes']['collection'], $modelConfig['camelName']);
             }
-            if (File::exists($collectionPath)) {
-                File::delete($collectionPath);
-                $this->command->warn("⚠️ Deleted existing collection: {$modelConfig['classes']['collection']}");
-            }
-
-            $this->generateCollection($modelConfig['studlyName'], $modelConfig['classes']['collection'], $modelConfig['camelName']);
         }
     }
 
@@ -68,67 +62,51 @@ class GenerateResourceCollectionService
     {
         if (in_array('resource', $this->generateConfig, true)) {
             $resourcePath = app_path("Http/Resources/{$modelConfig['studlyName']}/{$modelConfig['classes']['resource']}.php");
-
-            if (File::exists($resourcePath) && ! $force) {
-                $this->command->warn("⚠️ Resource already exists: {$modelConfig['classes']['resource']}");
-
-                return;
+            if ($this->guardAgainstExisting($resourcePath, "Resource {$modelConfig['classes']['resource']}", $force)) {
+                $this->generateResource($modelConfig);
             }
-
-            if (File::exists($resourcePath)) {
-                File::delete($resourcePath);
-                $this->command->warn("⚠️ Deleted existing resource: {$modelConfig['classes']['resource']}");
-            }
-
-            // Ensure the directory exists before creating the file
-            $resourceDir = dirname($resourcePath);
-            if (! File::exists($resourceDir)) {
-                File::makeDirectory($resourceDir, 0755, true);
-            }
-
-            $fields = $modelConfig['fields'] ?? [];
-            $relations = $modelConfig['relations'] ?? [];
-
-            $toArrayLines = [
-                "'id' => \$this->id,", // Add ID by default
-            ];
-
-            foreach ($fields as $field => $definition) {
-                $toArrayLines[] = "'$field' => \$this->$field,";
-            }
-
-            foreach ($relations as $relation => $relConfig) {
-                $toArrayLines[] = "'$relation' => \$this->whenLoaded('$relation'),";
-            }
-
-            $toArrayBody = implode("\n            ", $toArrayLines);
-
-            $namespace = "App\\Http\\Resources\\{$modelConfig['studlyName']}";
-            $className = $modelConfig['classes']['resource'];
-
-            $content = <<<PHP
-<?php
-
-namespace {$namespace};
-
-use Illuminate\Http\Resources\Json\JsonResource;
-
-class {$className} extends JsonResource
-{
-    /**
-     * Transform the resource into an array.
-     */
-    public function toArray(\$request): array
-    {
-        return [
-            {$toArrayBody}
-        ];
-    }
-}
-PHP;
-
-            File::put($resourcePath, $content);
-            $this->command->info("✅ Resource created: {$modelConfig['classes']['resource']}");
         }
+    }
+
+    /**
+     * Generate resource class from stub
+     */
+    protected function generateResource(array $modelConfig): void
+    {
+        $dir = app_path("Http/Resources/{$modelConfig['studlyName']}");
+        $path = "{$dir}/{$modelConfig['classes']['resource']}.php";
+        $stubPath = $this->pathResolverService->resolveStubPath('resource');
+
+        File::ensureDirectoryExists($dir);
+
+        $fields = $modelConfig['fields'] ?? [];
+        $relations = $modelConfig['relations'] ?? [];
+
+        $toArrayLines = [
+            "'id' => \$this->id,",
+        ];
+
+        foreach ($fields as $field => $definition) {
+            $toArrayLines[] = "'$field' => \$this->$field,";
+        }
+
+        foreach ($relations as $relation => $relConfig) {
+            $toArrayLines[] = "'$relation' => \$this->whenLoaded('$relation'),";
+        }
+
+        $toArrayBody = implode("\n            ", $toArrayLines);
+
+        $stubContent = str_replace(
+            ['{{ namespace }}', '{{ class }}', '{{ fields }}'],
+            [
+                app()->getNamespace() . "Http\\Resources\\{$modelConfig['studlyName']}",
+                $modelConfig['classes']['resource'],
+                $toArrayBody,
+            ],
+            File::get($stubPath)
+        );
+
+        File::put($path, $stubContent);
+        $this->command->info("✅ Resource created: {$modelConfig['classes']['resource']}");
     }
 }

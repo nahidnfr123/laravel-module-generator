@@ -5,15 +5,15 @@ namespace NahidFerdous\LaravelModuleGenerator\Services;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
-use NahidFerdous\LaravelModuleGenerator\Console\Commands\GenerateModuleFromYaml;
+use NahidFerdous\LaravelModuleGenerator\Contracts\OutputInterface;
 
 class GenerateModelService
 {
-    private GenerateModuleFromYaml $command;
+    private OutputInterface $command;
 
     private StubPathResolverService $stubPathResolver;
 
-    public function __construct(GenerateModuleFromYaml $command)
+    public function __construct(OutputInterface $command)
     {
         $this->command = $command;
         $this->stubPathResolver = new StubPathResolverService;
@@ -43,14 +43,12 @@ class GenerateModelService
 
         $fillableArray = $this->buildFillableArray($fields);
         $getters = $this->buildGetter($fields);
-        $setters = $this->buildSetter($fields);
         $casts = $this->buildCasts($fields);
         $relationshipMethods = $this->buildRelationshipMethods($relations);
 
         $this->replaceModelWithStub($modelPath, $modelName, $fillableArray, $relationshipMethods,
             $casts,
             $getters,
-            $setters,
             $primaryKey,
             $softDeletes,
             $generateConfig
@@ -84,11 +82,6 @@ PHP;
         }
 
         return $getters;
-    }
-
-    public function buildSetter($fields): string
-    {
-        return '';
     }
 
     public function buildCasts(array $fields): string
@@ -345,7 +338,6 @@ PHP;
         string $relationshipMethods,
         string $casts,
         string $getters,
-        string $setters,
         string $primaryKey = 'id',
         bool $softDeletes = false,
         $generateConfig = []
@@ -399,7 +391,6 @@ PHP;
                 '{{ relations }}',
                 '{{ casts }}',
                 '{{ getter }}',
-                '{{ setter }}',
                 '{{ use_statements }}',
                 '{{ traits }}',
                 '{{ primary_key }}',
@@ -409,7 +400,6 @@ PHP;
                 $relationshipMethods,
                 $casts,
                 $getters,
-                $setters,
                 $useStatementsString,
                 $traitsString,
                 $primaryKeyConfig,

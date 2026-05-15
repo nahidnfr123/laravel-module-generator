@@ -24,12 +24,7 @@ class GenerateYamlFromDbDiagram extends Command
      */
     protected $description = 'Generate YAML schema from dbdiagram.io DBML syntax';
 
-    /**
-     * Execute the console command.
-     *
-     * @return int
-     */
-    public function handle()
+    public function handle(): int
     {
         // Get config values
         $config = config('module-generator');
@@ -43,7 +38,7 @@ class GenerateYamlFromDbDiagram extends Command
         if (! file_exists($dbmlFilePath)) {
             $this->error("File not found: $dbmlFilePath");
 
-            return Command::FAILURE;
+            return self::FAILURE;
         }
 
         // Check if an output file exists
@@ -63,7 +58,7 @@ class GenerateYamlFromDbDiagram extends Command
                 if ($choice === 'cancel') {
                     $this->info('Operation cancelled.');
 
-                    return Command::SUCCESS;
+                    return self::SUCCESS;
                 }
 
                 if ($choice === 'new') {
@@ -111,7 +106,7 @@ class GenerateYamlFromDbDiagram extends Command
         $this->info('🎯 YAML schema generated successfully at: '.$outputFilePath);
         $this->info('📊 Generated models for '.count($schema).' tables');
 
-        return Command::SUCCESS;
+        return self::SUCCESS;
     }
 
     /**

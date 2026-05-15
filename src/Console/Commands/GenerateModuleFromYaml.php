@@ -5,6 +5,7 @@ namespace NahidFerdous\LaravelModuleGenerator\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use NahidFerdous\LaravelModuleGenerator\Contracts\OutputInterface;
 use NahidFerdous\LaravelModuleGenerator\Services\AppendRouteService;
 use NahidFerdous\LaravelModuleGenerator\Services\BackupService;
 use NahidFerdous\LaravelModuleGenerator\Services\GenerateControllerService;
@@ -14,11 +15,11 @@ use NahidFerdous\LaravelModuleGenerator\Services\GenerateRequestService;
 use NahidFerdous\LaravelModuleGenerator\Services\GenerateResourceCollectionService;
 use NahidFerdous\LaravelModuleGenerator\Services\GenerateSeederService;
 use NahidFerdous\LaravelModuleGenerator\Services\StubPathResolverService;
-use Symfony\Component\Console\Command\Command as CommandAlias;
+
 use Symfony\Component\Process\Process;
 use Symfony\Component\Yaml\Yaml;
 
-class GenerateModuleFromYaml extends Command
+class GenerateModuleFromYaml extends Command implements OutputInterface
 {
     protected $signature = 'module:generate
                            {--force : Overwrite existing files}
@@ -41,15 +42,14 @@ class GenerateModuleFromYaml extends Command
 
     public array $generateConfig = [];
 
-    public function handle()
+    public function handle(): int
     {
         if ($this->option('force')) {
             $confirmation = $this->ask('This command will replace existing module files and generate module files based on a YAML configuration. Do you want to proceed? (yes/no)', 'no');
-            //            $confirmation = 'yes';
-            if (strtolower($confirmation) !== 'yes' && strtolower($confirmation) !== 'y' && strtolower($confirmation) !== 'Y') {
+            if (strtolower($confirmation) !== 'yes' && strtolower($confirmation) !== 'y') {
                 $this->info('Command cancelled.');
 
-                return CommandAlias::SUCCESS;
+                return self::SUCCESS;
             }
         }
 
@@ -57,7 +57,7 @@ class GenerateModuleFromYaml extends Command
         $this->pathResolverService = new StubPathResolverService;
         $this->validateAndGetConfiguration();
         $this->parsedYamlData = $this->parseYamlFile();
-        $models = $this->parseYamlFile();
+        $models = $this->parsedYamlData;
 
         // Create backup unless explicitly skipped
         if (! $this->option('skip-backup')) {
@@ -79,7 +79,7 @@ class GenerateModuleFromYaml extends Command
         $this->runPint();
         $this->newLine();
 
-        return CommandAlias::SUCCESS;
+        return self::SUCCESS;
     }
 
     /**
@@ -105,7 +105,8 @@ class GenerateModuleFromYaml extends Command
 
         if (! file_exists($path)) {
             $this->error("YAML file not found at: $path");
-            exit(CommandAlias::FAILURE);
+
+            return self::FAILURE;
         }
 
         return [
@@ -204,7 +205,6 @@ class GenerateModuleFromYaml extends Command
         $this->newLine();
         $this->info("🎉 Module generated for $modelName");
         $this->newLine();
-        sleep(1);
     }
 
     /**
@@ -284,7 +284,7 @@ class GenerateModuleFromYaml extends Command
         $force = $this->option('force');
 
         if (in_array('request', $generateConfig, true)) {
-            (new GenerateRequestService($this, $this->parseYamlFile(), $generateConfig))
+            (new GenerateRequestService($this, $this->parsedYamlData, $generateConfig))
                 ->handleRequestGeneration($modelConfig, $force);
         }
 
@@ -316,9 +316,7 @@ class GenerateModuleFromYaml extends Command
      */
     private function getCurrentModelData(string $modelName): array
     {
-        $models = $this->parseYamlFile();
-
-        return $models[$modelName] ?? [];
+        return $this->parsedYamlData[$modelName] ?? [];
     }
 
     /**
@@ -354,9 +352,8 @@ class GenerateModuleFromYaml extends Command
             '--prefix' => $prefix,
         ]);
 
-        if ($result === CommandAlias::SUCCESS) {
+        if ($result === self::SUCCESS) {
             $this->newLine();
-            // $this->info('🥵 a Postman collection generated successfully!');
         } else {
             $this->warn('⚠️ Failed to generate Postman collection');
         }
@@ -375,9 +372,8 @@ class GenerateModuleFromYaml extends Command
             '--output' => 'module/dbdiagram.dbml',
         ]);
 
-        if ($result === CommandAlias::SUCCESS) {
+        if ($result === self::SUCCESS) {
             $this->newLine();
-            // $this->info('🤧 DB diagram generated successfully at module/dbdiagram.dbml');
         } else {
             $this->warn('⚠️ Failed to generate DB diagram');
         }

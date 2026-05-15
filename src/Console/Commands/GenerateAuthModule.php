@@ -9,6 +9,7 @@ use NahidFerdous\LaravelModuleGenerator\Console\Commands\Services\Authentication
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\Services\EmailVerificationService;
 use NahidFerdous\LaravelModuleGenerator\Console\Commands\Services\SocialAuthenticationService;
 use Symfony\Component\Console\Exception\CommandNotFoundException;
+use Symfony\Component\Process\Process;
 
 class GenerateAuthModule extends Command
 {
@@ -20,10 +21,7 @@ class GenerateAuthModule extends Command
 
     protected $description = 'Generate authentication, user management, and optionally roles & permissions';
 
-    /**
-     * @throws \Exception
-     */
-    public function handle()
+    public function handle(): int
     {
         $this->info('🚀 Starting Authentication & User Management Generation...');
         $this->newLine();
@@ -100,14 +98,15 @@ class GenerateAuthModule extends Command
 
         $this->displayNextSteps($includeRoles, $includeEmailVerification, $includeSocialAuth);
 
-        return Command::SUCCESS;
+        return self::SUCCESS;
     }
 
     protected function updateBootstrapForRoles($apiAuthDriver, $includeRoles = false): void
     {
+        $appNamespace = app()->getNamespace();
         $middlewareAliases = [
-            'auth' => '\App\Http\Middleware\Authenticate::class',
-            'cors' => 'App\Http\Middleware\Cors::class',
+            'auth' => '\\' . $appNamespace . 'Http\Middleware\Authenticate::class',
+            'cors' => $appNamespace . 'Http\Middleware\Cors::class',
         ];
         if ($includeRoles) {
             $middlewareAliases = array_merge($middlewareAliases, [
@@ -149,30 +148,15 @@ class GenerateAuthModule extends Command
         $this->info('📦 Installing Laravel Socialite...');
 
         try {
-            $process = proc_open(
-                'composer require laravel/socialite',
-                [
-                    0 => ['pipe', 'r'],
-                    1 => ['pipe', 'w'],
-                    2 => ['pipe', 'w'],
-                ],
-                $pipes,
-                base_path()
-            );
+            $process = new Process(['composer', 'require', 'laravel/socialite']);
+            $process->setWorkingDirectory(base_path());
+            $process->setTimeout(null);
+            $process->run();
 
-            if (is_resource($process)) {
-                fclose($pipes[0]);
-                stream_get_contents($pipes[1]);
-                fclose($pipes[1]);
-                stream_get_contents($pipes[2]);
-                fclose($pipes[2]);
-                $returnCode = proc_close($process);
+            if ($process->isSuccessful()) {
+                $this->line('✅ Laravel Socialite installed successfully');
 
-                if ($returnCode === 0) {
-                    $this->line('✅ Laravel Socialite installed successfully');
-
-                    return true;
-                }
+                return true;
             }
 
             return false;

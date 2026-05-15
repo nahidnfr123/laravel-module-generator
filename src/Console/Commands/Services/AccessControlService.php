@@ -4,6 +4,7 @@ namespace NahidFerdous\LaravelModuleGenerator\Console\Commands\Services;
 
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Symfony\Component\Process\Process;
 
 use function base_path;
 use function database_path;
@@ -122,9 +123,11 @@ class AccessControlService extends BaseAuthModuleService
 
         if (! isset($composerJson['require']['spatie/laravel-permission'])) {
             $this->command->info('Running: composer require spatie/laravel-permission');
-            exec('composer require spatie/laravel-permission 2>&1', $output, $returnCode);
+            $process = Process::fromShellCommandline('composer require spatie/laravel-permission');
+            $process->setTimeout(null);
+            $process->run();
 
-            if ($returnCode !== 0) {
+            if (! $process->isSuccessful()) {
                 $this->command->error('❌ Failed to install Spatie Laravel Permission');
                 $this->command->warn('Please run manually: composer require spatie/laravel-permission');
 
@@ -139,7 +142,7 @@ class AccessControlService extends BaseAuthModuleService
 
         if ($freshInstall) {
             $this->command->info('Refreshing Composer autoload...');
-            exec('composer dump-autoload 2>&1');
+            Process::fromShellCommandline('composer dump-autoload')->run();
 
             $this->command->info('Running package discovery...');
             Artisan::call('package:discover', [], $this->command->getOutput());
@@ -147,15 +150,17 @@ class AccessControlService extends BaseAuthModuleService
 
         $this->command->info('Publishing Spatie config and migrations...');
 
-        exec(
-            'php artisan vendor:publish --provider="Spatie\Permission\PermissionServiceProvider" --force 2>&1',
-            $output,
-            $exitCode
-        );
+        $process = new Process([
+            'php', 'artisan', 'vendor:publish',
+            '--provider=Spatie\Permission\PermissionServiceProvider',
+            '--force',
+        ]);
+        $process->setWorkingDirectory(base_path());
+        $process->run();
 
-        if ($exitCode !== 0) {
+        if (! $process->isSuccessful()) {
             $this->command->error('❌ Failed to publish Spatie resources');
-            $this->command->line(implode("\n", $output));
+            $this->command->line($process->getErrorOutput());
 
             return;
         }

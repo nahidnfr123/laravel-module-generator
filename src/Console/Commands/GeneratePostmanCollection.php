@@ -5,6 +5,7 @@ namespace NahidFerdous\LaravelModuleGenerator\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use NahidFerdous\LaravelModuleGenerator\Services\RelationParserService;
 use Symfony\Component\Yaml\Yaml;
 
 class GeneratePostmanCollection extends Command
@@ -35,9 +36,6 @@ class GeneratePostmanCollection extends Command
 
     private array $fullSchema;
 
-    /**
-     * Execute the console command.
-     */
     public function handle(): int
     {
         // Get config values
@@ -109,7 +107,7 @@ class GeneratePostmanCollection extends Command
     {
         return [
             'info' => [
-                'name' => env('APP_NAME', 'Laravel').' API Collection',
+                'name' => config('app.name', 'Laravel').' API Collection',
                 'description' => 'Auto-generated from YAML schema',
                 'schema' => 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
                 '_postman_id' => Str::uuid()->toString(),
@@ -158,36 +156,11 @@ class GeneratePostmanCollection extends Command
      */
     private function parseRelations(array $modelConfig): array
     {
-        $relations = [];
-
         if (! isset($modelConfig['relations'])) {
-            return $relations;
+            return [];
         }
 
-        foreach ($modelConfig['relations'] as $relationType => $relationString) {
-            if (! is_string($relationString)) {
-                continue;
-            }
-
-            // Split by comma to get individual relations
-            $relationParts = array_map('trim', explode(',', $relationString));
-
-            foreach ($relationParts as $relationPart) {
-                // Parse "Model:functionName" format
-                if (strpos($relationPart, ':') !== false) {
-                    [$model, $functionName] = explode(':', $relationPart, 2);
-                    $model = trim($model);
-                    $functionName = trim($functionName);
-
-                    $relations[$functionName] = [
-                        'type' => $relationType,
-                        'model' => $model,
-                    ];
-                }
-            }
-        }
-
-        return $relations;
+        return (new RelationParserService)->parse($modelConfig['relations']);
     }
 
     /**
